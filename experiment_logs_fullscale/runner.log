@@ -1,0 +1,27 @@
+08:10:41 === Remaining experiments ===
+08:10:41 START p3_11L_swiglu_trigram
+
+08:36:00 === RERUN batch ===
+08:36:00 START p3_11L_swiglu_trigram
+08:50:15 DONE  p3_11L_swiglu_trigram | exit=0 | steps=254 | val_bpb=3.41273810
+08:50:15 START p3_9L_mlp4x_leaky_trigram
+09:02:22 DONE  p3_9L_mlp4x_leaky_trigram | exit=0 | steps=141 | val_bpb=3.42925521
+09:02:22 START p4_lora_r4
+09:18:54 DONE  p4_lora_r4 | exit=0 | steps=251 | val_bpb=3.33781130
+09:18:54 START p4_lora_r8
+09:35:02 DONE  p4_lora_r8 | exit=0 | steps=243 | val_bpb=3.28403546
+09:35:02 START p4_lora_r16
+09:51:08 DONE  p4_lora_r16 | exit=0 | steps=241 | val_bpb=3.33288629
+09:51:08 START p4_lora_r32
+10:06:51 DONE  p4_lora_r32 | exit=0 | steps=246 | val_bpb=3.41506979
+10:06:51 START p4_fft_last2
+10:19:30 DONE  p4_fft_last2 | exit=0 | steps=245 | val_bpb=3.56794953
+10:19:30 SKIP  p4_fft_last4 (already complete)
+10:19:30 SKIP  p4_fft_all (already complete)
+10:19:30 SKIP  p4_lora_r16_3step (already complete)
+10:19:30 SKIP  p4_lora_r16_chunk128 (already complete)
+10:19:30 SKIP  p4_lora_r16_qvk (already complete)
+10:19:30 SKIP  p4_bias_ttt (already complete)
+10:19:30 SKIP  p4_lora_r16_qv_mlp (already complete)
+10:19:30 SKIP  p4_lora_r16_qvk_mlp (already complete)
+10:19:30 === ALL DONE ===

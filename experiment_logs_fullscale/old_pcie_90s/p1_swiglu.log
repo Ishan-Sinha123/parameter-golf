@@ -1,0 +1,80 @@
+W0402 03:20:20.972000 8221 torch/distributed/run.py:792] 
+W0402 03:20:20.972000 8221 torch/distributed/run.py:792] *****************************************
+W0402 03:20:20.972000 8221 torch/distributed/run.py:792] Setting OMP_NUM_THREADS environment variable for each process to be 1 in default, to avoid your system being overloaded, please further tune the variable for optimal performance in your application as needed. 
+W0402 03:20:20.972000 8221 torch/distributed/run.py:792] *****************************************
+[rank3]:[W402 03:20:44.736541595 ProcessGroupNCCL.cpp:4561] [PG ID 0 PG GUID 0 Rank 3]  using GPU 3 to perform barrier as devices used by this process are currently unknown. This can potentially cause a hang if this rank to GPU mapping is incorrect. Specify device_ids in barrier() to force use of a particular device, or call init_process_group() with a device_id.
+[rank2]:[W402 03:20:44.949844523 ProcessGroupNCCL.cpp:4561] [PG ID 0 PG GUID 0 Rank 2]  using GPU 2 to perform barrier as devices used by this process are currently unknown. This can potentially cause a hang if this rank to GPU mapping is incorrect. Specify device_ids in barrier() to force use of a particular device, or call init_process_group() with a device_id.
+[rank6]:[W402 03:20:44.169926970 ProcessGroupNCCL.cpp:4561] [PG ID 0 PG GUID 0 Rank 6]  using GPU 6 to perform barrier as devices used by this process are currently unknown. This can potentially cause a hang if this rank to GPU mapping is incorrect. Specify device_ids in barrier() to force use of a particular device, or call init_process_group() with a device_id.
+[rank0]:[W402 03:20:44.284254835 ProcessGroupNCCL.cpp:4561] [PG ID 0 PG GUID 0 Rank 0]  using GPU 0 to perform barrier as devices used by this process are currently unknown. This can potentially cause a hang if this rank to GPU mapping is incorrect. Specify device_ids in barrier() to force use of a particular device, or call init_process_group() with a device_id.
+[rank5]:[W402 03:20:44.373700589 ProcessGroupNCCL.cpp:4561] [PG ID 0 PG GUID 0 Rank 5]  using GPU 5 to perform barrier as devices used by this process are currently unknown. This can potentially cause a hang if this rank to GPU mapping is incorrect. Specify device_ids in barrier() to force use of a particular device, or call init_process_group() with a device_id.
+[rank4]:[W402 03:20:44.373916784 ProcessGroupNCCL.cpp:4561] [PG ID 0 PG GUID 0 Rank 4]  using GPU 4 to perform barrier as devices used by this process are currently unknown. This can potentially cause a hang if this rank to GPU mapping is incorrect. Specify device_ids in barrier() to force use of a particular device, or call init_process_group() with a device_id.
+[rank1]:[W402 03:20:44.412911495 ProcessGroupNCCL.cpp:4561] [PG ID 0 PG GUID 0 Rank 1]  using GPU 1 to perform barrier as devices used by this process are currently unknown. This can potentially cause a hang if this rank to GPU mapping is incorrect. Specify device_ids in barrier() to force use of a particular device, or call init_process_group() with a device_id.
+[rank7]:[W402 03:20:44.449437249 ProcessGroupNCCL.cpp:4561] [PG ID 0 PG GUID 0 Rank 7]  using GPU 7 to perform barrier as devices used by this process are currently unknown. This can potentially cause a hang if this rank to GPU mapping is incorrect. Specify device_ids in barrier() to force use of a particular device, or call init_process_group() with a device_id.
+logs/p1_swiglu.txt
+val_bpb:enabled tokenizer_kind=sentencepiece tokenizer_path=/home/ubuntu/parameter-golf/data/tokenizers/fineweb_1024_bpe.model
+train_loader:dataset:fineweb10B_sp1024 train_shards:80
+val_loader:shards pattern=/home/ubuntu/parameter-golf/data/datasets/fineweb10B_sp1024/fineweb_val_*.bin tokens:62021632
+model_params:35718236
+mtp_num_heads:0 mtp_loss_weight:0.2 mtp_params:0
+XSA:last_11 active_layers:[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+world_size:8 grad_accum_steps:1
+sdp_backends:cudnn=False flash=True mem_efficient=False math=False
+attention_mode:gqa num_heads:8 num_kv_heads:4
+tie_embeddings:True embed_lr:0.035 head_lr:0.0 matrix_lr:0.025 scalar_lr:0.025
+train_batch_tokens:524288 train_seq_len:1024 iterations:20000 warmup_steps:20 max_wallclock_seconds:90.000
+seed:1337
+warmup_step:1/20
+warmup_step:2/20
+warmup_step:3/20
+warmup_step:4/20
+warmup_step:5/20
+warmup_step:6/20
+warmup_step:7/20
+warmup_step:8/20
+warmup_step:9/20
+warmup_step:10/20
+warmup_step:11/20
+warmup_step:12/20
+warmup_step:13/20
+warmup_step:14/20
+warmup_step:15/20
+warmup_step:16/20
+warmup_step:17/20
+warmup_step:18/20
+warmup_step:19/20
+warmup_step:20/20
+step:0/20000 val_loss:6.9296 val_bpb:4.1041 train_time:0ms step_avg:0.02ms
+step:1/20000 train_loss:6.9312 train_time:305ms step_avg:305.14ms
+late_qat:enabled step:1 scale:0.0718
+step:2/20000 train_loss:8.6893 train_time:568ms step_avg:284.18ms
+step:3/20000 train_loss:8.6097 train_time:860ms step_avg:286.78ms
+step:4/20000 train_loss:8.4153 train_time:1152ms step_avg:288.10ms
+step:5/20000 train_loss:7.9601 train_time:1444ms step_avg:288.82ms
+step:6/20000 train_loss:8.0518 train_time:1736ms step_avg:289.27ms
+step:7/20000 train_loss:7.3366 train_time:2028ms step_avg:289.75ms
+step:8/20000 train_loss:7.1972 train_time:2320ms step_avg:289.99ms
+step:9/20000 train_loss:6.9004 train_time:2612ms step_avg:290.21ms
+step:10/20000 train_loss:6.6030 train_time:2904ms step_avg:290.37ms
+swa:start step:50
+step:200/20000 val_loss:3.4384 val_bpb:2.0364 train_time:58987ms step_avg:294.93ms
+step:306/20000 val_loss:3.3061 val_bpb:1.9580 train_time:90096ms step_avg:294.43ms
+stopping_early: wallclock_cap train_time:90096ms step:306/20000
+peak memory allocated: 23379 MiB reserved: 23772 MiB
+ema:applying EMA weights
+DIAGNOSTIC post_ema val_loss:4.8532 val_bpb:2.8743 eval_time:10227ms
+Serialized model: 123594156 bytes
+Code size: 125477 bytes
+gptq:building non-banked model for Hessian collection...
+gptq:generating autoregressive calibration data (64 seqs x 2048 tokens, temp=0.8)...
+gptq:generated 64 sequences in 87.7s
+gptq:collecting hessians from autoregressive data...
+gptq:collected hessians for 79 layers (AR self-gen)
+selective_prune: 10887576 ±1 candidates, unpruned=7.51MB target=15.9MB
+selective_prune: already fits, no pruning needed
+Serialized model int6+lzma: 7745508 bytes
+Total submission size int6+lzma: 7870985 bytes
+final_int6_roundtrip val_loss:6.2365 val_bpb:3.6936 eval_time:10486ms
+final_int6_roundtrip_exact val_loss:6.23645208 val_bpb:3.69357821
+final_int6_sliding_window val_loss:6.2373 val_bpb:3.6941 stride:64 eval_time:338615ms
+final_int6_sliding_window_exact val_loss:6.23727435 val_bpb:3.69407498
+final_int8_zlib_roundtrip_exact val_loss:6.23727435 val_bpb:3.69407498
