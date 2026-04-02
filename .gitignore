@@ -14,3 +14,19 @@ logs/
 fullscale_run.log
 train_gpt_cpu.py
 generate_report.py
+
+# Autoresearch runtime artifacts
+autoresearch/uv.lock
+autoresearch/agent.log
+autoresearch/nohup.out
+autoresearch/progress.png
+autoresearch/.python-version
+autoresearch/run.log
+autoresearch/results.tsv
+autoresearch/.venv
+autoresearch/worktrees/
+autoresearch/results/
+autoresearch/queue/
+autoresearch/dev/
+autoresearch/CLAUDE.md
+autoresearch/AGENTS.md
