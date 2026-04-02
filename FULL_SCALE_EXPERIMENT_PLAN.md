@@ -9,58 +9,79 @@
 
 ## Quick Start
 
-### 1. Setup (RunPod 8×H100 SXM)
+### 1. Setup (Vast.ai / RunPod — 4×H100 SXM or 8×H100 SXM)
 
 ```bash
-git clone git@github.com:Ishan-Sinha123/parameter-golf.git
-cd parameter-golf
+# As root on your GPU instance:
+useradd -m -s /bin/bash dev
+chmod -R 777 /root /root/parameter-golf  # or wherever the repo lives
+ln -s /opt/nvm/versions/node/v24.14.1/bin/claude /usr/local/bin/claude
+ln -s /opt/nvm/versions/node/v24.14.1/bin/node /usr/local/bin/node
+su - dev
+
+# As dev user:
+cd /root/parameter-golf  # or clone fresh: git clone git@github.com:Ishan-Sinha123/parameter-golf.git
 pip install -r requirements.txt
+export HF_HOME=/home/dev/.cache/huggingface
 python3 data/cached_challenge_fineweb.py --variant sp1024
 ```
 
-### 2. Run SOTA baseline first (validate your setup)
+### 2. Run SOTA baseline first — full eval (validate your setup)
 
 ```bash
+# On 4 GPUs: double wallclock to match 8-GPU step count
+NGPUS=4 MAX_WALLCLOCK_SECONDS=1200 ./scripts/run_ablations.sh 0
+
+# On 8 GPUs: use default 600s
 ./scripts/run_ablations.sh 0
 ```
 
-This reproduces PR #1019 exactly. Expected: ~1.1147 BPB on 8×H100 SXM, ~6900 steps in 600s.
+This reproduces PR #1019 exactly. Expected: ~1.1147 BPB on 8×H100 SXM (~6900 steps in 600s).
+On 4×H100 SXM with 1200s: ~same step count, comparable BPB.
+Includes full sliding window eval (~5 min on 4 GPUs).
 
-### 3. Run ablation categories
+### 3. Fast ablations (180s, no sliding window eval)
 
 ```bash
-# Architecture experiments (most promising)
-./scripts/run_ablations.sh A
+# Architecture experiments — most promising, run these first
+NGPUS=4 MAX_WALLCLOCK_SECONDS=180 ./scripts/run_ablations.sh A
 
 # Training dynamics
-./scripts/run_ablations.sh B
+NGPUS=4 MAX_WALLCLOCK_SECONDS=180 ./scripts/run_ablations.sh B
 
-# Eval-time (stride changes, no retraining needed)
-./scripts/run_ablations.sh C
-
-# Combinations (run after A/B/C show signal)
-./scripts/run_ablations.sh D
+# Eval stride changes — these DO run sliding window (that's what they test)
+# Reuses training from experiment 0, so only eval cost
+NGPUS=4 MAX_WALLCLOCK_SECONDS=1200 ./scripts/run_ablations.sh C
 ```
 
-### 4. Run specific experiments
+Sliding window eval is **automatically skipped** for A, B, and D experiments (except D4).
+This saves ~5-10 min per run. Compare using the `Int6 BPB` column in the summary.
+
+### 4. Combinations (after A/B/C show signal)
 
 ```bash
-./scripts/run_ablations.sh A1 A3 B1    # cherry-pick
+# Full budget for the best combos
+NGPUS=4 MAX_WALLCLOCK_SECONDS=1200 ./scripts/run_ablations.sh D1 D2
 ```
 
-### 5. Quick test runs (short budget, fewer GPUs)
+### 5. Other usage
 
 ```bash
-NGPUS=1 MAX_WALLCLOCK_SECONDS=90 ./scripts/run_ablations.sh 0 A1
+./scripts/run_ablations.sh A1 A3 B1           # cherry-pick specific experiments
+FULL_EVAL=1 ./scripts/run_ablations.sh A1     # force sliding window eval on any experiment
+DRY_RUN=1 ./scripts/run_ablations.sh          # print all commands without executing
 ```
 
-### 6. Dry run (see commands without executing)
+Logs go to `experiment_logs/ablations/`. Summary table printed at end of each run.
 
-```bash
-DRY_RUN=1 ./scripts/run_ablations.sh
-```
+### 6. Scaling: 4 GPUs vs 8 GPUs
 
-Logs go to `experiment_logs/ablations/`. Summary printed at end of each run.
+The SOTA script handles this automatically via `grad_accum_steps = 8 // world_size`:
+- **4 GPUs:** 2× gradient accumulation, same effective batch size, ~2× slower per step
+- **8 GPUs:** 1× gradient accumulation, native speed
+
+For ablations (relative ranking), use any GPU count — just keep it consistent across experiments.
+For final submission numbers, use 8×H100 SXM with 600s.
 
 ---
 
@@ -126,14 +147,28 @@ Stack the winners from A + B + C. Run these after individual experiments show si
 
 ## How the Pipeline Works
 
-Each experiment runs the full SOTA pipeline:
+Each experiment runs the SOTA pipeline:
 
 1. **Train** — Parallel Muon + Adam optimizers, EMA + SWA weight averaging
 2. **GPTQ int6** — Full Hessian quantization with AR self-generated calibration data
 3. **LZMA compress** — Artifact must be ≤16MB
-4. **Sliding window eval** — Final val_bpb score
+4. **Int6 roundtrip eval** — Quick single-pass eval (~23s on 8 GPUs)
+5. **Sliding window eval** — Full stride-64 eval (~105s on 8 GPUs) — **skipped for fast ablations**
 
 No TTT — PR #1019 dropped it after 25 failed attempts. The GPTQ improvement more than compensated.
+
+### Sliding Window Eval Policy
+
+| Experiments | Sliding window? | Why |
+|---|---|---|
+| **0 (SOTA repro)** | Yes | Need full score for reference |
+| **A1-A4 (architecture)** | No | Int6 roundtrip BPB is sufficient for ranking |
+| **B1-B6 (training)** | No | Same — relative comparison only |
+| **C1-C2 (stride)** | Yes | That's what they're testing |
+| **D1-D3 (combos)** | No | Run with `FULL_EVAL=1` once you have a winner |
+| **D4 (combo + stride)** | Yes | Stride experiment |
+
+Override with `FULL_EVAL=1` to force sliding window on any experiment.
 
 ---
 
