@@ -1,19 +1,14 @@
-W0402 03:32:22.223000 9489 torch/distributed/run.py:792] 
-W0402 03:32:22.223000 9489 torch/distributed/run.py:792] *****************************************
-W0402 03:32:22.223000 9489 torch/distributed/run.py:792] Setting OMP_NUM_THREADS environment variable for each process to be 1 in default, to avoid your system being overloaded, please further tune the variable for optimal performance in your application as needed. 
-W0402 03:32:22.223000 9489 torch/distributed/run.py:792] *****************************************
-[rank2]:[W402 03:32:45.869241508 ProcessGroupNCCL.cpp:4561] [PG ID 0 PG GUID 0 Rank 2]  using GPU 2 to perform barrier as devices used by this process are currently unknown. This can potentially cause a hang if this rank to GPU mapping is incorrect. Specify device_ids in barrier() to force use of a particular device, or call init_process_group() with a device_id.
-[rank3]:[W402 03:32:45.167871402 ProcessGroupNCCL.cpp:4561] [PG ID 0 PG GUID 0 Rank 3]  using GPU 3 to perform barrier as devices used by this process are currently unknown. This can potentially cause a hang if this rank to GPU mapping is incorrect. Specify device_ids in barrier() to force use of a particular device, or call init_process_group() with a device_id.
-[rank7]:[W402 03:32:45.339824417 ProcessGroupNCCL.cpp:4561] [PG ID 0 PG GUID 0 Rank 7]  using GPU 7 to perform barrier as devices used by this process are currently unknown. This can potentially cause a hang if this rank to GPU mapping is incorrect. Specify device_ids in barrier() to force use of a particular device, or call init_process_group() with a device_id.
-[rank6]:[W402 03:32:45.346698529 ProcessGroupNCCL.cpp:4561] [PG ID 0 PG GUID 0 Rank 6]  using GPU 6 to perform barrier as devices used by this process are currently unknown. This can potentially cause a hang if this rank to GPU mapping is incorrect. Specify device_ids in barrier() to force use of a particular device, or call init_process_group() with a device_id.
-[rank0]:[W402 03:32:45.495854417 ProcessGroupNCCL.cpp:4561] [PG ID 0 PG GUID 0 Rank 0]  using GPU 0 to perform barrier as devices used by this process are currently unknown. This can potentially cause a hang if this rank to GPU mapping is incorrect. Specify device_ids in barrier() to force use of a particular device, or call init_process_group() with a device_id.
-[rank1]:[W402 03:32:46.571888345 ProcessGroupNCCL.cpp:4561] [PG ID 0 PG GUID 0 Rank 1]  using GPU 1 to perform barrier as devices used by this process are currently unknown. This can potentially cause a hang if this rank to GPU mapping is incorrect. Specify device_ids in barrier() to force use of a particular device, or call init_process_group() with a device_id.
-[rank4]:[W402 03:32:46.571924049 ProcessGroupNCCL.cpp:4561] [PG ID 0 PG GUID 0 Rank 4]  using GPU 4 to perform barrier as devices used by this process are currently unknown. This can potentially cause a hang if this rank to GPU mapping is incorrect. Specify device_ids in barrier() to force use of a particular device, or call init_process_group() with a device_id.
-[rank5]:[W402 03:32:46.572071781 ProcessGroupNCCL.cpp:4561] [PG ID 0 PG GUID 0 Rank 5]  using GPU 5 to perform barrier as devices used by this process are currently unknown. This can potentially cause a hang if this rank to GPU mapping is incorrect. Specify device_ids in barrier() to force use of a particular device, or call init_process_group() with a device_id.
+W0402 05:50:32.736000 27836 torch/distributed/run.py:851] 
+W0402 05:50:32.736000 27836 torch/distributed/run.py:851] *****************************************
+W0402 05:50:32.736000 27836 torch/distributed/run.py:851] Setting OMP_NUM_THREADS environment variable for each process to be 1 in default, to avoid your system being overloaded, please further tune the variable for optimal performance in your application as needed. 
+W0402 05:50:32.736000 27836 torch/distributed/run.py:851] *****************************************
+/workspace/parameter-golf/.venv/lib/python3.12/site-packages/torch/distributed/c10d_logger.py:83: UserWarning: barrier(): using the device under current context. You can specify `device_id` in `init_process_group` to mute this warning.
+  return func(*args, **kwargs)
+[rank0]:[W402 05:50:40.488734708 ProcessGroupNCCL.cpp:5188] Guessing device ID based on global rank. This can cause a hang if rank to GPU mapping is heterogeneous. You can specify device_id in init_process_group()
 logs/p1_trigram_hash.txt
-val_bpb:enabled tokenizer_kind=sentencepiece tokenizer_path=/home/ubuntu/parameter-golf/data/tokenizers/fineweb_1024_bpe.model
+val_bpb:enabled tokenizer_kind=sentencepiece tokenizer_path=/workspace/parameter-golf/data/tokenizers/fineweb_1024_bpe.model
 train_loader:dataset:fineweb10B_sp1024 train_shards:80
-val_loader:shards pattern=/home/ubuntu/parameter-golf/data/datasets/fineweb10B_sp1024/fineweb_val_*.bin tokens:62021632
+val_loader:shards pattern=/workspace/parameter-golf/data/datasets/fineweb10B_sp1024/fineweb_val_*.bin tokens:62021632
 model_params:27067484
 mtp_num_heads:0 mtp_loss_weight:0.2 mtp_params:0
 XSA:last_11 active_layers:[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
@@ -43,38 +38,42 @@ warmup_step:17/20
 warmup_step:18/20
 warmup_step:19/20
 warmup_step:20/20
-step:0/20000 val_loss:6.9292 val_bpb:4.1038 train_time:0ms step_avg:0.02ms
-step:1/20000 train_loss:6.9296 train_time:325ms step_avg:324.61ms
-late_qat:enabled step:1 scale:0.0684
-step:2/20000 train_loss:8.3892 train_time:599ms step_avg:299.34ms
-step:3/20000 train_loss:8.3287 train_time:910ms step_avg:303.19ms
-step:4/20000 train_loss:8.1643 train_time:1217ms step_avg:304.14ms
-step:5/20000 train_loss:7.7704 train_time:1524ms step_avg:304.75ms
-step:6/20000 train_loss:7.9308 train_time:1831ms step_avg:305.17ms
-step:7/20000 train_loss:7.2647 train_time:2138ms step_avg:305.45ms
-step:8/20000 train_loss:7.1844 train_time:2445ms step_avg:305.66ms
-step:9/20000 train_loss:6.9217 train_time:2753ms step_avg:305.85ms
-step:10/20000 train_loss:6.6383 train_time:3060ms step_avg:305.98ms
+step:0/20000 val_loss:6.9301 val_bpb:4.1044 train_time:0ms step_avg:0.02ms
+step:1/20000 train_loss:6.9305 train_time:191ms step_avg:191.30ms
+late_qat:enabled step:1 scale:0.1161
+step:2/20000 train_loss:8.5958 train_time:334ms step_avg:167.05ms
+step:3/20000 train_loss:8.4023 train_time:494ms step_avg:164.62ms
+step:4/20000 train_loss:7.9509 train_time:652ms step_avg:163.00ms
+step:5/20000 train_loss:7.4587 train_time:810ms step_avg:162.04ms
+step:6/20000 train_loss:7.5412 train_time:968ms step_avg:161.41ms
+step:7/20000 train_loss:6.7612 train_time:1127ms step_avg:160.94ms
+step:8/20000 train_loss:6.6229 train_time:1285ms step_avg:160.60ms
+step:9/20000 train_loss:6.3850 train_time:1443ms step_avg:160.36ms
+step:10/20000 train_loss:6.1527 train_time:1601ms step_avg:160.14ms
 swa:start step:50
-step:200/20000 val_loss:3.5566 val_bpb:2.1064 train_time:62051ms step_avg:310.26ms
-step:291/20000 val_loss:3.4351 val_bpb:2.0345 train_time:90114ms step_avg:309.67ms
-stopping_early: wallclock_cap train_time:90114ms step:291/20000
-peak memory allocated: 23523 MiB reserved: 23972 MiB
+step:200/20000 val_loss:3.1991 val_bpb:1.8947 train_time:32116ms step_avg:160.58ms
+step:400/20000 val_loss:2.8455 val_bpb:1.6853 train_time:64298ms step_avg:160.75ms
+step:500/20000 train_loss:2.7736 train_time:80163ms step_avg:160.33ms
+step:562/20000 val_loss:2.7672 val_bpb:1.6389 train_time:90170ms step_avg:160.45ms
+stopping_early: wallclock_cap train_time:90170ms step:562/20000
+peak memory allocated: 20995 MiB reserved: 21512 MiB
 ema:applying EMA weights
-DIAGNOSTIC post_ema val_loss:5.8632 val_bpb:3.4725 eval_time:10922ms
-Serialized model: 106289185 bytes
+DIAGNOSTIC post_ema val_loss:6.4684 val_bpb:3.8309 eval_time:6020ms
+Serialized model: 106289590 bytes
 Code size: 125477 bytes
 gptq:building non-banked model for Hessian collection...
 gptq:generating autoregressive calibration data (64 seqs x 2048 tokens, temp=0.8)...
-gptq:generated 64 sequences in 167.1s
+gptq:generated 64 sequences in 75.4s
 gptq:collecting hessians from autoregressive data...
 gptq:collected hessians for 68 layers (AR self-gen)
-selective_prune: 6833627 ±1 candidates, unpruned=5.19MB target=15.9MB
+selective_prune: 7032195 ±1 candidates, unpruned=5.45MB target=15.9MB
 selective_prune: already fits, no pruning needed
-Serialized model int6+lzma: 5321340 bytes
-Total submission size int6+lzma: 5446817 bytes
-final_int6_roundtrip val_loss:7.1776 val_bpb:4.2510 eval_time:11241ms
-final_int6_roundtrip_exact val_loss:7.17758146 val_bpb:4.25096804
-final_int6_sliding_window val_loss:7.1810 val_bpb:4.2530 stride:64 eval_time:363494ms
-final_int6_sliding_window_exact val_loss:7.18098140 val_bpb:4.25299293
-final_int8_zlib_roundtrip_exact val_loss:7.18098140 val_bpb:4.25299293
+Serialized model int6+lzma: 5591704 bytes
+Total submission size int6+lzma: 5717181 bytes
+/workspace/parameter-golf/.venv/lib/python3.12/site-packages/torch/distributed/c10d_logger.py:83: UserWarning: barrier(): using the device under current context. You can specify `device_id` in `init_process_group` to mute this warning.
+  return func(*args, **kwargs)
+final_int6_roundtrip val_loss:11.6039 val_bpb:6.8725 eval_time:6337ms
+final_int6_roundtrip_exact val_loss:11.60392144 val_bpb:6.87249589
+final_int6_sliding_window val_loss:11.6346 val_bpb:6.8907 stride:64 eval_time:211313ms
+final_int6_sliding_window_exact val_loss:11.63455816 val_bpb:6.89065892
+final_int8_zlib_roundtrip_exact val_loss:11.63455816 val_bpb:6.89065892

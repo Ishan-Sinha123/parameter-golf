@@ -34,6 +34,7 @@ export TOKENIZER_PATH="$REPO_ROOT/data/tokenizers/fineweb_1024_bpe.model"
 export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 export TORCHDYNAMO_DISABLE=1
 export PYTHONUNBUFFERED=1
+export HF_HOME=/tmp/hf_home
 
 # ── Full-scale model config ──
 # Matches SOTA exactly (PR #1019): 11L/512d/MLP3x + BigramHash 3072×112
@@ -49,7 +50,7 @@ export BIGRAM_VOCAB_SIZE=3072
 export BIGRAM_DIM=112
 export TARGET_MB=15.9
 
-# ── Training budget (SOTA uses 600s, we use 90s for fast iteration) ──
+# ── Training budget (90s for fast ablation iteration, ~570 steps on SXM) ──
 export MAX_WALLCLOCK_SECONDS=90
 export VAL_LOSS_EVERY=200
 export WARMDOWN_ITERS=4000
@@ -114,6 +115,14 @@ run_one() {
 
     echo "  [$name] $status | final val_bpb: $final_bpb | ended: $end_time"
     echo ""
+
+    # Kill any leftover torchrun/train_sota_exp workers from this run
+    # to prevent GPU contention with the next experiment
+    pkill -f "train_sota_exp.py" 2>/dev/null || true
+    sleep 2
+    # Double-check: if any workers survived, force kill
+    pkill -9 -f "train_sota_exp.py" 2>/dev/null || true
+    sleep 1
 }
 
 # ─────────────────────────────────────────────────────────────

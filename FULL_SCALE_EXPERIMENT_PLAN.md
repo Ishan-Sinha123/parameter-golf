@@ -38,82 +38,96 @@ source .venv/bin/activate
 
 ## Phase 1 Results: Feature Isolation (COMPLETED)
 
-Tested each feature independently on SOTA config. All use `TTT_MODE=none`.
+Tested each feature independently on SOTA config. All use `TTT_MODE=none`.  
+**Hardware:** Clean GPUs, ~160ms/step, ~560 steps in 90s.
 
-| Run | Change | Training BPB | Final BPB | Steps | Delta |
-|-----|--------|-------------|-----------|-------|-------|
-| **p1_swiglu** | `MLP_ACTIVATION=swiglu` | **1.958** | **3.694** | 306 | **-0.560** |
-| p1_swiglu_trigram | SwiGLU + `TRIGRAM=1` | 1.967 | 3.723 | 305 | -0.531 |
-| p1_leaky_relu2 | `MLP_ACTIVATION=leaky_relu2` | 2.029 | 4.247 | 291 | -0.007 |
-| p1_trigram_hash | `TRIGRAM=1` | 2.035 | 4.253 | -0.001 |
-| p1_baseline | SOTA defaults | 2.028 | 4.254 | 292 | — |
+| Run | Change | Steps | ms/step | Training BPB | Final BPB | Delta |
+|-----|--------|-------|---------|-------------|-----------|-------|
+| **p1_swiglu** | `MLP_ACTIVATION=swiglu` | **607** | **148** | **1.599** | **4.148** | **-2.824** |
+| p1_swiglu_trigram | SwiGLU + `TRIGRAM=1` | 604 | 149 | 1.623 | 4.139 | -2.833 |
+| p1_leaky_relu2 | `MLP_ACTIVATION=leaky_relu2` | 564 | 160 | 1.632 | 6.622 | -0.350 |
+| p1_trigram_hash | `TRIGRAM=1` | 562 | 160 | 1.639 | 6.891 | -0.081 |
+| p1_baseline | SOTA defaults | 564 | 160 | 1.632 | 6.972 | — |
 
 ### Findings
-- **SwiGLU is the clear winner** — 0.56 bpb improvement AND 5% faster per step (294ms vs 305ms). The gating mechanism provides better gradient flow than LeakyReLU².
+- **SwiGLU is the clear winner** — 2.8 bpb improvement AND 8% faster per step (148ms vs 160ms). The gating mechanism provides better gradient flow than LeakyReLU².
 - **Trigram hash does nothing** on top of SOTA's existing BigramHash 3072×112. The bigram already captures the n-gram signal; trigram is redundant.
-- **SwiGLU + trigram is slightly worse than SwiGLU alone** — trigram adds noise when bigram is already large.
-- **LeakyReLU² ≈ baseline** — SOTA's default activation is already near-optimal within the ReLU² family.
+- **SwiGLU + trigram ≈ SwiGLU alone** — trigram adds no value when bigram is already large.
+- **LeakyReLU² shows modest improvement** over baseline in final BPB (6.622 vs 6.972).
 
 **Decision: Use SwiGLU. Drop trigram.**
 
 ---
 
-## Phase 2: Depth/Width Tradeoff (IN PROGRESS)
+## Phase 2 Results: Depth/Width Tradeoff (COMPLETED)
 
-| Run | Config | Justification |
-|-----|--------|---------------|
-| `p2_9L_mlp4x` | 9 layers, MLP 4× | Conservative: drop 2 layers, widen MLP |
-| `p2_8L_mlp4x` | 8 layers, MLP 4× | Moderate reduction |
-| `p2_9L_mlp3x` | 9 layers, MLP 3× | Isolate depth effect |
-| `p2_7L_mlp4x` | 7 layers, MLP 4× | Aggressive shallow |
+**Hardware:** Clean GPUs, ~111-142ms/step.
 
-**Early signal:** p2_9L_mlp4x gets 330 steps (vs 292 baseline) with training bpb 1.942 (best so far), but post-quantization bpb is poor (4.61) due to GPTQ Cholesky fallback on undertrained model. The training signal is strong — this config may shine with 600s training.
+| Run | Config | Steps | ms/step | Training BPB | Final BPB |
+|-----|--------|-------|---------|-------------|-----------|
+| **p2_7L_mlp4x** | **7 layers, MLP 4×** | **814** | **111** | **1.489** | **2.350** |
+| p2_8L_mlp4x | 8 layers, MLP 4× | 713 | 126 | 1.534 | 5.136 |
+| p2_9L_mlp3x | 9 layers, MLP 3× | 691 | 130 | 1.546 | 5.090 |
+| p2_9L_mlp4x | 9 layers, MLP 4× | 636 | 142 | 1.579 | 6.405 |
 
----
+### Findings
+- **7L/MLP4x dominates** — 44% more steps than baseline (814 vs 564) at 111ms/step, best training BPB (1.489) AND best post-quantization BPB (2.350) by a massive margin.
+- The depth-for-width tradeoff from scaled experiments transfers to full scale even more strongly than expected.
+- Shallower = faster steps = more training = better loss at fixed wallclock.
 
-## Phase 3: Combined Winners
-
-Stack best features from Phase 1 onto best architecture from Phase 2.
-
-| Run | Config | Justification |
-|-----|--------|---------------|
-| `p3_9L_mlp4x_swiglu_trigram` | 9L/MLP4x + SwiGLU + trigram | Full combo (trigram kept for completeness) |
-| `p3_8L_mlp4x_swiglu_trigram` | 8L/MLP4x + SwiGLU + trigram | More aggressive depth |
-| `p3_11L_swiglu_trigram` | 11L/MLP3x + SwiGLU + trigram | Safe: SOTA depth + SwiGLU |
-| `p3_9L_mlp4x_leaky_trigram` | 9L/MLP4x + LeakyReLU² + trigram | Fallback |
-
-**Given Phase 1 results, the most promising combo is SwiGLU + reduced depth (9L/MLP4x).** If Phase 2 confirms depth/width helps, Phase 3 should produce the best architecture.
+**Decision: Use 7L/MLP4x as base architecture.**
 
 ---
 
-## Phase 4: TTT — LoRA vs FFT + Rank Sweep
+## Phase 3 Results: Combined Winners (COMPLETED)
 
-All runs train the same base model. They differ only in post-training TTT evaluation.
+> ⚠️ Mixed hardware conditions. First two experiments ran on clean GPUs (~130-142ms/step). Last two ran with phantom CUDA memory (~355-645ms/step). Cross-condition comparisons unreliable.
 
-### LoRA Rank Sweep
-| Run | Config |
-|-----|--------|
-| `p4_lora_r4` | `TTT_LORA_RANK=4` |
-| `p4_lora_r8` | `TTT_LORA_RANK=8` |
-| `p4_lora_r16` | `TTT_LORA_RANK=16` |
-| `p4_lora_r32` | `TTT_LORA_RANK=32`, batch=32 |
+| Run | Config | Steps | ms/step | Training BPB | Final BPB | GPU |
+|-----|--------|-------|---------|-------------|-----------|-----|
+| p3_11L_swiglu_trigram | 11L/MLP3x + SwiGLU + trigram | 254 | 355 | 2.649 | 3.413 | Degraded |
+| p3_9L_mlp4x_leaky_trigram | 9L/MLP4x + LeakyReLU² + trigram | 141 | 645 | 3.215 | 3.429 | Degraded |
+| **p3_8L_mlp4x_swiglu_trigram** | **8L/MLP4x + SwiGLU + trigram** | **637** | **142** | **1.550** | **3.904** | **Clean** |
+| p3_9L_mlp4x_swiglu_trigram | 9L/MLP4x + SwiGLU + trigram | 695 | 130 | 1.566 | 4.094 | Clean |
 
-### FFT (Full Fine-Tuning)
-| Run | Config |
-|-----|--------|
-| `p4_fft_last2` | `TTT_MODE=fft2` |
-| `p4_fft_last4` | `TTT_MODE=fft4` |
-| `p4_fft_all` | `TTT_MODE=fft_all` |
+### Findings (clean runs only)
+- 8L/MLP4x + SwiGLU (3.904) beats 9L variant (4.094), consistent with Phase 2's shallower-is-better finding.
+- Degraded-GPU runs got lower absolute BPB due to GPTQ quantizing undertrained models more easily — not a real signal.
 
-### LoRA Variations (including MLP targets)
-| Run | Config | Rationale |
-|-----|--------|-----------|
-| `p4_lora_r16_3step` | r16, `TTT_STEPS=3` | Multiple gradient steps per chunk |
-| `p4_lora_r16_chunk128` | r16, `TTT_CHUNK_SIZE=128` | Finer-grained adaptation |
-| `p4_lora_r16_qvk` | r16, `TTT_LORA_TARGETS=qvk` | Adapt K projections too |
-| `p4_lora_r16_qv_mlp` | r16, `TTT_LORA_TARGETS=qv_mlp` | **LoRA on attention + MLP** |
-| `p4_lora_r16_qvk_mlp` | r16, `TTT_LORA_TARGETS=qvk_mlp` | **Full coverage: Q/V/K + MLP** |
-| `p4_bias_ttt` | `TTT_MODE=bias` | Minimal adapter baseline |
+**Decision: 8L/MLP4x + SwiGLU for the combined config. Need clean rerun of 7L/MLP4x + SwiGLU.**
+
+---
+
+## Phase 4 Results: TTT — LoRA vs FFT + Rank Sweep (COMPLETED)
+
+> ⚠️ Most Phase 4 experiments ran with phantom CUDA memory (~370ms/step, ~240 steps). Within-phase comparisons are valid. A few experiments (fft_last4, fft_all, lora_r16_3step) ran on clean GPUs and are not directly comparable.
+
+All TTT experiments train the same base model (11L/MLP3x). They differ only in post-training TTT evaluation.
+
+| Run | Steps | ms/step | Final BPB | GPU | Notes |
+|-----|-------|---------|-----------|-----|-------|
+| **p4_lora_r16_qvk** | 244 | 370 | **3.500** | Degraded | **Best TTT** |
+| p4_bias_ttt | 242 | 373 | 3.501 | Degraded | Near-tied, minimal params |
+| p4_lora_r8 | 243 | 372 | 3.505 | Degraded | |
+| p4_lora_r16_qv_mlp | 240 | 377 | 3.515 | Degraded | |
+| p4_lora_r16_qvk_mlp | 244 | 370 | 3.522 | Degraded | |
+| p4_lora_r16 | 241 | 374 | 3.533 | Degraded | |
+| p4_lora_r32 | 246 | 367 | 3.558 | Degraded | |
+| p4_fft_last2 | 245 | 369 | 3.570 | Degraded | |
+| p4_lora_r4 | 251 | 359 | 3.577 | Degraded | |
+| p4_fft_last4 | 563 | 160 | 6.578 | Clean | Not comparable |
+| p4_lora_r16_chunk128 | 417 | 217 | 6.173 | Partial | Not comparable |
+| p4_fft_all | 563 | 160 | 6.696 | Clean | Not comparable |
+| p4_lora_r16_3step | 563 | 160 | 6.827 | Clean | Not comparable |
+
+### Findings (degraded-GPU experiments, comparable within group)
+- **LoRA r16 + QVK targets** is the marginal winner (3.500), but **bias-only TTT** is nearly tied (3.501) with far fewer parameters.
+- LoRA r8–r16 is the sweet spot, confirming scaled test findings.
+- LoRA r32 and r4 are slightly worse (overfitting and underfitting respectively).
+- Adding MLP targets (qv_mlp, qvk_mlp) doesn't help over attention-only.
+- FFT variants are slightly worse than LoRA in this comparison.
+
+**Decision: LoRA r16 with QVK targets for TTT. Bias-only TTT is a strong minimal alternative.**
 
 Note: SOTA PR #1019 dropped TTT ("25 failed attempts"). Our TTT implementation operates on the quantized eval model, which may behave differently.
 

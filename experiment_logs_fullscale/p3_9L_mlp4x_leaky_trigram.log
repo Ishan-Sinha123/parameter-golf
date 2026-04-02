@@ -1,0 +1,76 @@
+W0402 08:50:16.503000 369153 torch/distributed/run.py:851] 
+W0402 08:50:16.503000 369153 torch/distributed/run.py:851] *****************************************
+W0402 08:50:16.503000 369153 torch/distributed/run.py:851] Setting OMP_NUM_THREADS environment variable for each process to be 1 in default, to avoid your system being overloaded, please further tune the variable for optimal performance in your application as needed. 
+W0402 08:50:16.503000 369153 torch/distributed/run.py:851] *****************************************
+/workspace/parameter-golf/.venv/lib/python3.12/site-packages/torch/distributed/c10d_logger.py:83: UserWarning: barrier(): using the device under current context. You can specify `device_id` in `init_process_group` to mute this warning.
+  return func(*args, **kwargs)
+[rank0]:[W402 08:50:24.898084614 ProcessGroupNCCL.cpp:5188] Guessing device ID based on global rank. This can cause a hang if rank to GPU mapping is heterogeneous. You can specify device_id in init_process_group()
+logs/p3_9L_mlp4x_leaky_trigram.txt
+val_bpb:enabled tokenizer_kind=sentencepiece tokenizer_path=/workspace/parameter-golf/data/tokenizers/fineweb_1024_bpe.model
+train_loader:dataset:fineweb10B_sp1024 train_shards:80
+val_loader:shards pattern=/workspace/parameter-golf/data/datasets/fineweb10B_sp1024/fineweb_val_*.bin tokens:62021632
+model_params:27062860
+mtp_num_heads:0 mtp_loss_weight:0.2 mtp_params:0
+XSA:last_11 active_layers:[0, 1, 2, 3, 4, 5, 6, 7, 8]
+world_size:8 grad_accum_steps:1
+sdp_backends:cudnn=False flash=True mem_efficient=False math=False
+attention_mode:gqa num_heads:8 num_kv_heads:4
+tie_embeddings:True embed_lr:0.035 head_lr:0.0 matrix_lr:0.025 scalar_lr:0.025
+train_batch_tokens:524288 train_seq_len:1024 iterations:20000 warmup_steps:20 max_wallclock_seconds:90.000
+seed:1337
+warmup_step:1/20
+warmup_step:2/20
+warmup_step:3/20
+warmup_step:4/20
+warmup_step:5/20
+warmup_step:6/20
+warmup_step:7/20
+warmup_step:8/20
+warmup_step:9/20
+warmup_step:10/20
+warmup_step:11/20
+warmup_step:12/20
+warmup_step:13/20
+warmup_step:14/20
+warmup_step:15/20
+warmup_step:16/20
+warmup_step:17/20
+warmup_step:18/20
+warmup_step:19/20
+warmup_step:20/20
+step:0/20000 val_loss:6.9301 val_bpb:4.1044 train_time:0ms step_avg:0.02ms
+step:1/20000 train_loss:6.9305 train_time:730ms step_avg:730.37ms
+late_qat:enabled step:1 scale:0.0299
+step:2/20000 train_loss:8.6980 train_time:995ms step_avg:497.32ms
+step:3/20000 train_loss:8.6637 train_time:1744ms step_avg:581.44ms
+step:4/20000 train_loss:8.5718 train_time:2553ms step_avg:638.24ms
+step:5/20000 train_loss:8.3783 train_time:3330ms step_avg:665.91ms
+step:6/20000 train_loss:8.6019 train_time:4111ms step_avg:685.13ms
+step:7/20000 train_loss:8.1024 train_time:4794ms step_avg:684.84ms
+step:8/20000 train_loss:8.0434 train_time:5602ms step_avg:700.29ms
+step:9/20000 train_loss:7.8451 train_time:6397ms step_avg:710.77ms
+step:10/20000 train_loss:7.6316 train_time:7156ms step_avg:715.62ms
+swa:start step:50
+step:141/20000 val_loss:5.4282 val_bpb:3.2149 train_time:90941ms step_avg:644.97ms
+stopping_early: wallclock_cap train_time:90941ms step:141/20000
+peak memory allocated: 20292 MiB reserved: 20982 MiB
+ema:applying EMA weights
+DIAGNOSTIC post_ema val_loss:5.7723 val_bpb:3.4187 eval_time:11861ms
+Serialized model: 106268654 bytes
+Code size: 125477 bytes
+gptq:building non-banked model for Hessian collection...
+gptq:generating autoregressive calibration data (64 seqs x 2048 tokens, temp=0.8)...
+gptq:generated 64 sequences in 74.3s
+gptq:collecting hessians from autoregressive data...
+gptq:collected hessians for 56 layers (AR self-gen)
+selective_prune: 6330948 ±1 candidates, unpruned=4.34MB target=15.9MB
+selective_prune: already fits, no pruning needed
+Serialized model int6+lzma: 4423976 bytes
+Total submission size int6+lzma: 4549453 bytes
+/workspace/parameter-golf/.venv/lib/python3.12/site-packages/torch/distributed/c10d_logger.py:83: UserWarning: barrier(): using the device under current context. You can specify `device_id` in `init_process_group` to mute this warning.
+  return func(*args, **kwargs)
+final_int6_roundtrip val_loss:5.7901 val_bpb:3.4292 eval_time:12242ms
+final_int6_roundtrip_exact val_loss:5.79011735 val_bpb:3.42923363
+final_int6_sliding_window val_loss:5.7901 val_bpb:3.4293 stride:64 eval_time:402513ms
+final_int6_sliding_window_exact val_loss:5.79013845 val_bpb:3.42925521
+final_int8_zlib_roundtrip_exact val_loss:5.79013845 val_bpb:3.42925521
