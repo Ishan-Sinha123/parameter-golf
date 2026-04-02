@@ -1,0 +1,66 @@
+[W401 22:35:24.980683596 CUDAAllocatorConfig.h:28] Warning: expandable_segments not supported on this platform (function operator())
+logs/p6_mlp4x_4h.txt
+val_bpb:enabled tokenizer_kind=sentencepiece tokenizer_path=./data/tokenizers/fineweb_1024_bpe.model
+train_loader:dataset:fineweb10B_sp1024 train_shards:80
+val_loader:shards pattern=./data/datasets/fineweb10B_sp1024/fineweb_val_*.bin tokens:62021632
+model_params:11020440
+world_size:1 grad_accum_steps:8
+sdp_backends:cudnn=False flash=True mem_efficient=False math=False
+attention_mode:gqa num_heads:4 num_kv_heads:4
+tie_embeddings:True embed_lr:0.05 head_lr:0.0 matrix_lr:0.04 scalar_lr:0.04
+train_batch_tokens:262144 train_seq_len:512 iterations:20000 warmup_steps:10 max_wallclock_seconds:90.000
+seed:1337
+warmup_step:1/10
+warmup_step:2/10
+warmup_step:3/10
+warmup_step:4/10
+warmup_step:5/10
+warmup_step:6/10
+warmup_step:7/10
+warmup_step:8/10
+warmup_step:9/10
+warmup_step:10/10
+step:0/20000 val_loss:6.9327 val_bpb:4.1059 train_time:0ms step_avg:0.02ms
+step:1/20000 train_loss:6.9335 train_time:635ms step_avg:634.82ms
+step:2/20000 train_loss:13.8181 train_time:1271ms step_avg:635.40ms
+step:3/20000 train_loss:12.0459 train_time:1907ms step_avg:635.77ms
+step:4/20000 train_loss:9.9814 train_time:2545ms step_avg:636.25ms
+step:5/20000 train_loss:8.1162 train_time:3182ms step_avg:636.38ms
+step:6/20000 train_loss:6.8526 train_time:3822ms step_avg:636.96ms
+step:7/20000 train_loss:6.2422 train_time:4458ms step_avg:636.88ms
+step:8/20000 train_loss:5.8656 train_time:5095ms step_avg:636.88ms
+step:9/20000 train_loss:5.7315 train_time:5732ms step_avg:636.87ms
+step:10/20000 train_loss:5.7206 train_time:6368ms step_avg:636.81ms
+step:10/20000 val_loss:5.6978 val_bpb:3.3746 train_time:6370ms step_avg:636.96ms
+step:20/20000 val_loss:5.4780 val_bpb:3.2444 train_time:12742ms step_avg:637.11ms
+step:30/20000 val_loss:5.0485 val_bpb:2.9900 train_time:19108ms step_avg:636.93ms
+step:40/20000 val_loss:4.6702 val_bpb:2.7659 train_time:25481ms step_avg:637.02ms
+step:50/20000 val_loss:4.4538 val_bpb:2.6378 train_time:31847ms step_avg:636.95ms
+step:60/20000 val_loss:4.3121 val_bpb:2.5539 train_time:38226ms step_avg:637.10ms
+step:70/20000 val_loss:4.1994 val_bpb:2.4871 train_time:44600ms step_avg:637.14ms
+step:80/20000 val_loss:4.0934 val_bpb:2.4243 train_time:50967ms step_avg:637.09ms
+step:90/20000 val_loss:3.9959 val_bpb:2.3666 train_time:57332ms step_avg:637.02ms
+W0401 22:45:21.385000 713141 torch/distributed/elastic/agent/server/api.py:704] Received Signals.SIGTERM death signal, shutting down workers
+W0401 22:45:21.386000 713141 torch/distributed/elastic/multiprocessing/api.py:897] Sending process 713173 closing signal SIGTERM
+Traceback (most recent call last):
+  File "/home/ubuntu/parameter-golf/.venv/bin/torchrun", line 8, in <module>
+    sys.exit(main())
+  File "/home/ubuntu/parameter-golf/.venv/lib/python3.10/site-packages/torch/distributed/elastic/multiprocessing/errors/__init__.py", line 355, in wrapper
+    return f(*args, **kwargs)
+  File "/home/ubuntu/parameter-golf/.venv/lib/python3.10/site-packages/torch/distributed/run.py", line 919, in main
+    run(args)
+  File "/home/ubuntu/parameter-golf/.venv/lib/python3.10/site-packages/torch/distributed/run.py", line 910, in run
+    elastic_launch(
+  File "/home/ubuntu/parameter-golf/.venv/lib/python3.10/site-packages/torch/distributed/launcher/api.py", line 138, in __call__
+    return launch_agent(self._config, self._entrypoint, list(args))
+  File "/home/ubuntu/parameter-golf/.venv/lib/python3.10/site-packages/torch/distributed/launcher/api.py", line 260, in launch_agent
+    result = agent.run()
+  File "/home/ubuntu/parameter-golf/.venv/lib/python3.10/site-packages/torch/distributed/elastic/metrics/api.py", line 137, in wrapper
+    result = f(*args, **kwargs)
+  File "/home/ubuntu/parameter-golf/.venv/lib/python3.10/site-packages/torch/distributed/elastic/agent/server/api.py", line 696, in run
+    result = self._invoke_run(role)
+  File "/home/ubuntu/parameter-golf/.venv/lib/python3.10/site-packages/torch/distributed/elastic/agent/server/api.py", line 855, in _invoke_run
+    time.sleep(monitor_interval)
+  File "/home/ubuntu/parameter-golf/.venv/lib/python3.10/site-packages/torch/distributed/elastic/multiprocessing/api.py", line 84, in _terminate_process_handler
+    raise SignalException(f"Process {os.getpid()} got signal: {sigval}", sigval=sigval)
+torch.distributed.elastic.multiprocessing.api.SignalException: Process 713141 got signal: 15
