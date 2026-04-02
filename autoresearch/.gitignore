@@ -21,3 +21,11 @@ dev/
 
 # Results file
 results.tsv
+
+# Runtime artifacts
+uv.lock
+agent.log
+nohup.out
+progress.png
+.python-version
+run.log

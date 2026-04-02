@@ -90,4 +90,4 @@
 **Submission size:** 16.67MB (over 16MB limit — needs more aggressive pruning)
 **SOTA comparison:** 1.1147 (0.056 gap)
 
-Full log: `experiment_logs_fullscale/best_combo_7L_swiglu_ttt_qvk_r16.log`
+Full log: `experiment_logs/fullscale/best_combo_7L_swiglu_ttt_qvk_r16.log`

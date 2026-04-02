@@ -17,7 +17,7 @@ Before burning expensive H100 hours, we ran 30 scaled-down ablations on a single
 
 This was the biggest surprise. At a fixed wall-clock budget, **reducing depth and increasing MLP width dramatically improves val_bpb**.
 
-![MLP Expansion Comparison](experiment_logs_scaled/plots/mlp_expansion_comparison.png)
+![MLP Expansion Comparison](experiment_logs/scaled/plots/mlp_expansion_comparison.png)
 
 The left panel shows per-step learning — all configs learn at roughly similar rates per gradient update. The right panel is what matters: **val_bpb vs wall time**.
 
@@ -37,7 +37,7 @@ This is consistent with the scaling literature — wider models outperform deepe
 
 ## Finding 2: Trigram Hash Is a Free Lunch
 
-![Architecture Winners](experiment_logs_scaled/plots/architecture_winners.png)
+![Architecture Winners](experiment_logs/scaled/plots/architecture_winners.png)
 
 **Trigram hash embedding** (green) was the best single-feature addition, improving val_bpb by 0.063 over baseline. It works by adding a parallel embedding channel that hashes 3-token windows, giving the model n-gram context at minimal compute cost.
 
@@ -49,7 +49,7 @@ This is consistent with the scaling literature — wider models outperform deepe
 
 ## Finding 3: TTT Variants Don't Affect Training
 
-![TTT Comparison](experiment_logs_scaled/plots/ttt_lora_vs_fft.png)
+![TTT Comparison](experiment_logs/scaled/plots/ttt_lora_vs_fft.png)
 
 This plot tells the story: all 9 TTT experiments (LoRA rank 8/16/32, FFT 2L/4L/all, bias-only, multi-step, chunk variants) produce **identical training curves**. They literally overlap.
 
@@ -86,7 +86,7 @@ Several ideas that seemed promising on paper failed in practice:
 
 ## Full Rankings
 
-![All Experiments](experiment_logs_scaled/plots/final_bpb_bar_chart.png)
+![All Experiments](experiment_logs/scaled/plots/final_bpb_bar_chart.png)
 
 **Red** = MLP/depth variants | **Blue** = TTT variants (identical training) | **Green** = embedding variants
 
