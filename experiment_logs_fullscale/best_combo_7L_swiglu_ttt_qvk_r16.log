@@ -81,3 +81,4 @@ step:4200/20000 val_loss:2.1021 val_bpb:1.2450 train_time:418148ms step_avg:99.5
 step:4400/20000 val_loss:2.0967 val_bpb:1.2418 train_time:438059ms step_avg:99.56ms
 step:4500/20000 train_loss:2.1894 train_time:447953ms step_avg:99.55ms
 step:4600/20000 val_loss:2.0854 val_bpb:1.2351 train_time:457971ms step_avg:99.56ms
+step:4800/20000 val_loss:2.0748 val_bpb:1.2288 train_time:477883ms step_avg:99.56ms
