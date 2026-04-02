@@ -479,7 +479,7 @@ device = torch.device("cuda", _local_rank)
 autocast_ctx = torch.amp.autocast(device_type="cuda", dtype=torch.bfloat16)
 H100_BF16_PEAK_FLOPS = 989.5e12
 
-tokenizer = Tokenizer.from_directory()
+tokenizer = Tokenizer.from_file()
 vocab_size = tokenizer.get_vocab_size()
 if _master:
     print(f"Vocab size: {vocab_size:,}")
@@ -531,9 +531,9 @@ model_raw = model  # keep unwrapped ref for eval
 if _distributed:
     model = DDP(model, device_ids=[_local_rank])
 
-train_loader = make_dataloader(tokenizer, DEVICE_BATCH_SIZE, MAX_SEQ_LEN, "train",
+train_loader = make_dataloader(DEVICE_BATCH_SIZE, MAX_SEQ_LEN, "train",
                                rank=_rank, world_size=_world_size)
-x, y, epoch = next(train_loader)  # prefetch first batch
+x, y = next(train_loader)  # prefetch first batch
 
 if _master:
     print(f"Time budget: {TIME_BUDGET}s")
@@ -576,7 +576,7 @@ while True:
         train_loss = loss.detach()
         loss = loss / grad_accum_steps
         loss.backward()
-        x, y, epoch = next(train_loader)
+        x, y = next(train_loader)
 
     # Progress and schedules
     progress = min(total_training_time / TIME_BUDGET, 1.0)
@@ -615,7 +615,7 @@ while True:
     remaining = max(0, TIME_BUDGET - total_training_time)
 
     if _master:
-        print(f"\rstep {step:05d} ({pct_done:.1f}%) | loss: {debiased_smooth_loss:.6f} | lrm: {lrm:.2f} | dt: {dt*1000:.0f}ms | tok/sec: {tok_per_sec:,} | mfu: {mfu:.1f}% | epoch: {epoch} | remaining: {remaining:.0f}s    ", end="", flush=True)
+        print(f"\rstep {step:05d} ({pct_done:.1f}%) | loss: {debiased_smooth_loss:.6f} | lrm: {lrm:.2f} | dt: {dt*1000:.0f}ms | tok/sec: {tok_per_sec:,} | mfu: {mfu:.1f}% | remaining: {remaining:.0f}s    ", end="", flush=True)
 
     # GC management (Python's GC causes ~500ms stalls)
     if step == 0:
