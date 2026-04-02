@@ -135,3 +135,41 @@ Three clear winners emerged from 30 scaled ablations:
 For TTT eval: **LoRA r16** is the sweet spot, confirmed both from training-time validation and standalone eval.
 
 The open question: **do these gains transfer to full scale (11L/512d, 8×H100)?** The depth/width tradeoff is scale-dependent — 8-GPU parallelism changes the step-time calculus. That's what we test next.
+
+---
+
+## Full-Scale Experiments on SOTA Fork (April 2, 2026)
+
+### Setup Change: train_alpha.py → train_sota_exp.py
+
+The scaled ablations used `train_alpha.py`, which was missing ~8 critical SOTA features (XSA, GPTQ, EMA/SWA, partial RoPE, value embeddings, SmearGate, parameter banking, late QAT). To get meaningful results, we forked the actual SOTA script (`train_gpt.py` from PR #1019, 1.1147 bpb) as `train_sota_exp.py` and added:
+
+- SwiGLU activation toggle (`MLP_ACTIVATION=swiglu`)
+- TTT (LoRA/FFT/bias) with MLP+attention targets, adapted for SOTA's banked parameter architecture
+- FA3 fallback (tries Hopper kernels, falls back to PyTorch SDPA)
+- GPTQ Cholesky fallback for undertrained models
+
+**Hardware:** 8×H100 PCIe, PyTorch 2.6.0+cu124, FA3 via flash-attn 2.8.3.  
+**Training:** 90s per run (292 steps at ~305ms/step). Full GPTQ+LZMA pipeline after training.
+
+### Phase 1 Results: SwiGLU Dominates
+
+| Run | Training BPB | Final BPB | Steps | Delta vs baseline |
+|-----|-------------|-----------|-------|-------------------|
+| **p1_swiglu** | **1.958** | **3.694** | 306 | **-0.560** |
+| p1_swiglu_trigram | 1.967 | 3.723 | 305 | -0.531 |
+| p1_leaky_relu2 | 2.029 | 4.247 | 291 | -0.007 |
+| p1_trigram_hash | 2.035 | 4.253 | -0.001 |
+| p1_baseline | 2.028 | 4.254 | 292 | — |
+
+**Key insight:** SwiGLU is both faster (306 steps vs 292) and learns better (-0.56 bpb). Trigram hash is redundant on top of SOTA's BigramHash 3072×112.
+
+### Phase 2: In Progress
+
+Testing depth/width tradeoffs (9L/MLP4x, 8L/MLP4x, 9L/MLP3x, 7L/MLP4x). Early signal from p2_9L_mlp4x: best training bpb (1.942) and most steps (330), but poor post-quantization score due to GPTQ Cholesky fallback on undertrained model.
+
+### Next Steps
+
+- Complete Phases 2-4 (ideally on H100 SXM for faster iteration)
+- Combine SwiGLU + best depth/width config in Phase 3
+- Test TTT with MLP+attention LoRA targets in Phase 4
