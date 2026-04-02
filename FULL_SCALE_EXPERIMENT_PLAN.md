@@ -1,139 +1,168 @@
-# Full-Scale Experiment Plan (v2)
+# Full-Scale Experiment Plan (v3)
 
-**Goal:** Beat current SOTA of 1.11473 val_bpb  
-**Setup:** 90s training, 8×H100, `train_sota_exp.py` (fork of SOTA `train_gpt.py` with experiment features)  
-**Baseline:** SOTA config reproduced on our hardware (BigramHash 3072×112, XSA all layers, Parallel Muon, GPTQ int6, LZMA, etc.)  
-**Script:** `./scripts/run_fullscale.sh`  
-
----
-
-## What Changed from v1
-
-- **Switched from `train_alpha.py` to `train_sota_exp.py`** — a fork of the actual SOTA `train_gpt.py` (PR #1019). The old `train_alpha.py` was missing ~8 critical SOTA features (XSA, GPTQ, EMA/SWA, partial RoPE, value embeddings, SmearGate, parameter banking, late QAT). Experiments now stack on top of SOTA, not a weaker baseline.
-- **Added SwiGLU activation** as a toggleable option (`MLP_ACTIVATION=swiglu`)
-- **Added TTT (LoRA/FFT/bias)** with MLP+attention targets, ported to work with SOTA's banked architecture
-- **Added FA3 fallback** — tries `flash_attn.flash_attn_interface` (FA3 Hopper kernels), falls back to PyTorch SDPA
-- **GPTQ Cholesky fallback** — gracefully falls back to percentile quantization when Hessians are ill-conditioned (common with short training runs)
-- **Trigram uses `TRIGRAM=1` env var** (SOTA convention), not `HASH_MODE=trigram`
-- **Full GPTQ+LZMA pipeline** runs on every experiment for accurate post-quantization scores
-
-### Hardware Note
-
-SOTA was developed on 8×H100 SXM (3.35 TB/s bandwidth, ~87ms/step → ~6900 steps in 600s). Our H100 PCIe setup gets ~305ms/step → ~292 steps in 90s. Per [Abay's analysis](https://abaybektursun.com), step-1000 bpb predicts final outcome at r=0.86 — our 292-step runs are below that threshold, so absolute bpb values are high. **Relative comparisons between experiments are still valid.**
-
-For production runs, use 8×H100 SXM with 600s training.
+**Goal:** Beat current SOTA of 1.11473 val_bpb
+**Script:** Unmodified SOTA `train_gpt.py` from `records/track_10min_16mb/2026-03-25_ValCalib_GPTQ_XSA_BigramHash3072/`
+**Runner:** `./scripts/run_ablations.sh`
+**Approach:** Every experiment runs the exact same SOTA code with different env var overrides. No code forks.
 
 ---
 
 ## Quick Start
 
+### 1. Setup (RunPod 8×H100 SXM)
+
 ```bash
-source .venv/bin/activate
-./scripts/run_fullscale.sh          # all 4 phases
-./scripts/run_fullscale.sh 1 2 3    # architecture only
-./scripts/run_fullscale.sh 4        # TTT comparison only
+git clone git@github.com:Ishan-Sinha123/parameter-golf.git
+cd parameter-golf
+pip install -r requirements.txt
+python3 data/cached_challenge_fineweb.py --variant sp1024
 ```
 
----
+### 2. Run SOTA baseline first (validate your setup)
 
-## Phase 1 Results: Feature Isolation (COMPLETED)
+```bash
+./scripts/run_ablations.sh 0
+```
 
-Tested each feature independently on SOTA config. All use `TTT_MODE=none`.  
-**Hardware:** Clean GPUs, ~160ms/step, ~560 steps in 90s.
+This reproduces PR #1019 exactly. Expected: ~1.1147 BPB on 8×H100 SXM, ~6900 steps in 600s.
 
-| Run | Change | Steps | ms/step | Training BPB | Final BPB | Delta |
-|-----|--------|-------|---------|-------------|-----------|-------|
-| **p1_swiglu** | `MLP_ACTIVATION=swiglu` | **607** | **148** | **1.599** | **4.148** | **-2.824** |
-| p1_swiglu_trigram | SwiGLU + `TRIGRAM=1` | 604 | 149 | 1.623 | 4.139 | -2.833 |
-| p1_leaky_relu2 | `MLP_ACTIVATION=leaky_relu2` | 564 | 160 | 1.632 | 6.622 | -0.350 |
-| p1_trigram_hash | `TRIGRAM=1` | 562 | 160 | 1.639 | 6.891 | -0.081 |
-| p1_baseline | SOTA defaults | 564 | 160 | 1.632 | 6.972 | — |
+### 3. Run ablation categories
 
-### Findings
-- **SwiGLU is the clear winner** — 2.8 bpb improvement AND 8% faster per step (148ms vs 160ms). The gating mechanism provides better gradient flow than LeakyReLU².
-- **Trigram hash does nothing** on top of SOTA's existing BigramHash 3072×112. The bigram already captures the n-gram signal; trigram is redundant.
-- **SwiGLU + trigram ≈ SwiGLU alone** — trigram adds no value when bigram is already large.
-- **LeakyReLU² shows modest improvement** over baseline in final BPB (6.622 vs 6.972).
+```bash
+# Architecture experiments (most promising)
+./scripts/run_ablations.sh A
 
-**Decision: Use SwiGLU. Drop trigram.**
+# Training dynamics
+./scripts/run_ablations.sh B
 
----
+# Eval-time (stride changes, no retraining needed)
+./scripts/run_ablations.sh C
 
-## Phase 2 Results: Depth/Width Tradeoff (COMPLETED)
+# Combinations (run after A/B/C show signal)
+./scripts/run_ablations.sh D
+```
 
-**Hardware:** Clean GPUs, ~111-142ms/step.
+### 4. Run specific experiments
 
-| Run | Config | Steps | ms/step | Training BPB | Final BPB |
-|-----|--------|-------|---------|-------------|-----------|
-| **p2_7L_mlp4x** | **7 layers, MLP 4×** | **814** | **111** | **1.489** | **2.350** |
-| p2_8L_mlp4x | 8 layers, MLP 4× | 713 | 126 | 1.534 | 5.136 |
-| p2_9L_mlp3x | 9 layers, MLP 3× | 691 | 130 | 1.546 | 5.090 |
-| p2_9L_mlp4x | 9 layers, MLP 4× | 636 | 142 | 1.579 | 6.405 |
+```bash
+./scripts/run_ablations.sh A1 A3 B1    # cherry-pick
+```
 
-### Findings
-- **7L/MLP4x dominates** — 44% more steps than baseline (814 vs 564) at 111ms/step, best training BPB (1.489) AND best post-quantization BPB (2.350) by a massive margin.
-- The depth-for-width tradeoff from scaled experiments transfers to full scale even more strongly than expected.
-- Shallower = faster steps = more training = better loss at fixed wallclock.
+### 5. Quick test runs (short budget, fewer GPUs)
 
-**Decision: Use 7L/MLP4x as base architecture.**
+```bash
+NGPUS=1 MAX_WALLCLOCK_SECONDS=90 ./scripts/run_ablations.sh 0 A1
+```
 
----
+### 6. Dry run (see commands without executing)
 
-## Phase 3 Results: Combined Winners (COMPLETED)
+```bash
+DRY_RUN=1 ./scripts/run_ablations.sh
+```
 
-> ⚠️ Mixed hardware conditions. First two experiments ran on clean GPUs (~130-142ms/step). Last two ran with phantom CUDA memory (~355-645ms/step). Cross-condition comparisons unreliable.
-
-| Run | Config | Steps | ms/step | Training BPB | Final BPB | GPU |
-|-----|--------|-------|---------|-------------|-----------|-----|
-| p3_11L_swiglu_trigram | 11L/MLP3x + SwiGLU + trigram | 254 | 355 | 2.649 | 3.413 | Degraded |
-| p3_9L_mlp4x_leaky_trigram | 9L/MLP4x + LeakyReLU² + trigram | 141 | 645 | 3.215 | 3.429 | Degraded |
-| **p3_8L_mlp4x_swiglu_trigram** | **8L/MLP4x + SwiGLU + trigram** | **637** | **142** | **1.550** | **3.904** | **Clean** |
-| p3_9L_mlp4x_swiglu_trigram | 9L/MLP4x + SwiGLU + trigram | 695 | 130 | 1.566 | 4.094 | Clean |
-
-### Findings (clean runs only)
-- 8L/MLP4x + SwiGLU (3.904) beats 9L variant (4.094), consistent with Phase 2's shallower-is-better finding.
-- Degraded-GPU runs got lower absolute BPB due to GPTQ quantizing undertrained models more easily — not a real signal.
-
-**Decision: 8L/MLP4x + SwiGLU for the combined config. Need clean rerun of 7L/MLP4x + SwiGLU.**
+Logs go to `experiment_logs/ablations/`. Summary printed at end of each run.
 
 ---
 
-## Phase 4 Results: TTT — LoRA vs FFT + Rank Sweep (COMPLETED)
+## Experiment Matrix
 
-> ⚠️ Most Phase 4 experiments ran with phantom CUDA memory (~370ms/step, ~240 steps). Within-phase comparisons are valid. A few experiments (fft_last4, fft_all, lora_r16_3step) ran on clean GPUs and are not directly comparable.
+All experiments use the unmodified SOTA `train_gpt.py`. Only env vars change.
 
-All TTT experiments train the same base model (11L/MLP3x). They differ only in post-training TTT evaluation.
+### Experiment 0: SOTA Baseline
 
-| Run | Steps | ms/step | Final BPB | GPU | Notes |
-|-----|-------|---------|-----------|-----|-------|
-| **p4_lora_r16_qvk** | 244 | 370 | **3.500** | Degraded | **Best TTT** |
-| p4_bias_ttt | 242 | 373 | 3.501 | Degraded | Near-tied, minimal params |
-| p4_lora_r8 | 243 | 372 | 3.505 | Degraded | |
-| p4_lora_r16_qv_mlp | 240 | 377 | 3.515 | Degraded | |
-| p4_lora_r16_qvk_mlp | 244 | 370 | 3.522 | Degraded | |
-| p4_lora_r16 | 241 | 374 | 3.533 | Degraded | |
-| p4_lora_r32 | 246 | 367 | 3.558 | Degraded | |
-| p4_fft_last2 | 245 | 369 | 3.570 | Degraded | |
-| p4_lora_r4 | 251 | 359 | 3.577 | Degraded | |
-| p4_fft_last4 | 563 | 160 | 6.578 | Clean | Not comparable |
-| p4_lora_r16_chunk128 | 417 | 217 | 6.173 | Partial | Not comparable |
-| p4_fft_all | 563 | 160 | 6.696 | Clean | Not comparable |
-| p4_lora_r16_3step | 563 | 160 | 6.827 | Clean | Not comparable |
+| ID | Env Overrides | Description |
+|----|--------------|-------------|
+| **0** | *(none)* | Reproduce PR #1019 exactly (1.1147 BPB) |
 
-### Findings (degraded-GPU experiments, comparable within group)
-- **LoRA r16 + QVK targets** is the marginal winner (3.500), but **bias-only TTT** is nearly tied (3.501) with far fewer parameters.
-- LoRA r8–r16 is the sweet spot, confirming scaled test findings.
-- LoRA r32 and r4 are slightly worse (overfitting and underfitting respectively).
-- Adding MLP targets (qv_mlp, qvk_mlp) doesn't help over attention-only.
-- FFT variants are slightly worse than LoRA in this comparison.
+### Category A: Architecture
 
-**Decision: LoRA r16 with QVK targets for TTT. Bias-only TTT is a strong minimal alternative.**
+These test the depth/width tradeoff — our strongest finding from prior experiments. Note: `XSA_LAST_N` and `VE_LAYERS` are adjusted to match the new layer count.
 
-Note: SOTA PR #1019 dropped TTT ("25 failed attempts"). Our TTT implementation operates on the quantized eval model, which may behave differently.
+| ID | Env Overrides | Description |
+|----|--------------|-------------|
+| **A1** | `NUM_LAYERS=9 MLP_MULT=3.5 XSA_LAST_N=9 VE_LAYERS=7,8` | 9L + MLP 3.5x (PR #1105 width, fewer layers) |
+| **A2** | `NUM_LAYERS=8 MLP_MULT=4.0 XSA_LAST_N=8 VE_LAYERS=6,7` | 8L + MLP 4x (prior best combo) |
+| **A3** | `NUM_LAYERS=7 MLP_MULT=4.0 XSA_LAST_N=7 VE_LAYERS=5,6` | 7L + MLP 4x (scaled test winner) |
+| **A4** | `NUM_LAYERS=11 MLP_MULT=3.5` | 11L + MLP 3.5x (wider MLP, same depth as SOTA) |
+
+**Rationale:** Prior experiments showed 7L/MLP4x gets 44% more training steps than 11L/MLP3x. The question is whether this transfers at full 600s budget on SXM hardware.
+
+### Category B: Training Dynamics
+
+| ID | Env Overrides | Description |
+|----|--------------|-------------|
+| **B1** | `MATRIX_LR=0.03 SCALAR_LR=0.03` | Muon LR 0.03 (autoresearch found 0.03 > 0.025) |
+| **B2** | `WARMDOWN_ITERS=4500` | Longer warmdown (smoother quant transition) |
+| **B3** | `WARMDOWN_ITERS=5000` | Even longer warmdown |
+| **B4** | `BIGRAM_VOCAB_SIZE=3072 BIGRAM_DIM=112` | BigramHash 3072×112 (match submission.json) |
+| **B5** | `MUON_WD=0.06 ADAM_WD=0.06` | Higher weight decay |
+| **B6** | `HEAD_LR=0.01` | Higher unembedding LR |
+
+**Rationale:** Autoresearch sweep found Muon LR 0.03 and higher head LR are slightly better. The SOTA submission.json says 3072×112 bigram but the script defaults to 2048×128 — B4 checks if the submission values actually matter.
+
+### Category C: Eval-Time
+
+No retraining needed — these only change the sliding window eval stride. Run on any trained checkpoint.
+
+| ID | Env Overrides | Description |
+|----|--------------|-------------|
+| **C1** | `EVAL_STRIDE=32` | Sliding window stride 32 (2× more overlap) |
+| **C2** | `EVAL_STRIDE=16` | Sliding window stride 16 (4× more overlap) |
+
+**Rationale:** More overlap = better BPB but slower eval. PR #641 uses stride 16. SOTA uses stride 64. Need to check if the improvement justifies the eval time within the 10-minute eval budget.
+
+### Category D: Combinations
+
+Stack the winners from A + B + C. Run these after individual experiments show signal.
+
+| ID | Env Overrides | Description |
+|----|--------------|-------------|
+| **D1** | `NUM_LAYERS=7 MLP_MULT=4.0 XSA_LAST_N=7 VE_LAYERS=5,6 MATRIX_LR=0.03 SCALAR_LR=0.03` | 7L/4x + Muon 0.03 |
+| **D2** | `NUM_LAYERS=9 MLP_MULT=3.5 XSA_LAST_N=9 VE_LAYERS=7,8 MATRIX_LR=0.03 SCALAR_LR=0.03` | 9L/3.5x + Muon 0.03 |
+| **D3** | `NUM_LAYERS=11 MLP_MULT=3.5 BIGRAM_VOCAB_SIZE=3072 BIGRAM_DIM=112` | 11L/3.5x + bigger bigram |
+| **D4** | `NUM_LAYERS=7 MLP_MULT=4.0 XSA_LAST_N=7 VE_LAYERS=5,6 MATRIX_LR=0.03 SCALAR_LR=0.03 EVAL_STRIDE=16` | D1 + stride 16 eval |
 
 ---
 
-## Do NOT Run (Failed in Scaled Tests)
+## How the Pipeline Works
+
+Each experiment runs the full SOTA pipeline:
+
+1. **Train** — Parallel Muon + Adam optimizers, EMA + SWA weight averaging
+2. **GPTQ int6** — Full Hessian quantization with AR self-generated calibration data
+3. **LZMA compress** — Artifact must be ≤16MB
+4. **Sliding window eval** — Final val_bpb score
+
+No TTT — PR #1019 dropped it after 25 failed attempts. The GPTQ improvement more than compensated.
+
+---
+
+## What to Look For
+
+1. **Training BPB** — printed every `VAL_LOSS_EVERY` steps. Lower is better.
+2. **`final_int6_sliding_window_exact val_bpb:`** — this is the real score. Compare to SOTA 1.1147.
+3. **`artifact_bytes`** — must be ≤16,000,000. If over, need more aggressive quantization.
+4. **`step_avg`** — ms/step. Fewer layers = faster steps = more training. The depth/width tradeoff.
+
+---
+
+## Prior Results Summary (from v2 experiments)
+
+These used `train_sota_exp.py` (a modified fork) with 90s training. Directional findings only:
+
+| Finding | Evidence |
+|---------|----------|
+| **SwiGLU > LeakyReLU²** | 8% faster + better loss across all 3 tracks |
+| **7L/MLP4x > 11L/MLP3x** | 44% more steps, best training + post-quant BPB |
+| **Trigram hash is redundant** | No improvement on top of BigramHash 3072×112 |
+| **LoRA r16 QVK best for TTT** | Marginal over bias-only TTT |
+| **Muon LR 0.03 > 0.025** | Autoresearch sweep (36 experiments) |
+
+**Key caveat:** These were run on a modified script with 90s budget. The v3 experiments use the unmodified SOTA script at full budget to get definitive results.
+
+---
+
+## Do NOT Run (Failed in Prior Tests)
 
 | Experiment | Why Skip |
 |-----------|----------|
@@ -141,4 +170,4 @@ Note: SOTA PR #1019 dropped TTT ("25 failed attempts"). Our TTT implementation o
 | LN inverse sqrt | Aggressive decay hurts (+0.04 bpb) |
 | Gram Newton-Schulz | Wrong optimizer (+0.61 bpb) |
 | Causal conv (k=3) | No signal (+0.01 bpb) |
-| Trigram hash (on SOTA) | Redundant with BigramHash 3072×112 (Phase 1 result) |
+| Trigram hash (on SOTA) | Redundant with BigramHash 3072×112 |
