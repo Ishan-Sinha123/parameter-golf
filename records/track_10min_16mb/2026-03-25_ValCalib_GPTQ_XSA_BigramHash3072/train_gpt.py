@@ -67,6 +67,7 @@ class Hyperparameters:
     adam_eps = float(os.environ.get("ADAM_EPS", 1e-8))
     grad_clip_norm = float(os.environ.get("GRAD_CLIP_NORM", 0.3))
     eval_stride = int(os.environ.get("EVAL_STRIDE", 64))
+    mlp_activation = os.environ.get("MLP_ACTIVATION", "leaky_relu2")
     mtp_num_heads = int(os.environ.get("MTP_NUM_HEADS", 0))
     mtp_loss_weight = float(os.environ.get("MTP_LOSS_WEIGHT", 0.2))
     muon_beta2 = float(os.environ.get("MUON_BETA2", 0.95))
@@ -729,10 +730,14 @@ class ValueEmbedding(nn.Module):
         return h * self.scale.to(dtype=h.dtype)
 
 class MLP(nn.Module):
-    def __init__(self, dim: int, mlp_mult: int):
+    def __init__(self, dim: int, mlp_mult: int, activation: str = "leaky_relu2"):
         super().__init__()
-        # No CastedLinear -- weights come from banks
+        self.activation = activation
     def forward(self, x: Tensor, up_w: Tensor, down_w: Tensor) -> Tensor:
+        if self.activation == "swiglu":
+            combined = F.linear(x, up_w.to(x.dtype))
+            gate, up = combined.chunk(2, dim=-1)
+            return F.linear(F.silu(gate) * up, down_w.to(x.dtype))
         x = F.leaky_relu(F.linear(x, up_w.to(x.dtype)), negative_slope=0.5)
         return F.linear(x.square(), down_w.to(x.dtype))
 
@@ -750,13 +755,14 @@ class Block(nn.Module):
         dtg: bool = False,
         gated_attention: bool = False,
         value_residual: bool = False,
+        mlp_activation: str = "leaky_relu2",
     ):
         super().__init__()
         self.attn_norm = RMSNorm()
         self.mlp_norm = RMSNorm()
         self.attn = CausalSelfAttention(dim, num_heads, num_kv_heads, rope_base, qk_gain_init,
                                         gated_attention=gated_attention, value_residual=value_residual)
-        self.mlp = MLP(dim, mlp_mult)
+        self.mlp = MLP(dim, mlp_mult, activation=mlp_activation)
         self.attn_scale = nn.Parameter(torch.ones(dim, dtype=torch.float32))
         self.mlp_scale = nn.Parameter(torch.ones(dim, dtype=torch.float32))
         self.resid_mix = nn.Parameter(torch.stack((torch.ones(dim), torch.zeros(dim))).float())
@@ -805,6 +811,7 @@ class GPT(nn.Module):
         ve_layers: str = "9,10",
         gated_attention: bool = False,
         value_residual: bool = False,
+        mlp_activation: str = "leaky_relu2",
     ):
         super().__init__()
         self._ve_target_dim = num_kv_heads * (model_dim // num_heads)  # kv_dim for value projection
@@ -828,9 +835,11 @@ class GPT(nn.Module):
         kv_dim = num_kv_heads * head_dim
         mlp_dim = int(mlp_mult * model_dim)
         self.num_layers = num_layers
+        self.mlp_activation = mlp_activation
         self.qo_bank = nn.Parameter(torch.empty(2 * num_layers, model_dim, model_dim))
         self.kv_bank = nn.Parameter(torch.empty(2 * num_layers, kv_dim, model_dim))
-        self.mlp_up_bank = nn.Parameter(torch.empty(num_layers, mlp_dim, model_dim))
+        mlp_up_dim = 2 * mlp_dim if mlp_activation == "swiglu" else mlp_dim
+        self.mlp_up_bank = nn.Parameter(torch.empty(num_layers, mlp_up_dim, model_dim))
         self.mlp_down_bank = nn.Parameter(torch.empty(num_layers, model_dim, mlp_dim))
         self.blocks = nn.ModuleList(
             [
@@ -846,6 +855,7 @@ class GPT(nn.Module):
                     dtg=dtg,
                     gated_attention=gated_attention,
                     value_residual=value_residual,
+                    mlp_activation=mlp_activation,
                 )
                 for i in range(num_layers)
             ]
@@ -1185,9 +1195,19 @@ def quantize_int6_gptq(weight, hessian=None, clip_range=31, block_size=128):
     W = t32[:, perm].clone()
     W[:, dead[perm]] = 0
     H = H[perm][:, perm]
-    Hinv = torch.linalg.cholesky(H)
-    Hinv = torch.cholesky_inverse(Hinv)
-    Hinv = torch.linalg.cholesky(Hinv, upper=True)
+    # Retry cholesky with increasing damping if not positive-definite
+    for extra_damp in [0, 0.1, 1.0, 10.0]:
+        try:
+            if extra_damp > 0:
+                H[torch.arange(cols), torch.arange(cols)] += extra_damp * damp
+            Hinv = torch.linalg.cholesky(H)
+            Hinv = torch.cholesky_inverse(Hinv)
+            Hinv = torch.linalg.cholesky(Hinv, upper=True)
+            break
+        except torch._C._LinAlgError:
+            if extra_damp >= 10.0:
+                return _quantize_int6_percentile(t32, clip_range)
+            continue
     best_q = None; best_scale = None; best_err = float('inf')
     for pct in [0.9990, 0.9995, 0.9999, 0.99999, 1.0]:
         if pct < 1.0:
@@ -1356,20 +1376,27 @@ class _HessianAttn(nn.Module):
 
 class _HessianMLP(nn.Module):
     """Non-banked MLP with CastedLinear layers for Hessian hooks."""
-    def __init__(self, dim, mlp_mult):
+    def __init__(self, dim, mlp_mult, activation="leaky_relu2"):
         super().__init__()
-        self.fc = CastedLinear(dim, int(mlp_mult * dim), bias=False)
-        self.proj = CastedLinear(int(mlp_mult * dim), dim, bias=False)
+        mlp_dim = int(mlp_mult * dim)
+        fc_dim = 2 * mlp_dim if activation == "swiglu" else mlp_dim
+        self.fc = CastedLinear(dim, fc_dim, bias=False)
+        self.proj = CastedLinear(mlp_dim, dim, bias=False)
+        self.activation = activation
     def forward(self, x):
+        if self.activation == "swiglu":
+            combined = self.fc(x)
+            gate, up = combined.chunk(2, dim=-1)
+            return self.proj(F.silu(gate) * up)
         return self.proj(F.leaky_relu(self.fc(x), negative_slope=0.5).square())
 
 class _HessianBlock(nn.Module):
-    def __init__(self, dim, num_heads, num_kv_heads, mlp_mult, rope_base, qk_gain_init, layer_idx=0, ln_scale=False):
+    def __init__(self, dim, num_heads, num_kv_heads, mlp_mult, rope_base, qk_gain_init, layer_idx=0, ln_scale=False, mlp_activation="leaky_relu2"):
         super().__init__()
         self.attn_norm = RMSNorm()
         self.mlp_norm = RMSNorm()
         self.attn = _HessianAttn(dim, num_heads, num_kv_heads, rope_base, qk_gain_init)
-        self.mlp = _HessianMLP(dim, mlp_mult)
+        self.mlp = _HessianMLP(dim, mlp_mult, activation=mlp_activation)
         self.attn_scale = nn.Parameter(torch.ones(dim, dtype=torch.float32))
         self.mlp_scale = nn.Parameter(torch.ones(dim, dtype=torch.float32))
         self.resid_mix = nn.Parameter(torch.stack((torch.ones(dim), torch.zeros(dim))).float())
@@ -1388,7 +1415,8 @@ class _HessianGPT(nn.Module):
                  mlp_mult, tie_embeddings, logit_softcap, rope_base, qk_gain_init,
                  bigram_vocab_size=0, bigram_dim=128, xsa_last_n=0,
                  rope_dims=0, ln_scale=False,
-                 ve_enabled=False, ve_dim=128, ve_layers="9,10"):
+                 ve_enabled=False, ve_dim=128, ve_layers="9,10",
+                 mlp_activation="leaky_relu2"):
         super().__init__()
         self.tie_embeddings = tie_embeddings
         self.logit_softcap = logit_softcap
@@ -1402,7 +1430,7 @@ class _HessianGPT(nn.Module):
         self.skip_weights = nn.Parameter(torch.ones(self.num_skip_weights, model_dim, dtype=torch.float32))
         self.blocks = nn.ModuleList([
             _HessianBlock(model_dim, num_heads, num_kv_heads, mlp_mult, rope_base, qk_gain_init,
-                          layer_idx=i, ln_scale=ln_scale)
+                          layer_idx=i, ln_scale=ln_scale, mlp_activation=mlp_activation)
             for i in range(num_layers)
         ])
         if rope_dims > 0:
@@ -1647,6 +1675,7 @@ def main() -> None:
         ve_layers=args.ve_layers,
         gated_attention=args.gated_attention,
         value_residual=args.value_residual,
+        mlp_activation=args.mlp_activation,
     ).to(device).bfloat16()
     # Banks stay FP32 (like CastedLinear weights), cast to BF16 in forward
     base_model.qo_bank.data = base_model.qo_bank.data.float()
@@ -1966,6 +1995,7 @@ def main() -> None:
         bigram_vocab_size=args.bigram_vocab_size, bigram_dim=args.bigram_dim,
         xsa_last_n=args.xsa_last_n, rope_dims=args.rope_dims, ln_scale=args.ln_scale,
         ve_enabled=args.ve_enabled, ve_dim=args.ve_dim, ve_layers=args.ve_layers,
+        mlp_activation=args.mlp_activation,
     ).to(device).bfloat16()
     for m in hessian_model.modules():
         if isinstance(m, CastedLinear):
@@ -2072,6 +2102,7 @@ def main() -> None:
         rope_dims=args.rope_dims, ln_scale=args.ln_scale, dtg=args.dtg_enabled,
         ve_enabled=args.ve_enabled, ve_dim=args.ve_dim, ve_layers=args.ve_layers,
         gated_attention=args.gated_attention, value_residual=args.value_residual,
+        mlp_activation=args.mlp_activation,
     ).to(device).bfloat16()
     eval_model.qo_bank.data = eval_model.qo_bank.data.float()
     eval_model.kv_bank.data = eval_model.kv_bank.data.float()

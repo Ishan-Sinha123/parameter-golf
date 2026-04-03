@@ -35,6 +35,24 @@
 set -euo pipefail
 
 # --- Configuration ---
+# Resolve paths relative to repo root (needed early for torchrun discovery)
+REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+
+# Find torchrun: prefer /venv/main (CUDA-compatible torch), then .venv, then PATH
+TORCHRUN="${TORCHRUN:-}"
+if [ -z "$TORCHRUN" ]; then
+    if [ -x "/venv/main/bin/torchrun" ]; then
+        TORCHRUN="/venv/main/bin/torchrun"
+    elif [ -x "$REPO_ROOT/.venv/bin/torchrun" ]; then
+        TORCHRUN="$REPO_ROOT/.venv/bin/torchrun"
+    elif command -v torchrun &>/dev/null; then
+        TORCHRUN="torchrun"
+    else
+        echo "ERROR: torchrun not found. Set TORCHRUN=/path/to/torchrun or activate the right venv."
+        exit 1
+    fi
+fi
+
 NGPUS="${NGPUS:-$(nvidia-smi -L 2>/dev/null | wc -l)}"
 NGPUS="${NGPUS:-8}"
 [ "$NGPUS" -eq 0 ] && NGPUS=8
@@ -45,8 +63,6 @@ FULL_EVAL="${FULL_EVAL:-0}"
 LOG_DIR="${LOG_DIR:-experiment_logs/ablations}"
 SOTA_SCRIPT="${SOTA_SCRIPT:-records/track_10min_16mb/2026-03-25_ValCalib_GPTQ_XSA_BigramHash3072/train_gpt.py}"
 
-# Resolve paths relative to repo root
-REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$REPO_ROOT"
 
 if [ ! -f "$SOTA_SCRIPT" ]; then
@@ -78,6 +94,9 @@ EXPERIMENTS=(
     "B4_bigram_3072x112|BIGRAM_VOCAB_SIZE=3072 BIGRAM_DIM=112|BigramHash 3072x112 (match submission.json)"
     "B5_muon_wd_0.06|MUON_WD=0.06 ADAM_WD=0.06|Higher weight decay"
     "B6_head_lr_0.01|HEAD_LR=0.01|Higher unembedding LR (autoresearch: 0.008 > 0.004)"
+    "B7_swiglu|MLP_ACTIVATION=swiglu|SwiGLU activation (strongest finding across all tracks)"
+    "B8_softcap_15|LOGIT_SOFTCAP=15|Softcap 15 (autoresearch optimal)"
+    "B9_wd_0.2|MUON_WD=0.2 ADAM_WD=0.2|WD 0.2 (autoresearch optimal)"
 
     # === Category C: Eval-time (no training change, needs full sliding window) ===
     "C1_stride_32|EVAL_STRIDE=32|Sliding window stride 32 (more overlap)"
@@ -88,9 +107,13 @@ EXPERIMENTS=(
     "D2_9L_mlp3.5x_muon03|NUM_LAYERS=9 MLP_MULT=3.5 XSA_LAST_N=9 VE_LAYERS=7,8 MATRIX_LR=0.03 SCALAR_LR=0.03|9L/3.5x + Muon 0.03"
     "D3_11L_mlp3.5x_bigram3072|NUM_LAYERS=11 MLP_MULT=3.5 BIGRAM_VOCAB_SIZE=3072 BIGRAM_DIM=112|11L/3.5x + bigger bigram"
     "D4_best_combo_stride16|NUM_LAYERS=7 MLP_MULT=4.0 XSA_LAST_N=7 VE_LAYERS=5,6 MATRIX_LR=0.03 SCALAR_LR=0.03 EVAL_STRIDE=16|D1 + stride 16 eval"
+    "D5_7L_swiglu_muon03|NUM_LAYERS=7 MLP_MULT=4.0 MLP_ACTIVATION=swiglu XSA_LAST_N=7 VE_LAYERS=5,6 MATRIX_LR=0.03 SCALAR_LR=0.03|7L/4x + SwiGLU + Muon 0.03"
 )
 
 # --- Helper functions ---
+
+EVAL_TIMEOUT="${EVAL_TIMEOUT:-600}"  # 10 minute eval timeout (default)
+STATUS_FILE="${LOG_DIR}/status.json"
 
 needs_sliding_window() {
     local name="$1"
@@ -101,6 +124,21 @@ needs_sliding_window() {
     # Also if user forced it
     [[ "$FULL_EVAL" == "1" ]] && return 0
     return 1
+}
+
+update_status() {
+    local name="$1" status="$2" extra="${3:-}"
+    python3 -c "
+import json, os, time
+sf = '$STATUS_FILE'
+data = {}
+if os.path.exists(sf):
+    try:
+        with open(sf) as f: data = json.load(f)
+    except: pass
+data['$name'] = {'status': '$status', 'ts': time.time(), 'extra': '$extra'}
+with open(sf, 'w') as f: json.dump(data, f, indent=2)
+" 2>/dev/null || true
 }
 
 run_experiment() {
@@ -139,17 +177,23 @@ run_experiment() {
         env_cmd+="$envs "
     fi
 
-    local cmd="env $env_cmd torchrun --standalone --nproc_per_node=$NGPUS $SOTA_SCRIPT"
+    # Total timeout: training wallclock + eval timeout + 2 min buffer
+    local total_timeout=$(( WALLCLOCK + EVAL_TIMEOUT + 120 ))
+    local cmd="timeout $total_timeout env $env_cmd $TORCHRUN --standalone --nproc_per_node=$NGPUS $SOTA_SCRIPT"
 
     if [ "$DRY_RUN" = "1" ]; then
         echo "[DRY RUN] $cmd"
         echo ""
+        update_status "$name" "dry_run"
         return 0
     fi
 
     echo "Running: $cmd"
     echo "Started: $(date -Iseconds)"
+    echo "Timeout: ${total_timeout}s (${WALLCLOCK}s train + ${EVAL_TIMEOUT}s eval + 120s buffer)"
     echo ""
+
+    update_status "$name" "running"
 
     # Run and tee to log
     eval "$cmd" 2>&1 | tee "$logfile"
@@ -159,11 +203,30 @@ run_experiment() {
     echo "Finished: $(date -Iseconds) (exit code: $exit_code)"
 
     # Extract key metrics from log
+    local final_bpb="N/A"
     if [ -f "$logfile" ]; then
         echo "--- Key metrics ---"
         grep -E "final_int6_roundtrip_exact|final_int6_sliding_window_exact|model_params|step_avg|post_ema" "$logfile" | tail -5
+        final_bpb=$(grep -oP 'val_bpb:\K[\d.]+' "$logfile" | tail -1 || echo "N/A")
         echo ""
     fi
+
+    if [ $exit_code -eq 0 ]; then
+        update_status "$name" "completed" "$final_bpb"
+    elif [ $exit_code -eq 124 ]; then
+        update_status "$name" "timeout" "$final_bpb"
+    else
+        update_status "$name" "failed" "exit_$exit_code"
+    fi
+
+    # Kill leftover workers
+    pkill -f "train_gpt.py" 2>/dev/null || true
+    sleep 2
+    pkill -9 -f "train_gpt.py" 2>/dev/null || true
+    sleep 1
+
+    # Clean torch inductor cache to prevent /tmp from filling up
+    rm -rf /tmp/torchinductor_root /tmp/torchelastic_* /tmp/torch_* 2>/dev/null || true
 
     return $exit_code
 }
@@ -203,13 +266,13 @@ filters=("$@")
 if [ ${#filters[@]} -eq 0 ]; then
     # No args = run all
     for spec in "${EXPERIMENTS[@]}"; do
-        run_experiment "$spec"
+        run_experiment "$spec" || true
     done
 else
     for spec in "${EXPERIMENTS[@]}"; do
         for filter in "${filters[@]}"; do
             if match_experiment "$filter" "$spec"; then
-                run_experiment "$spec"
+                run_experiment "$spec" || true
                 break
             fi
         done

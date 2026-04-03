@@ -1,0 +1,86 @@
+W0403 01:42:49.606000 195804 site-packages/torch/distributed/run.py:851] 
+W0403 01:42:49.606000 195804 site-packages/torch/distributed/run.py:851] *****************************************
+W0403 01:42:49.606000 195804 site-packages/torch/distributed/run.py:851] Setting OMP_NUM_THREADS environment variable for each process to be 1 in default, to avoid your system being overloaded, please further tune the variable for optimal performance in your application as needed. 
+W0403 01:42:49.606000 195804 site-packages/torch/distributed/run.py:851] *****************************************
+logs/B6_head_lr_0.01.txt
+val_bpb:enabled tokenizer_kind=sentencepiece tokenizer_path=./data/tokenizers/fineweb_1024_bpe.model
+train_loader:dataset:fineweb10B_sp1024 train_shards:10
+val_loader:shards pattern=./data/datasets/fineweb10B_sp1024/fineweb_val_*.bin tokens:62021632
+model_params:26993756
+mtp_num_heads:0 mtp_loss_weight:0.2 mtp_params:0
+XSA:last_11 active_layers:[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+world_size:4 grad_accum_steps:2
+sdp_backends:cudnn=False flash=True mem_efficient=False math=False
+attention_mode:gqa num_heads:8 num_kv_heads:4
+tie_embeddings:True embed_lr:0.035 head_lr:0.0 matrix_lr:0.025 scalar_lr:0.025
+train_batch_tokens:786432 train_seq_len:2048 iterations:20000 warmup_steps:20 max_wallclock_seconds:180.000
+seed:1337
+warmup_step:1/20
+warmup_step:2/20
+warmup_step:3/20
+warmup_step:4/20
+warmup_step:5/20
+warmup_step:6/20
+warmup_step:7/20
+warmup_step:8/20
+warmup_step:9/20
+warmup_step:10/20
+warmup_step:11/20
+warmup_step:12/20
+warmup_step:13/20
+warmup_step:14/20
+warmup_step:15/20
+warmup_step:16/20
+warmup_step:17/20
+warmup_step:18/20
+warmup_step:19/20
+warmup_step:20/20
+step:0/20000 val_loss:6.9309 val_bpb:4.1049 train_time:0ms step_avg:0.02ms
+step:1/20000 train_loss:6.9314 train_time:221ms step_avg:221.22ms
+step:2/20000 train_loss:8.6932 train_time:341ms step_avg:170.39ms
+step:3/20000 train_loss:8.2281 train_time:510ms step_avg:170.07ms
+step:4/20000 train_loss:7.5714 train_time:680ms step_avg:169.96ms
+step:5/20000 train_loss:6.9325 train_time:850ms step_avg:169.91ms
+step:6/20000 train_loss:6.5094 train_time:1019ms step_avg:169.91ms
+step:7/20000 train_loss:6.2936 train_time:1190ms step_avg:170.05ms
+step:8/20000 train_loss:6.0484 train_time:1364ms step_avg:170.48ms
+step:9/20000 train_loss:5.9383 train_time:1535ms step_avg:170.55ms
+step:10/20000 train_loss:5.8519 train_time:1705ms step_avg:170.46ms
+step:100/20000 train_loss:3.4853 train_time:17119ms step_avg:171.19ms
+step:200/20000 train_loss:2.7703 train_time:34345ms step_avg:171.73ms
+step:200/20000 val_loss:2.8994 val_bpb:1.7172 train_time:34396ms step_avg:171.98ms
+step:300/20000 train_loss:2.6728 train_time:51569ms step_avg:171.90ms
+swa:start step:350
+step:400/20000 train_loss:2.5231 train_time:68875ms step_avg:172.19ms
+step:400/20000 val_loss:2.5222 val_bpb:1.4938 train_time:68987ms step_avg:172.47ms
+step:500/20000 train_loss:2.4427 train_time:86170ms step_avg:172.34ms
+late_qat:enabled step:519 scale:0.1498
+step:600/20000 train_loss:2.4107 train_time:103450ms step_avg:172.42ms
+step:600/20000 val_loss:2.3816 val_bpb:1.4105 train_time:103560ms step_avg:172.60ms
+step:700/20000 train_loss:2.4403 train_time:120721ms step_avg:172.46ms
+step:800/20000 train_loss:2.2821 train_time:138022ms step_avg:172.53ms
+step:800/20000 val_loss:2.3055 val_bpb:1.3654 train_time:138132ms step_avg:172.67ms
+step:900/20000 train_loss:2.1641 train_time:155367ms step_avg:172.63ms
+step:1000/20000 train_loss:2.3087 train_time:172656ms step_avg:172.66ms
+step:1000/20000 val_loss:2.2635 val_bpb:1.3406 train_time:172767ms step_avg:172.77ms
+step:1043/20000 val_loss:2.2602 val_bpb:1.3386 train_time:180211ms step_avg:172.78ms
+stopping_early: wallclock_cap train_time:180211ms step:1043/20000
+peak memory allocated: 23141 MiB reserved: 23522 MiB
+ema:applying EMA weights
+DIAGNOSTIC post_ema val_loss:2.3845 val_bpb:1.4122 eval_time:4110ms
+Serialized model: 106158518 bytes
+Code size: 103019 bytes
+gptq:building non-banked model for Hessian collection...
+gptq:generating autoregressive calibration data (64 seqs x 2048 tokens, temp=0.8)...
+gptq:generated 64 sequences in 163.2s
+gptq:collecting hessians from autoregressive data...
+gptq:collected hessians for 68 layers (AR self-gen)
+selective_prune: 10569065 ±1 candidates, unpruned=7.59MB target=15.9MB
+selective_prune: already fits, no pruning needed
+Serialized model int6+lzma: 7858636 bytes
+Total submission size int6+lzma: 7961655 bytes
+final_int6_roundtrip val_loss:2.8649 val_bpb:1.6967 eval_time:18123ms
+final_int6_roundtrip_exact val_loss:2.86487358 val_bpb:1.69673951
+final_int6_sliding_window_s64 val_loss:2.8378 val_bpb:1.6807 stride:64 eval_time:156631ms
+final_int6_sliding_window_s64_exact val_loss:2.83783542 val_bpb:1.68073043
+final_int8_zlib_roundtrip_exact val_loss:2.83783542 val_bpb:1.68073043

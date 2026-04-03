@@ -118,8 +118,11 @@ These test the depth/width tradeoff — our strongest finding from prior experim
 | **B4** | `BIGRAM_VOCAB_SIZE=3072 BIGRAM_DIM=112` | BigramHash 3072×112 (match submission.json) |
 | **B5** | `MUON_WD=0.06 ADAM_WD=0.06` | Higher weight decay |
 | **B6** | `HEAD_LR=0.01` | Higher unembedding LR |
+| **B7** | `MLP_ACTIVATION=swiglu` | SwiGLU activation (strongest finding across all tracks) |
+| **B8** | `LOGIT_SOFTCAP=15` | Softcap 15 (autoresearch optimal) |
+| **B9** | `MUON_WD=0.2 ADAM_WD=0.2` | WD 0.2 (autoresearch optimal) |
 
-**Rationale:** Autoresearch sweep found Muon LR 0.03 and higher head LR are slightly better. The SOTA submission.json says 3072×112 bigram but the script defaults to 2048×128 — B4 checks if the submission values actually matter.
+**Rationale:** Autoresearch sweep found Muon LR 0.03 and higher head LR are slightly better. The SOTA submission.json says 3072×112 bigram but the script defaults to 2048×128 — B4 checks if the submission values actually matter. B7 tests SwiGLU — the strongest finding from all 92 prior experiments. Note: SwiGLU doubles the MLP up-projection parameters (gate+up concatenated). B8 tests softcap 15 (autoresearch optimal vs default 30). B9 tests WD 0.2 (autoresearch found 0.2 >> 0.04 default).
 
 ### Category C: Eval-Time
 
@@ -142,6 +145,7 @@ Stack the winners from A + B + C. Run these after individual experiments show si
 | **D2** | `NUM_LAYERS=9 MLP_MULT=3.5 XSA_LAST_N=9 VE_LAYERS=7,8 MATRIX_LR=0.03 SCALAR_LR=0.03` | 9L/3.5x + Muon 0.03 |
 | **D3** | `NUM_LAYERS=11 MLP_MULT=3.5 BIGRAM_VOCAB_SIZE=3072 BIGRAM_DIM=112` | 11L/3.5x + bigger bigram |
 | **D4** | `NUM_LAYERS=7 MLP_MULT=4.0 XSA_LAST_N=7 VE_LAYERS=5,6 MATRIX_LR=0.03 SCALAR_LR=0.03 EVAL_STRIDE=16` | D1 + stride 16 eval |
+| **D5** | `NUM_LAYERS=7 MLP_MULT=4.0 MLP_ACTIVATION=swiglu XSA_LAST_N=7 VE_LAYERS=5,6 MATRIX_LR=0.03 SCALAR_LR=0.03` | 7L/4x + SwiGLU + Muon 0.03 |
 
 ---
 
