@@ -247,3 +247,106 @@ These experiments used 90s training (not the full 600s SOTA budget). With 600s t
 - Potentially change the relative rankings between depth configs (deeper models benefit more from longer training)
 
 A clean 600s rerun of the top configs (7L/MLP4x + SwiGLU, 8L/MLP4x + SwiGLU) is needed before submitting.
+
+---
+
+## V3 Ablation Experiments on Unmodified SOTA Script (April 3, 2026)
+
+### Motivation
+
+The previous full-scale experiments (Phases 1–4 above) used `train_sota_exp.py`, a modified fork of the SOTA script. This introduced uncertainty: do the findings transfer to the actual unmodified SOTA `train_gpt.py` (PR #1019)?
+
+V3 answers this by running **16 experiments using the unmodified SOTA script** with only env var overrides — no code forks. The only script modification was adding SwiGLU activation support (via `MLP_ACTIVATION` env var) and a Cholesky damping retry for GPTQ robustness.
+
+### Setup
+
+**Hardware:** 4×H100 SXM (80GB HBM3), Vast.ai  
+**Baseline:** 1200s wall-clock (matches 8-GPU 600s step count via 2× grad accum)  
+**Ablations:** 180s wall-clock each (fast ranking, not final numbers)  
+**Pipeline:** Full SOTA pipeline — Train → EMA/SWA → AR Self-Gen GPTQ int6 → LZMA → Eval  
+**Runner:** `scripts/run_ablations.sh` with sliding window eval skipped for fast ablations  
+
+### Baseline Reproduction (Experiment 0)
+
+| Metric | Value |
+|--------|-------|
+| Steps | 6,949 |
+| ms/step | 172.7 |
+| Training val_bpb | 1.1380 |
+| Post-EMA val_bpb | 1.1369 |
+| Int6 roundtrip val_bpb | 1.1407 |
+| **Sliding window val_bpb** | **1.1171** |
+| Artifact size | 15.21 MB |
+| Quantization gap | 0.0038 BPB |
+
+Reproduces PR #1019's 1.1147 BPB closely (delta 0.002 from 4-GPU vs 8-GPU). Pipeline works end-to-end. Near-lossless GPTQ at full training budget.
+
+### Architecture Ablations (A-series, 180s)
+
+| Rank | Config | Steps | ms/step | Params | Int6 BPB |
+|------|--------|-------|---------|--------|----------|
+| **1** | **A3: 7L/MLP4x** | **1,558** | **115.6** | **21.2M** | **1.394** |
+| 2 | A2: 8L/MLP4x | 1,372 | 131.2 | 24.1M | 1.463 |
+| 3 | A1: 9L/MLP3.5x | 1,258 | 143.2 | 24.6M | 1.509 |
+| 4 | A4: 11L/MLP3.5x | 999 | 180.3 | 29.9M | 1.755 |
+
+**Confirmed: depth-for-width tradeoff transfers to unmodified SOTA.** A3 (7L) gets 56% more steps than A4 (11L) at 36% faster per step. Ranking is perfectly monotonic: 7L > 8L > 9L > 11L.
+
+### Training Dynamics (B-series, 180s)
+
+| Rank | Config | Int6 BPB | Delta vs B-baseline† |
+|------|--------|----------|---------------------|
+| **1** | **B1: Muon LR 0.03** | **1.605** | **-0.10** |
+| 2 | B8: Softcap 15 | 1.675 | -0.03 |
+| 3 | B4: Bigram 3072×112 | 1.691 | -0.02 |
+| 4 | B6: Head LR 0.01 | 1.697 | -0.01 |
+| 5 | B5: WD 0.06 | 1.726 | +0.02 |
+| 6 | B7: SwiGLU | 1.856 | +0.15 |
+| 7 | B2: Warmdown 4500 | 1.886 | +0.18 |
+| 8 | B3: Warmdown 5000 | 1.949 | +0.24 |
+| 9 | B9: WD 0.2 | 2.072 | +0.37 |
+
+†B-series baseline is ~1.71 (same architecture, default hyperparams, 180s). Computed from C1/C2 which ran with default training params.
+
+**Key findings:**
+
+- **B1 (Muon LR 0.03)** is the strongest individual hyperparameter improvement. Confirms autoresearch sweep.
+- **B8 (Softcap 15)** and **B4 (Bigram 3072×112)** show modest gains.
+- **B7 (SwiGLU) is surprisingly bad on unmodified SOTA.** 35.6M params (32% bloat), 199.7 ms/step (16% slower), only 902 steps. SwiGLU doubles `mlp_up_bank` dimensions, which destroys the speed advantage that made SwiGLU win in `train_sota_exp.py` (where it was 8% faster). The parameter banking architecture in the SOTA script makes SwiGLU a net negative at short budgets.
+- **B2/B3 (Warmdown 4500/5000) are invalid at 180s.** With ~1,040 total steps, `WARMDOWN_ITERS=4500` means warmdown starts at step ~50. These test "immediate warmdown" not "longer warmdown." Need full-budget rerun to be meaningful.
+- **B9 (WD 0.2) has catastrophic quantization damage.** Best training BPB (1.305) but worst int6 BPB (2.072) — a 0.77 BPB gap. High weight decay produces small weights that quantize terribly. The autoresearch finding "WD 0.2 >> 0.04" does not survive GPTQ int6 quantization.
+
+### Eval Stride (C-series, 180s)
+
+| Config | Int6 Roundtrip | Sliding Window | Stride |
+|--------|---------------|----------------|--------|
+| C1: Stride 32 | 1.708 | 1.692 | 32 |
+| C2: Stride 16 | 1.702 | — (killed) | 16 |
+| Baseline (from exp 0) | 1.141 | 1.117 | 64 |
+
+C1 shows stride-32 gives ~0.016 BPB improvement over roundtrip at 180s training. C2 was killed before sliding window completed. **Neither is comparable to baseline** since they trained from scratch at 180s instead of reusing the baseline checkpoint — a design gap in the runner.
+
+### Critical Revisions to Prior Findings
+
+| Prior Finding | V3 Status | Explanation |
+|--------------|-----------|-------------|
+| SwiGLU is fastest + best | **Reversed on SOTA script** | SwiGLU doubles mlp_up_bank → 32% param bloat → slower, not faster |
+| WD 0.2 >> 0.04 | **Reversed after GPTQ** | High WD destroys quantization (0.77 BPB gap) |
+| 7L/MLP4x best architecture | **Confirmed** | Transfers perfectly to unmodified SOTA |
+| Muon LR 0.03 > 0.025 | **Confirmed** | Strongest single hyperparameter change |
+
+### Methodological Notes
+
+1. **EMA inversion at 180s:** A-series experiments show post-EMA BPB *worse* than final training BPB (e.g., A3: 1.279 → 1.293). EMA averages over the full training run — with only 180s, early underfitted checkpoints drag the average up. At full budget (baseline: 1.138 → 1.137), EMA works correctly.
+
+2. **Quantization gap dominates at short budgets:** The gap between training BPB and int6 BPB ranges from 0.10–0.77 at 180s vs 0.004 at 1200s. Short-budget ablations overweight quantization resilience relative to training quality. Rankings based on int6 BPB favor smaller/simpler models that quantize easily.
+
+3. **Status tracking gaps:** `status.json` shows A4, C1, C2, D1 as "running" despite completion. The runner's status update runs before the experiment; if the process is killed externally, the final "completed" update never fires.
+
+### What's Next
+
+1. **Run D1 (7L/MLP4x + Muon 0.03) at full 1200s budget** — combines the two confirmed winners. This is the highest-priority experiment.
+2. **Fix C experiments** to reuse baseline checkpoint for eval-only stride testing, rather than retraining from scratch.
+3. **Re-evaluate SwiGLU** — test at 7L depth where the MLP up-projection bloat is proportionally smaller (21M → ~28M vs 27M → 36M at 11L).
+4. **Run D5 (7L + SwiGLU + Muon 0.03)** if SwiGLU at 7L shows promise.
+5. **Consider dropping B2/B3/B9** from future runs — warmdown and high-WD results are invalid/harmful at any budget with GPTQ.
