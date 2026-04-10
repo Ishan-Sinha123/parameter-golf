@@ -191,6 +191,21 @@ def cmd_dashboard(args, config: AutoResearchConfig):
 
     api_server.configure(registry, scheduler, cluster, ideas, research,
                           claude=claude, recipes_dir=config.abs_recipes_dir)
+
+    # Poll discover_all on a timer so the dashboard's in-memory cluster
+    # state stays fresh. The worker has its own scheduler driving probes,
+    # but this process has its own ClusterManager instance that would
+    # otherwise remain frozen at OFFLINE forever.
+    def _probe_loop():
+        while True:
+            try:
+                cluster.discover_all()
+            except Exception as e:
+                log.warning("dashboard cluster probe failed: %s", e)
+            time.sleep(config.health_check_interval_s)
+    threading.Thread(target=_probe_loop, daemon=True,
+                     name="dashboard-cluster-probe").start()
+
     log.info("Dashboard only: http://localhost:%d (worker runs separately)",
              config.http_port)
     api_server.run_server(config.http_host, config.http_port)

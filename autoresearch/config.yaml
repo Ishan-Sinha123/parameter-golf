@@ -42,7 +42,7 @@ log_sync_to_experiment_logs: true
 
 # Git-based deployment
 # Azure VM commits+pushes → GPU node does git pull → runs exact code
-deploy_branch: ""  # auto-detect current branch if empty
+deploy_branch: "autoresearch-deploy"  # pinned — never touch main
 deploy_auto_commit: true
 deploy_repo_dir: ""  # auto-detect repo root if empty
 

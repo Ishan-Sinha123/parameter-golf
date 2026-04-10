@@ -229,14 +229,20 @@ class NodeClient:
         env_str = " ".join(env_parts)
 
         # 5. Launch via nohup + torchrun
+        # `setsid` + `< /dev/null` + fd redirection is required to fully
+        # detach the process tree from the SSH channel. Without </dev/null
+        # the backgrounded torchrun inherits stdin from the SSH session and
+        # SSH won't return until stdin closes, causing the deploy call to
+        # time out even though the job successfully launched.
         launch_cmd = (
             f"cd {self.ssh.work_dir} && "
-            f"nohup env {env_str} "
+            f"setsid nohup env {env_str} "
             f"torchrun --standalone --nproc_per_node={nproc} {script} "
-            f"> {remote_exp_dir}/train.log 2>&1 & echo $!"
+            f"< /dev/null > {remote_exp_dir}/train.log 2>&1 & "
+            f"PID=$!; disown $PID 2>/dev/null; echo $PID"
         )
         try:
-            r = self._run_ssh(launch_cmd, timeout=15)
+            r = self._run_ssh(launch_cmd, timeout=30)
             if r.returncode == 0 and r.stdout.strip().isdigit():
                 pid = int(r.stdout.strip())
                 log.info("Launched %s on %s GPUs %s, PID=%d",

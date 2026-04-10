@@ -265,7 +265,35 @@ class APIHandler(BaseHTTPRequestHandler):
 
     def _api_experiment_logs(self, query, exp_id: str):
         lines = int(query.get("lines", [100])[0])
+        # 1. Try the live cluster (works for jobs still in _running_jobs in
+        #    *this* process — mainly the worker).
         log_text = _cluster.get_log_tail(exp_id, lines) if _cluster else ""
+        # 2. Fallback to the locally-synced train.log under experiment_logs/.
+        #    The scheduler rsyncs remote logs into
+        #    <workspace_parent>/experiment_logs/<idea_id>/<exp_id>/train.log
+        #    while the job runs and one final time on completion, so this
+        #    path is the right source for finished/failed experiments and
+        #    for read-only dashboard processes that don't own _running_jobs.
+        if not log_text and _registry:
+            try:
+                from pathlib import Path
+                exp = _registry.get_experiment(exp_id)
+                if exp:
+                    base = Path(_registry.db_path).parent.parent.parent \
+                        / "experiment_logs" / exp.idea_id / exp.id / "train.log"
+                    if base.exists():
+                        with open(base, "rb") as f:
+                            # Read last ~lines*512 bytes, then tail
+                            try:
+                                f.seek(0, 2)
+                                size = f.tell()
+                                f.seek(max(0, size - lines * 512))
+                                tail = f.read().decode("utf-8", errors="replace")
+                                log_text = "\n".join(tail.splitlines()[-lines:])
+                            except Exception:
+                                log_text = base.read_text(errors="replace")
+            except Exception as e:
+                log.warning("log fallback failed for %s: %s", exp_id, e)
         self._json_response({"exp_id": exp_id, "log": log_text})
 
     def _api_events(self, query):
