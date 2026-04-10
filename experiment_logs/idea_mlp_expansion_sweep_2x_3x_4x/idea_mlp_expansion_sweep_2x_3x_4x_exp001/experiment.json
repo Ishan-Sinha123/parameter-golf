@@ -1,17 +1,16 @@
 {
   "experiment_id": "idea_mlp_expansion_sweep_2x_3x_4x_exp001",
   "idea_id": "idea_mlp_expansion_sweep_2x_3x_4x",
-  "stage": "screen",
+  "stage": "gate",
   "host": "206.125.32.60",
   "gpus": [
-    1,
-    2
+    5
   ],
-  "commit_sha": "caa553fcbbe3d959d6eb071fa34c749a149306ec",
+  "commit_sha": "604ac0443429ea92c519c1a44299bbd7ba07b791",
   "branch": "autoresearch-deploy",
   "env_overrides": {
     "MLP_MULT": "3"
   },
-  "wallclock_s": 260,
-  "started_at": "2026-04-10T10:17:21.475539"
+  "wallclock_s": 380,
+  "started_at": "2026-04-10T10:23:51.710868"
 }
