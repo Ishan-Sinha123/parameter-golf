@@ -6,23 +6,25 @@
 
 ## Hypothesis
 
-Longer context (seq_len = 2048) may yield better BPB if the higher per-step
-cost is offset by the richer contextual signal per token, even though
-fewer optimizer steps complete in the 480 s gate budget. Per-step batch
-tokens are doubled to 1,048,576 so the number of sequences per step
-stays in the same ballpark as the 1024-seq default.
+Longer context (seq_len = 2048) may yield better BPB if the higher
+per-step cost is offset by the richer contextual signal per token, even
+though fewer optimizer steps complete in the 480 s gate budget.
+Per-step batch tokens are doubled to 1,048,576 so the number of
+sequences per step stays in the same ballpark as the 1024-seq default.
 
 ## Configuration
 
-| Env override | Value | Default |
-|---|---|---|
-| `TRAIN_SEQ_LEN` | **2048** | 1024 |
-| `TRAIN_BATCH_TOKENS` | **1048576** | 524288 |
+| Env override         | Value        | Default |
+|----------------------|--------------|---------|
+| `TRAIN_SEQ_LEN`      | **2048**     | 1024    |
+| `TRAIN_BATCH_TOKENS` | **1048576**  | 524288  |
 
-- Recipe: *none* (plain `train_gpt.py` with env overrides; `recipe_id = null`)
+- Recipe: *none* (`recipe_id = null`; plain `train_gpt.py` with env overrides)
 - Source ref: _(empty)_ — not a reproduction
-- Stage: `gate` (1 GPU, `grad_accum_steps:8`, `iterations:20000`, `max_wallclock_seconds:480`)
+- Stage: `gate` (1 GPU, `grad_accum_steps:8`, `iterations:20000`,
+  `max_wallclock_seconds:480`)
 - Model: 17,059,912 params, GQA 8/4 heads, tied embeddings, seed 1337
+- Commit: `b3417cf3dde21867c1ba33cd942e0ea624d38a3f` on `autoresearch-deploy`
 
 ### Key log lines
 
@@ -47,19 +49,19 @@ No numerical warnings or NaNs observed; run exited cleanly via `wallclock_cap`.
 
 Baseline for delta = **1.10625** (val_bpb supplied for this report).
 
-| Metric | Value | Δ vs baseline (1.10625) |
-|---|---|---|
-| `screen_ema_bpb` | 1.36271 | **+0.25646** |
-| `gate_int6_bpb` (int8+zlib roundtrip) | 1.37770 | **+0.27145** |
-| `gate_quant_gap` | −1.04 × 10⁻⁵ | ≈ 0 |
-| `gate_artifact_mb` | 0.00 reported / ~10.97 MB from log | well under 16 MB |
-| `gate_passed` | true | — |
-| `promote_ema_bpb` | null | — |
-| `promote_int6_bpb` | null | — |
-| Steps completed | 642 / 20,000 | — |
-| Step avg | 747.9 ms | — |
-| Wallclock | 480,149 ms (early-stopped at cap) | — |
-| Peak memory | 20,245 MiB | — |
+| Metric                                | Value                 | Δ vs baseline (1.10625) |
+|---------------------------------------|-----------------------|-------------------------|
+| `screen_ema_bpb`                      | 1.36271               | **+0.25646**            |
+| `gate_int6_bpb` (int8+zlib roundtrip) | 1.37770               | **+0.27146**            |
+| `gate_quant_gap`                      | −1.04 × 10⁻⁵          | ≈ 0                     |
+| `gate_artifact_mb`                    | 0.00 reported / ~10.97 MB from log | well under 16 MB |
+| `gate_passed`                         | true                  | —                       |
+| `promote_ema_bpb`                     | null                  | —                       |
+| `promote_int6_bpb`                    | null                  | —                       |
+| Steps completed                       | 642 / 20,000          | —                       |
+| Step avg                              | 747.9 ms              | —                       |
+| Wallclock                             | 480,149 ms (early-stopped at cap) | —           |
+| Peak memory                           | 20,245 MiB            | —                       |
 
 At ~748 ms/step, only 642 of the intended 20,000 steps finished inside
 the 480 s gate cap. Train loss was still descending monotonically
@@ -72,16 +74,16 @@ absolute BPB is ~0.26–0.27 nats worse than the 1.10625 baseline.
 **regression**
 
 Doubling the sequence length to 2048 at the gate-stage budget is
-severely step-starved: 642 updates in the 480 s window, vs. thousands
-for short-context siblings. Final int8+zlib val_bpb of 1.3777 is
-+0.27145 nats above the 1.10625 baseline, and screen EMA val_bpb of
-1.36271 is +0.25646 above it — both far outside the 0.005-nat record
-bar. The zero quant gap is the only positive signal, but it does not
-compensate for the update-count deficit. Memory also ballooned to
-~20 GiB, narrowing the headroom for later stacking. The hypothesis
-(longer context converges in fewer steps) cannot be validated from
-this run because training terminated long before any crossover point
-with the short-context baseline.
+severely step-starved: 642 updates in the 480 s window, versus
+thousands for short-context siblings. Final int8+zlib val_bpb of
+1.3777 is +0.27146 nats above the 1.10625 baseline, and screen EMA
+val_bpb of 1.36271 is +0.25646 above it — both far outside the
+0.005-nat record bar. The zero quant gap is the only positive signal,
+but it does not compensate for the update-count deficit. Memory also
+ballooned to ~20 GiB, narrowing the headroom for later stacking. The
+hypothesis (longer context converges in fewer steps) cannot be
+validated from this run because training terminated long before any
+crossover point with the short-context baseline.
 
 ## Suggested follow-ups
 
@@ -105,4 +107,4 @@ with the short-context baseline.
 - **Pair with a cheaper attention:** sliding-window or XSA on all
   layers might recover enough step-time to make long-context tractable
   at this budget; the current dense-GQA 2048 path is ~4.25× slower
-  than 512.
+  than the short-context default.
