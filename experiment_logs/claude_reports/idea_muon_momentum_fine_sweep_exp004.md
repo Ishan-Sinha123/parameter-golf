@@ -2,22 +2,18 @@
 
 ## Hypothesis
 
-Momentum 0.98 may be optimal for the Muon optimizer at this screening
-wallclock. This is the fourth run in a fine sweep (`exp001`–`exp004`) walking
-momentum upward from the 0.95 default; prior sweep legs showed diminishing
-returns as momentum rose, and this run tests whether 0.98 continues the trend
-or overshoots and starts hurting short-run optimization dynamics.
+Momentum 0.98 may be optimal for the Muon optimizer at this screening wallclock. This is the fourth leg in a fine sweep (`exp001`–`exp004`) walking Muon momentum upward; the run tests whether pushing momentum to 0.98 continues to improve short-run optimization on the baseline screening recipe or overshoots and starts to hurt.
 
 ## Configuration
 
-| Env var         | Value                     |
-|-----------------|---------------------------|
-| `MUON_MOMENTUM` | `0.98` (default: `0.95`)  |
+| Env var         | Value  |
+|-----------------|--------|
+| `MUON_MOMENTUM` | `0.98` |
 
 - Recipe: *(none — single env-var override on baseline screening recipe)*
-- Source ref: *(none)*  ·  Reproduction: no
+- Source ref: *(none)* · Reproduction: no
 
-Other relevant config from `train.log`:
+Relevant config read from `train.log`:
 
 - `model_params`: 17,059,912 (~17.06M)
 - `attention_mode`: gqa (8 heads, 4 kv heads), tied embeddings
@@ -28,8 +24,7 @@ Other relevant config from `train.log`:
 
 ## Results
 
-Training stopped early at step 1617 / 20000 when the 540 s wallclock cap
-hit. Step avg ≈ 334 ms. No NaN / divergence / stability warnings.
+Training stopped early at step 1617 / 20000 when the 540 s wallclock cap hit. Step avg ≈ 334 ms. No NaN, divergence, or stability warnings in the log.
 
 Key log lines (`experiment_logs/idea_muon_momentum_fine_sweep/idea_muon_momentum_fine_sweep_exp004/train.log`):
 
@@ -57,39 +52,19 @@ final_int8_zlib_roundtrip_exact val_loss:2.21677284 val_bpb:1.31289774
 | `promote_ema_bpb`                      | *(not run)*    | —                          |
 | `promote_int6_bpb`                     | *(not run)*    | —                          |
 
-**Apples-to-apples caveat:** the 1.10625 baseline is a longer-budget multi-GPU
-SOTA-track number; this run is a single-GPU 540 s screening gate on the
-baseline recipe, so the +0.18 nat gap vs baseline is expected and is **not** a
-real regression of the momentum knob. The meaningful comparison is
-horizontally against `exp001`–`exp003` on the same gate.
+**Apples-to-apples caveat:** the 1.10625 baseline is a longer-budget multi-GPU SOTA-track number; this run is a 1-GPU 540 s screening gate on the baseline recipe, so the +0.18 nat gap is expected and is **not** a real regression of the momentum knob. The meaningful comparison is horizontally against `exp001`–`exp003` on the same gate.
 
 ## Verdict
 
 **neutral**
 
-The gate passed cleanly, the int8+zlib quant gap is effectively zero (~2e-6
-nats), and the artifact is comfortably under the 16 MB cap. However, no
-promotion metrics were recorded (`promote_ema_bpb: null`), so we have no
-full-budget signal that 0.98 is actually the sweep winner. Against the
-full-budget baseline, this screen is 0.18 nats behind — expected for a
-1-GPU / 540 s run, but means no record claim is possible from this leg alone.
-Neither a win nor a regression; awaits within-sweep comparison.
+Gate passed cleanly, the int8+zlib quant gap is effectively zero (~2e-6 nats), and the artifact is comfortably under the 16 MB cap. However, no promotion metrics were recorded (`promote_ema_bpb: null`), so we have no full-budget signal that 0.98 is actually the sweep winner. Against the full-budget baseline this screen sits 0.18 nats behind — expected for a 1-GPU / 540 s run, but it means no record claim is possible from this leg alone. Neither a win nor a regression; conclusion awaits the within-sweep comparison.
 
 ## Suggested follow-ups
 
-- Compare `screen_ema_bpb` across all four legs (`exp001`–`exp004`) to pick
-  the within-sweep winner before allocating any full-budget promote runs.
-- Multi-seed (≥3) the top 1–2 momentum values at the same screening wallclock
-  to measure the seed-level noise floor and confirm whether differences
-  exceed the 5e-3 nat PR bar.
-- Probe one step further (`MUON_MOMENTUM=0.99`) to confirm saturation vs.
-  reversal at very high momentum.
-- Try a momentum warmup schedule (e.g. `0.85 → 0.98` over the first ~100
-  steps) — late-stage high momentum sometimes beats fixed high momentum on
-  short runs.
-- Port the sweep winner onto the current SOTA chain in a stacking experiment
-  (XSA + self-gen GPTQ + LeakyReLU²); single-GPU screening cannot tell us
-  whether the momentum optimum transfers to the 8×H100 / 10-minute target.
-- Couple momentum with a `MUON_WD` sweep — momentum and weight decay
-  interact, and a higher momentum typically prefers a slightly different
-  effective WD.
+- Compare `screen_ema_bpb` across all four legs (`exp001`–`exp004`) to pick the within-sweep winner before allocating any full-budget promote runs.
+- Multi-seed (≥3) the top 1–2 momentum values at the same screening wallclock to measure the seed-level noise floor and confirm whether differences exceed the 5e-3 nat PR bar.
+- Probe one step further (`MUON_MOMENTUM=0.99`) to distinguish saturation from reversal at very high momentum.
+- Try a momentum warmup schedule (e.g. `0.85 → 0.98` over the first ~100 steps) — late-stage high momentum sometimes beats a fixed high value on short runs.
+- Port the sweep winner onto the current SOTA chain (XSA + self-gen GPTQ + LeakyReLU²) since single-GPU screening cannot tell us whether the optimum transfers to the 8×H100 / 10-minute target.
+- Couple momentum with a `MUON_WD` sweep — momentum and weight decay interact, and higher momentum typically prefers a slightly different effective WD.

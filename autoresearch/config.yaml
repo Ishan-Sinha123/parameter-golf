@@ -32,7 +32,7 @@ nodes:
     ssh_key: ~/.ssh/id_ed25519
     work_dir: /workspace/parameter-golf
     label: "vast-h100-2"
-    enabled: true
+    enabled: false  # CUDA runtime wedged (cudaErrorDevicesUnavailable); re-enable after instance reboot
     env_setup: "source /workspace/parameter-golf/.venv/bin/activate"
 
 

@@ -1,0 +1,107 @@
+W0410 23:04:29.792000 73975 site-packages/torch/distributed/run.py:851] 
+W0410 23:04:29.792000 73975 site-packages/torch/distributed/run.py:851] *****************************************
+W0410 23:04:29.792000 73975 site-packages/torch/distributed/run.py:851] Setting OMP_NUM_THREADS environment variable for each process to be 1 in default, to avoid your system being overloaded, please further tune the variable for optimal performance in your application as needed. 
+W0410 23:04:29.792000 73975 site-packages/torch/distributed/run.py:851] *****************************************
+Traceback (most recent call last):
+  File "/workspace/parameter-golf/autoresearch/baselines/rec_20260410_2026_03_31_parallelresiduals_minidepthre_4d594ac1/train_gpt.py", line 880, in <module>
+    if __name__=='__main__':main()
+                            ^^^^^^
+  File "/workspace/parameter-golf/autoresearch/baselines/rec_20260410_2026_03_31_parallelresiduals_minidepthre_4d594ac1/train_gpt.py", line 721, in main
+    device=torch.device(_F,local_rank);torch.cuda.set_device(device)
+                                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/venv/main/lib/python3.12/site-packages/torch/cuda/__init__.py", line 638, in set_device
+    torch._C._cuda_setDevice(device)
+torch.AcceleratorError: CUDA error: CUDA-capable device(s) is/are busy or unavailable
+Search for `cudaErrorDevicesUnavailable' in https://docs.nvidia.com/cuda/cuda-runtime-api/group__CUDART__TYPES.html for more information.
+CUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.
+For debugging consider passing CUDA_LAUNCH_BLOCKING=1
+Compile with `TORCH_USE_CUDA_DSA` to enable device-side assertions.
+
+W0410 23:04:36.931000 73975 site-packages/torch/distributed/elastic/multiprocessing/api.py:1012] Sending process 74061 closing signal SIGTERM
+W0410 23:04:36.932000 73975 site-packages/torch/distributed/elastic/multiprocessing/api.py:1012] Sending process 74062 closing signal SIGTERM
+W0410 23:04:36.932000 73975 site-packages/torch/distributed/elastic/multiprocessing/api.py:1012] Sending process 74063 closing signal SIGTERM
+W0410 23:04:36.932000 73975 site-packages/torch/distributed/elastic/multiprocessing/api.py:1012] Sending process 74064 closing signal SIGTERM
+W0410 23:04:36.932000 73975 site-packages/torch/distributed/elastic/multiprocessing/api.py:1012] Sending process 74065 closing signal SIGTERM
+W0410 23:04:36.932000 73975 site-packages/torch/distributed/elastic/multiprocessing/api.py:1012] Sending process 74066 closing signal SIGTERM
+W0410 23:04:36.932000 73975 site-packages/torch/distributed/elastic/multiprocessing/api.py:1012] Sending process 74067 closing signal SIGTERM
+E0410 23:04:37.376000 73975 site-packages/torch/distributed/elastic/multiprocessing/api.py:986] failed (exitcode: 1) local_rank: 0 (pid: 74060) of binary: /venv/main/bin/python3
+Traceback (most recent call last):
+  File "/venv/main/bin/torchrun", line 10, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "/venv/main/lib/python3.12/site-packages/torch/distributed/elastic/multiprocessing/errors/__init__.py", line 362, in wrapper
+    return f(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^
+  File "/venv/main/lib/python3.12/site-packages/torch/distributed/run.py", line 990, in main
+    run(args)
+  File "/venv/main/lib/python3.12/site-packages/torch/distributed/run.py", line 981, in run
+    elastic_launch(
+  File "/venv/main/lib/python3.12/site-packages/torch/distributed/launcher/api.py", line 170, in __call__
+    return launch_agent(self._config, self._entrypoint, list(args))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/venv/main/lib/python3.12/site-packages/torch/distributed/launcher/api.py", line 317, in launch_agent
+    raise ChildFailedError(
+torch.distributed.elastic.multiprocessing.errors.ChildFailedError: 
+============================================================
+autoresearch/baselines/rec_20260410_2026_03_31_parallelresiduals_minidepthre_4d594ac1/train_gpt.py FAILED
+------------------------------------------------------------
+Failures:
+[1]:
+  time      : 2026-04-10_23:04:37
+  host      : f46767b720d0
+  rank      : 1 (local_rank: 1)
+  exitcode  : -15 (pid: 74061)
+  error_file: <N/A>
+  traceback : Signal 15 (SIGTERM) received by PID 74061
+[2]:
+  time      : 2026-04-10_23:04:37
+  host      : f46767b720d0
+  rank      : 2 (local_rank: 2)
+  exitcode  : -15 (pid: 74062)
+  error_file: <N/A>
+  traceback : Signal 15 (SIGTERM) received by PID 74062
+[3]:
+  time      : 2026-04-10_23:04:37
+  host      : f46767b720d0
+  rank      : 3 (local_rank: 3)
+  exitcode  : -15 (pid: 74063)
+  error_file: <N/A>
+  traceback : Signal 15 (SIGTERM) received by PID 74063
+[4]:
+  time      : 2026-04-10_23:04:37
+  host      : f46767b720d0
+  rank      : 4 (local_rank: 4)
+  exitcode  : -15 (pid: 74064)
+  error_file: <N/A>
+  traceback : Signal 15 (SIGTERM) received by PID 74064
+[5]:
+  time      : 2026-04-10_23:04:37
+  host      : f46767b720d0
+  rank      : 5 (local_rank: 5)
+  exitcode  : -15 (pid: 74065)
+  error_file: <N/A>
+  traceback : Signal 15 (SIGTERM) received by PID 74065
+[6]:
+  time      : 2026-04-10_23:04:37
+  host      : f46767b720d0
+  rank      : 6 (local_rank: 6)
+  exitcode  : -15 (pid: 74066)
+  error_file: <N/A>
+  traceback : Signal 15 (SIGTERM) received by PID 74066
+[7]:
+  time      : 2026-04-10_23:04:37
+  host      : f46767b720d0
+  rank      : 7 (local_rank: 7)
+  exitcode  : -15 (pid: 74067)
+  error_file: <N/A>
+  traceback : Signal 15 (SIGTERM) received by PID 74067
+------------------------------------------------------------
+Root Cause (first observed failure):
+[0]:
+  time      : 2026-04-10_23:04:36
+  host      : f46767b720d0
+  rank      : 0 (local_rank: 0)
+  exitcode  : 1 (pid: 74060)
+  error_file: <N/A>
+  traceback : To enable traceback see: https://pytorch.org/docs/stable/elastic/errors.html
+============================================================
