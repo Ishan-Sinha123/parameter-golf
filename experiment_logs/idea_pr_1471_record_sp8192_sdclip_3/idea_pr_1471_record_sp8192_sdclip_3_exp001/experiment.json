@@ -2,7 +2,7 @@
   "experiment_id": "idea_pr_1471_record_sp8192_sdclip_3_exp001",
   "idea_id": "idea_pr_1471_record_sp8192_sdclip_3",
   "stage": "screen",
-  "host": "34.69.145.155",
+  "host": "206.125.32.60",
   "gpus": [
     0,
     1,
@@ -13,7 +13,7 @@
     6,
     7
   ],
-  "commit_sha": "6271fca0c1b4a093baf6afee0b3405c07ca40950",
+  "commit_sha": "961555f36a757db61d68d59f7c631ac7feb6e6c8",
   "branch": "autoresearch-deploy",
   "script_path": "autoresearch/baselines/rec_20260410_2026_03_31_parallelresiduals_minidepthre_4d594ac1/train_gpt.py",
   "recipe_id": "rec_20260410_pr1471_sdclip_sp8192_b93b1c5d",
@@ -112,5 +112,5 @@
     "SKIP_GATES_ENABLED": true
   },
   "wallclock_s": 420,
-  "started_at": "2026-04-10T23:03:34.702271"
+  "started_at": "2026-04-10T23:37:54.093254"
 }
