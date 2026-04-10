@@ -1,0 +1,9 @@
+{
+  "recipe_id": "rec_20260410_2026_03_18_fp16embed_wd3600_866833e0",
+  "source_ref": "/home/azureuser/parameter-golf/records/track_10min_16mb/2026-03-18_FP16Embed_WD3600",
+  "val_bpb": 1.21972502,
+  "artifact_mb": null,
+  "features": [
+    "sota_fork"
+  ]
+}
