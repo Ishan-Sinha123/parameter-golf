@@ -132,3 +132,6 @@ step:1600/20000 train_loss:2.3405 train_time:280980ms step_avg:175.61ms
 step:1800/20000 train_loss:2.3802 train_time:315914ms step_avg:175.51ms
 step:2000/20000 train_loss:2.3884 train_time:350938ms step_avg:175.47ms
 step:2000/20000 val_loss:2.3270 val_bpb:1.3782 train_time:350938ms step_avg:175.47ms
+step:2200/20000 train_loss:2.2690 train_time:385865ms step_avg:175.39ms
+step:2400/20000 train_loss:2.2638 train_time:421342ms step_avg:175.56ms
+step:2600/20000 train_loss:2.2742 train_time:456375ms step_avg:175.53ms
