@@ -1,0 +1,20 @@
+id: "{{ EXP_ID }}"
+name: "{{ EXP_NAME }}"
+parent: "{{ PARENT_ID }}"
+hypothesis: "{{ HYPOTHESIS }}"
+category: hyperparameter
+priority: "{{ PRIORITY }}"
+
+# Hyperparameter-specific overrides — only list what changes vs parent.
+env_overrides:
+  MUON_LR: "{{ MUON_LR }}"
+  ADAM_LR: "{{ ADAM_LR }}"
+  WEIGHT_DECAY: "{{ WEIGHT_DECAY }}"
+
+# Hyperparameter ranking is reliable at 180s; screen + gate is sufficient.
+stages:
+  - screen
+  - gate
+
+# Auto-reject if screen BPB is more than this worse than parent.
+reject_if_worse_by: 0.05

@@ -1,0 +1,20 @@
+id: "{{ EXP_ID }}"
+name: "{{ EXP_NAME }}"
+parent: "{{ PARENT_ID }}"
+hypothesis: "{{ HYPOTHESIS }}"
+category: architecture
+priority: "{{ PRIORITY }}"
+
+# Architecture-specific overrides — only list what changes vs parent.
+env_overrides:
+  NUM_LAYERS: "{{ NUM_LAYERS }}"
+  MLP_MULT: "{{ MLP_MULT }}"
+  HEAD_DIM: "{{ HEAD_DIM }}"
+
+# Architecture changes may not rank correctly at 180s; run both stages.
+stages:
+  - screen
+  - gate
+
+# Auto-reject if screen BPB is more than this worse than parent.
+reject_if_worse_by: 0.05

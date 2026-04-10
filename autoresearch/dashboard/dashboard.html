@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Parameter Golf AutoResearch</title>
+<style>
+:root {
+  --bg: #0d1117; --surface: #161b22; --border: #30363d;
+  --text: #e6edf3; --text-dim: #8b949e; --text-bright: #f0f6fc;
+  --accent: #58a6ff; --green: #3fb950; --red: #f85149;
+  --yellow: #d29922; --purple: #bc8cff; --orange: #f0883e;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'SF Mono', 'Cascadia Code', monospace; background: var(--bg); color: var(--text); font-size: 13px; }
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* Layout */
+.header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 12px 20px; display: flex; align-items: center; justify-content: space-between; }
+.header h1 { font-size: 16px; color: var(--text-bright); }
+.header .stats { display: flex; gap: 16px; font-size: 12px; color: var(--text-dim); }
+.header .stat-val { color: var(--accent); font-weight: bold; }
+
+.nav { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 20px; display: flex; gap: 0; }
+.nav button { background: none; border: none; color: var(--text-dim); padding: 10px 16px; cursor: pointer; font-family: inherit; font-size: 13px; border-bottom: 2px solid transparent; }
+.nav button:hover { color: var(--text); }
+.nav button.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+.main { padding: 20px; max-width: 1400px; margin: 0 auto; }
+.panel { display: none; }
+.panel.active { display: block; }
+
+/* Cards */
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 16px; margin-bottom: 12px; }
+.card h3 { font-size: 14px; margin-bottom: 8px; color: var(--text-bright); }
+.card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
+
+/* Tables */
+table { width: 100%; border-collapse: collapse; }
+th, td { padding: 8px 12px; text-align: left; border-bottom: 1px solid var(--border); }
+th { color: var(--text-dim); font-weight: normal; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
+tr:hover { background: rgba(88, 166, 255, 0.04); }
+
+/* Status badges */
+.badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: bold; }
+.badge-proposed { background: rgba(139,148,158,0.2); color: var(--text-dim); }
+.badge-approved { background: rgba(88,166,255,0.2); color: var(--accent); }
+.badge-active { background: rgba(63,185,80,0.2); color: var(--green); }
+.badge-completed { background: rgba(63,185,80,0.15); color: var(--green); }
+.badge-rejected { background: rgba(248,81,73,0.2); color: var(--red); }
+.badge-failed { background: rgba(248,81,73,0.2); color: var(--red); }
+.badge-parked { background: rgba(210,153,34,0.2); color: var(--yellow); }
+.badge-screening, .badge-gating, .badge-promoting, .badge-deploying { background: rgba(63,185,80,0.2); color: var(--green); animation: pulse 2s infinite; }
+.badge-queued { background: rgba(210,153,34,0.2); color: var(--yellow); }
+.badge-stopped { background: rgba(248,81,73,0.15); color: var(--red); }
+.badge-done { background: rgba(63,185,80,0.15); color: var(--green); }
+.badge-defined { background: rgba(139,148,158,0.15); color: var(--text-dim); }
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
+
+/* Priority */
+.pri-4 { color: var(--red); } .pri-3 { color: var(--orange); }
+.pri-2 { color: var(--text); } .pri-1 { color: var(--text-dim); }
+
+/* Buttons */
+.btn { background: var(--surface); border: 1px solid var(--border); color: var(--text); padding: 6px 12px; border-radius: 6px; cursor: pointer; font-family: inherit; font-size: 12px; }
+.btn:hover { border-color: var(--accent); color: var(--accent); }
+.btn-danger { border-color: var(--red); color: var(--red); }
+.btn-danger:hover { background: rgba(248,81,73,0.1); }
+.btn-primary { background: rgba(88,166,255,0.15); border-color: var(--accent); color: var(--accent); }
+.btn-sm { padding: 3px 8px; font-size: 11px; }
+
+/* Cluster viz */
+.cluster-grid { display: flex; gap: 16px; flex-wrap: wrap; }
+.node-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 12px; min-width: 280px; }
+.node-card.online { border-color: var(--green); }
+.node-card.offline { border-color: var(--red); opacity: 0.6; }
+.node-header { display: flex; justify-content: space-between; margin-bottom: 8px; }
+.gpu-row { display: flex; align-items: center; gap: 8px; padding: 4px 0; font-size: 12px; }
+.gpu-bar { flex: 1; height: 16px; background: var(--border); border-radius: 3px; overflow: hidden; position: relative; }
+.gpu-bar-fill { height: 100%; border-radius: 3px; transition: width 0.3s; }
+.gpu-bar-fill.low { background: var(--green); }
+.gpu-bar-fill.mid { background: var(--yellow); }
+.gpu-bar-fill.high { background: var(--red); }
+.gpu-label { width: 60px; font-size: 11px; color: var(--text-dim); }
+.gpu-exp { font-size: 11px; color: var(--purple); min-width: 80px; text-align: right; }
+
+/* Log viewer */
+.log-viewer { background: #0a0e14; border: 1px solid var(--border); border-radius: 6px; padding: 12px; font-size: 12px; max-height: 400px; overflow-y: auto; white-space: pre-wrap; word-break: break-all; color: var(--text-dim); }
+
+/* Modal */
+.modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); z-index: 100; align-items: center; justify-content: center; }
+.modal-overlay.show { display: flex; }
+.modal { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 24px; max-width: 600px; width: 90%; max-height: 80vh; overflow-y: auto; }
+.modal h2 { font-size: 16px; margin-bottom: 16px; }
+.modal label { display: block; font-size: 12px; color: var(--text-dim); margin: 8px 0 4px; }
+.modal input, .modal textarea, .modal select { width: 100%; background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 8px; border-radius: 6px; font-family: inherit; font-size: 13px; }
+.modal textarea { min-height: 80px; resize: vertical; }
+.modal .actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
+
+/* Event feed */
+.event-feed { max-height: 300px; overflow-y: auto; }
+.event-item { padding: 6px 0; border-bottom: 1px solid rgba(48,54,61,0.5); font-size: 12px; display: flex; gap: 8px; }
+.event-time { color: var(--text-dim); min-width: 140px; }
+.event-type { color: var(--purple); min-width: 120px; }
+
+/* Responsive */
+@media (max-width: 768px) { .card-grid { grid-template-columns: 1fr; } .cluster-grid { flex-direction: column; } }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Parameter Golf AutoResearch</h1>
+  <div class="stats">
+    <span>Ideas: <span class="stat-val" id="stat-ideas">-</span></span>
+    <span>Experiments: <span class="stat-val" id="stat-exps">-</span></span>
+    <span>Running: <span class="stat-val" id="stat-running">-</span></span>
+    <span>Nodes: <span class="stat-val" id="stat-nodes">-</span></span>
+    <span>Free GPUs: <span class="stat-val" id="stat-gpus">-</span></span>
+    <span style="color:var(--text-dim);font-size:11px" id="last-update"></span>
+  </div>
+</div>
+
+<div class="nav">
+  <button class="active" onclick="showPanel('leaderboard')">Leaderboard</button>
+  <button onclick="showPanel('ideas')">Ideas</button>
+  <button onclick="showPanel('experiments')">Experiments</button>
+  <button onclick="showPanel('cluster')">Cluster</button>
+  <button onclick="showPanel('claude')">Claude</button>
+  <button onclick="showPanel('events')">Events</button>
+  <button onclick="showPanel('research')">Research</button>
+  <button class="btn btn-sm btn-primary" style="margin-left:auto;align-self:center" onclick="showNewIdeaModal()">+ New Idea</button>
+  <button class="btn btn-sm btn-danger" style="align-self:center;margin-left:8px" onclick="stopAll()">Stop All</button>
+</div>
+
+<div class="main">
+  <!-- LEADERBOARD PANEL -->
+  <div class="panel active" id="panel-leaderboard">
+    <div class="card" style="margin-bottom:12px">
+      <h3>Parameter Golf Leaderboard</h3>
+      <p style="color:var(--text-dim);margin-top:4px">
+        Recipes ranked by best observed val_bpb. The row marked <span class="badge badge-active">BEST</span>
+        is the <code>current_best_baseline</code> — new experiments stack on top of it.
+        Rows marked <span class="badge badge-parked">REPRO</span> are reruns of existing records/
+        submissions, not novel wins.
+      </p>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>#</th><th>Recipe</th><th>Features</th>
+          <th>val_bpb</th><th>int6_bpb</th><th>artifact_mb</th>
+          <th>Source</th><th>Links</th>
+        </tr>
+      </thead>
+      <tbody id="leaderboard-table"></tbody>
+    </table>
+  </div>
+
+  <!-- IDEAS PANEL -->
+  <div class="panel" id="panel-ideas">
+    <table>
+      <thead>
+        <tr>
+          <th>Priority</th><th>Title</th><th>Status</th><th>Source</th>
+          <th>Experiments</th><th>Best Screen BPB</th><th>Best Gate BPB</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="ideas-table"></tbody>
+    </table>
+  </div>
+
+  <!-- EXPERIMENTS PANEL -->
+  <div class="panel" id="panel-experiments">
+    <div style="margin-bottom:12px">
+      <select id="exp-filter" onchange="refreshExperiments()" class="btn">
+        <option value="">All</option>
+        <option value="queued">Queued</option>
+        <option value="screening">Screening</option>
+        <option value="gating">Gating</option>
+        <option value="promoting">Promoting</option>
+        <option value="done">Done</option>
+        <option value="rejected">Rejected</option>
+        <option value="failed">Failed</option>
+      </select>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th><th>Name</th><th>Idea</th><th>Status</th><th>Priority</th>
+          <th>Screen EMA BPB</th><th>Gate Int6 BPB</th><th>Quant Gap</th>
+          <th>Node</th><th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="experiments-table"></tbody>
+    </table>
+  </div>
+
+  <!-- CLUSTER PANEL -->
+  <div class="panel" id="panel-cluster">
+    <div class="cluster-grid" id="cluster-grid"></div>
+  </div>
+
+  <!-- CLAUDE TASKS PANEL -->
+  <div class="panel" id="panel-claude">
+    <div class="card" style="margin-bottom:12px">
+      <h3>Claude Code tasks</h3>
+      <p style="color:var(--text-dim);margin-top:4px">
+        Subprocess tasks the worker delegates to <code>claude -p</code>.
+        write_report, assess_pr, compose_recipe, implement_technique,
+        reproduce_record, and monitor_run all show up here.
+      </p>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>Task ID</th><th>Type</th><th>Target</th><th>Status</th>
+          <th>Duration</th><th>Exit</th><th>Branch</th><th>Logs</th>
+        </tr>
+      </thead>
+      <tbody id="claude-table"></tbody>
+    </table>
+  </div>
+
+  <!-- EVENTS PANEL -->
+  <div class="panel" id="panel-events">
+    <div class="card">
+      <h3>Recent Events</h3>
+      <div class="event-feed" id="event-feed"></div>
+    </div>
+  </div>
+
+  <!-- RESEARCH PANEL -->
+  <div class="panel" id="panel-research">
+    <div class="card" style="margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <h3>Research Agent</h3>
+        <button class="btn btn-primary" onclick="triggerPoll()">Poll Now</button>
+      </div>
+      <p style="color:var(--text-dim);margin-top:8px">Polls GitHub PRs and arxiv papers for new techniques relevant to the parameter-golf competition.</p>
+    </div>
+    <div class="card">
+      <h3>Current Best SOTA</h3>
+      <div id="sota-info" style="color:var(--text-dim)">Loading...</div>
+    </div>
+    <div class="card">
+      <h3>Recent Research Discoveries</h3>
+      <div id="research-events" class="event-feed"></div>
+    </div>
+  </div>
+</div>
+
+<!-- NEW IDEA MODAL -->
+<div class="modal-overlay" id="modal-new-idea">
+  <div class="modal">
+    <h2>New Research Idea</h2>
+    <label>Title</label>
+    <input type="text" id="idea-title" placeholder="e.g. SwiGLU activation for MLP">
+    <label>Hypothesis (testable)</label>
+    <textarea id="idea-hypothesis" placeholder="e.g. Replacing GELU with SwiGLU will reduce BPB by ~0.005 based on Track 4 results"></textarea>
+    <label>Priority</label>
+    <select id="idea-priority">
+      <option value="1">Low</option>
+      <option value="2" selected>Normal</option>
+      <option value="3">High</option>
+      <option value="4">Critical</option>
+    </select>
+    <label>Tags (comma-separated)</label>
+    <input type="text" id="idea-tags" placeholder="e.g. architecture, mlp">
+    <label>Notes</label>
+    <textarea id="idea-notes" placeholder="Background, references, related work..."></textarea>
+    <div class="actions">
+      <button class="btn" onclick="closeModal('modal-new-idea')">Cancel</button>
+      <button class="btn btn-primary" onclick="submitNewIdea()">Create Idea</button>
+    </div>
+  </div>
+</div>
+
+<!-- EXPERIMENT LOG MODAL -->
+<div class="modal-overlay" id="modal-log">
+  <div class="modal" style="max-width:800px">
+    <h2 id="log-title">Experiment Log</h2>
+    <div class="log-viewer" id="log-content">Loading...</div>
+    <div class="actions"><button class="btn" onclick="closeModal('modal-log')">Close</button></div>
+  </div>
+</div>
+
+<!-- IDEA DETAIL MODAL -->
+<div class="modal-overlay" id="modal-idea-detail">
+  <div class="modal" style="max-width:800px">
+    <div id="idea-detail-content"></div>
+    <div class="actions"><button class="btn" onclick="closeModal('modal-idea-detail')">Close</button></div>
+  </div>
+</div>
+
+<script>
+const API = '';
+
+async function api(method, path, body) {
+  const opts = { method, headers: { 'Content-Type': 'application/json' } };
+  if (body) opts.body = JSON.stringify(body);
+  const r = await fetch(API + path, opts);
+  return r.json();
+}
+
+// ── Navigation ──
+function showPanel(name) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav button').forEach(b => b.classList.remove('active'));
+  document.getElementById('panel-' + name).classList.add('active');
+  document.querySelectorAll('.nav button').forEach(b => { if (b.textContent.toLowerCase().includes(name)) b.classList.add('active'); });
+  if (name === 'leaderboard') refreshLeaderboard();
+  if (name === 'ideas') refreshIdeas();
+  if (name === 'experiments') refreshExperiments();
+  if (name === 'cluster') refreshCluster();
+  if (name === 'claude') refreshClaude();
+  if (name === 'events') refreshEvents();
+  if (name === 'research') refreshResearch();
+}
+
+// ── Leaderboard ──
+async function refreshLeaderboard() {
+  const data = await api('GET', '/api/leaderboard?limit=100');
+  const tb = document.getElementById('leaderboard-table');
+  const rows = data.leaderboard || [];
+  if (rows.length === 0) {
+    tb.innerHTML = '<tr><td colspan="8" style="color:var(--text-dim);text-align:center;padding:20px">No recipes with metrics yet. Run `python -m autoresearch.main migrate-recipes` to seed.</td></tr>';
+    return;
+  }
+  tb.innerHTML = rows.map((r, i) => {
+    const val = r.best_val_bpb != null ? r.best_val_bpb.toFixed(4) : '—';
+    const int6 = r.best_int6_bpb != null ? r.best_int6_bpb.toFixed(4) : '—';
+    const art = r.best_artifact_mb != null ? r.best_artifact_mb.toFixed(2) + ' MB' : '—';
+    const feats = (r.features || []).slice(0, 6).join(', ');
+    const badges = [];
+    if (r.is_current_best) badges.push('<span class="badge badge-active">BEST</span>');
+    if (r.is_reproduction) badges.push('<span class="badge badge-parked">REPRO</span>');
+    const links = [];
+    if (r.best_experiment_id) links.push(`<a href="#" onclick="showExpLog('${r.best_experiment_id}');return false">train.log</a>`);
+    if (r.report_link) links.push(`<a href="file://${r.report_link}" target="_blank">report</a>`);
+    if (r.source_ref) {
+      let href = r.source_ref;
+      if (/^\d+$/.test(r.source_ref)) href = 'https://github.com/openai/parameter-golf/pull/' + r.source_ref;
+      if (r.source_ref.startsWith('PR#')) href = 'https://github.com/openai/parameter-golf/pull/' + r.source_ref.slice(3);
+      links.push(`<a href="${href}" target="_blank">source</a>`);
+    }
+    return `
+      <tr>
+        <td>${i + 1}</td>
+        <td>${badges.join(' ')} <a href="#" onclick="showRecipeDetail('${r.recipe_id}');return false">${esc(r.name)}</a><br><span style="color:var(--text-dim);font-size:11px">${r.recipe_id}</span></td>
+        <td style="color:var(--text-dim)">${esc(feats)}</td>
+        <td><strong style="color:var(--accent)">${val}</strong></td>
+        <td>${int6}</td>
+        <td>${art}</td>
+        <td style="color:var(--text-dim)">${esc(r.source_ref || '—')}</td>
+        <td>${links.join(' · ') || '—'}</td>
+      </tr>
+    `;
+  }).join('');
+}
+
+async function showRecipeDetail(recipeId) {
+  const data = await api('GET', '/api/recipes/' + encodeURIComponent(recipeId));
+  if (!data.recipe) return;
+  const r = data.recipe;
+  const body = `
+    <h2>${esc(r.name)}</h2>
+    <p style="color:var(--text-dim)">${esc(r.id)}</p>
+    <p>${esc(r.description || '')}</p>
+    <h3>Features</h3>
+    <pre>${esc((r.features || []).join('\n'))}</pre>
+    <h3>env_overrides</h3>
+    <pre>${esc(JSON.stringify(r.env_overrides, null, 2))}</pre>
+    <h3>Lineage</h3>
+    <p>Parent: ${r.parent_recipe ? `<a href="#" onclick="showRecipeDetail('${r.parent_recipe}');return false">${r.parent_recipe}</a>` : '—'}</p>
+    <p>Ancestors: ${(data.ancestors || []).map(a => `<a href="#" onclick="showRecipeDetail('${a.id}');return false">${esc(a.name)}</a>`).join(' → ') || '—'}</p>
+    <p>Children: ${(data.children || []).map(c => `<a href="#" onclick="showRecipeDetail('${c.id}');return false">${esc(c.name)}</a>`).join(', ') || '—'}</p>
+    <h3>Best metrics</h3>
+    <p>val_bpb: ${r.best_val_bpb ?? '—'} · int6_bpb: ${r.best_int6_bpb ?? '—'} · artifact_mb: ${r.best_artifact_mb ?? '—'}</p>
+    <p>Best experiment: ${r.best_experiment_id || '—'}</p>
+    <p style="color:var(--text-dim);font-size:11px">base_commit: ${esc(r.base_commit || '—')} · base_branch: ${esc(r.base_branch || '—')}</p>
+  `;
+  document.getElementById('idea-detail-content').innerHTML = body;
+  document.getElementById('modal-idea-detail').style.display = 'flex';
+}
+
+// ── Claude tasks ──
+async function refreshClaude() {
+  const data = await api('GET', '/api/claude/tasks?limit=200');
+  const tb = document.getElementById('claude-table');
+  if (!data.enabled) {
+    tb.innerHTML = '<tr><td colspan="8" style="color:var(--text-dim);text-align:center;padding:20px">Claude runner disabled. Enable with claude_enabled=true in config.yaml.</td></tr>';
+    return;
+  }
+  const tasks = data.tasks || [];
+  if (tasks.length === 0) {
+    tb.innerHTML = '<tr><td colspan="8" style="color:var(--text-dim);text-align:center;padding:20px">No Claude tasks yet.</td></tr>';
+    return;
+  }
+  tb.innerHTML = tasks.map(t => {
+    const dur = t.duration_s != null ? t.duration_s.toFixed(1) + 's' : '—';
+    return `
+      <tr>
+        <td style="font-size:11px;color:var(--text-dim)">${esc(t.id)}</td>
+        <td>${esc(t.task_type)}</td>
+        <td>${esc(t.target_id || '')}</td>
+        <td><span class="badge badge-${t.status}">${t.status}</span></td>
+        <td>${dur}</td>
+        <td>${t.exit_code ?? '—'}</td>
+        <td>${esc(t.branch || '')}</td>
+        <td><a href="/api/claude/tasks/${encodeURIComponent(t.id)}/stdout" target="_blank">stdout</a></td>
+      </tr>
+    `;
+  }).join('');
+}
+
+// ── Ideas ──
+async function refreshIdeas() {
+  const data = await api('GET', '/api/ideas');
+  const tb = document.getElementById('ideas-table');
+  tb.innerHTML = (data.ideas || []).map(i => `
+    <tr>
+      <td class="pri-${i.priority}">${['','Low','Normal','High','CRIT'][i.priority]}</td>
+      <td><a href="#" onclick="showIdeaDetail('${i.id}');return false">${esc(i.title)}</a></td>
+      <td><span class="badge badge-${i.status}">${i.status}</span></td>
+      <td>${i.source}</td>
+      <td>${i.total_experiments} (${i.running_experiments} running, ${i.completed_experiments} done)</td>
+      <td>${fmt(i.best_screen_bpb)}</td>
+      <td>${fmt(i.best_gate_bpb)}</td>
+      <td>
+        ${i.status === 'proposed' ? `<button class="btn btn-sm" onclick="approveIdea('${i.id}')">Approve</button>
+        <button class="btn btn-sm btn-danger" onclick="rejectIdea('${i.id}')">Reject</button>` : ''}
+        ${i.status === 'approved' || i.status === 'active' ? `<button class="btn btn-sm" onclick="showNewExpModal('${i.id}')">+ Exp</button>` : ''}
+      </td>
+    </tr>`).join('');
+}
+
+async function showIdeaDetail(id) {
+  const data = await api('GET', `/api/ideas/${id}`);
+  const c = document.getElementById('idea-detail-content');
+  const idea = data.idea;
+  c.innerHTML = `
+    <h2>${esc(idea.title)} <span class="badge badge-${idea.status}">${idea.status}</span></h2>
+    <p style="color:var(--text-dim);margin:8px 0"><b>Hypothesis:</b> ${esc(idea.hypothesis)}</p>
+    <p style="color:var(--text-dim)"><b>Source:</b> ${idea.source} ${idea.source_ref ? `(<a href="${idea.source_ref}" target="_blank">link</a>)` : ''}</p>
+    ${idea.evaluation ? `<p style="margin-top:8px"><b>Evaluation:</b> ${esc(idea.evaluation)}</p>` : ''}
+    ${idea.notes ? `<p style="margin-top:8px;color:var(--text-dim)"><b>Notes:</b> ${esc(idea.notes)}</p>` : ''}
+    <h3 style="margin-top:16px">Experiments (${data.experiments.length})</h3>
+    <table><thead><tr><th>ID</th><th>Name</th><th>Status</th><th>Screen BPB</th><th>Gate BPB</th><th>Actions</th></tr></thead><tbody>
+    ${data.experiments.map(e => `<tr>
+      <td>${e.id}</td><td>${esc(e.name)}</td>
+      <td><span class="badge badge-${e.status}">${e.status}</span></td>
+      <td>${fmt(e.screen_ema_bpb)}</td><td>${fmt(e.gate_int6_bpb)}</td>
+      <td>
+        ${['screening','gating','promoting'].includes(e.status) ? `<button class="btn btn-sm btn-danger" onclick="stopExp('${e.id}')">Stop</button>` : ''}
+        <button class="btn btn-sm" onclick="showLog('${e.id}')">Log</button>
+      </td>
+    </tr>`).join('')}
+    </tbody></table>
+    ${data.log.length ? `<h3 style="margin-top:16px">Idea Log</h3><div class="log-viewer">${data.log.map(l => `[${l.ts}] ${l.event}: ${l.message}`).join('\n')}</div>` : ''}
+  `;
+  document.getElementById('modal-idea-detail').classList.add('show');
+}
+
+async function approveIdea(id) { await api('POST', `/api/ideas/${id}/approve`, {}); refreshIdeas(); }
+async function rejectIdea(id) {
+  const reason = prompt('Rejection reason:');
+  if (reason) { await api('POST', `/api/ideas/${id}/reject`, { reason }); refreshIdeas(); }
+}
+
+// ── Experiments ──
+async function refreshExperiments() {
+  const filter = document.getElementById('exp-filter').value;
+  const q = filter ? `?status=${filter}` : '';
+  const data = await api('GET', '/api/experiments' + q);
+  const tb = document.getElementById('experiments-table');
+  tb.innerHTML = (data.experiments || []).map(e => `
+    <tr>
+      <td style="font-size:11px">${e.id}</td>
+      <td>${esc(e.name)}</td>
+      <td><a href="#" onclick="showIdeaDetail('${e.idea_id}');return false">${e.idea_id}</a></td>
+      <td><span class="badge badge-${e.status}">${e.status}</span></td>
+      <td class="pri-${e.priority}">${e.priority}</td>
+      <td>${fmt(e.screen_ema_bpb)}</td>
+      <td>${fmt(e.gate_int6_bpb)}</td>
+      <td>${fmt(e.gate_quant_gap)}</td>
+      <td>${e.node_host || '-'}</td>
+      <td>
+        ${['screening','gating','promoting'].includes(e.status) ? `<button class="btn btn-sm btn-danger" onclick="stopExp('${e.id}')">Stop</button>` : ''}
+        ${e.gate_passed && e.status !== 'promoting' ? `<button class="btn btn-sm btn-primary" onclick="promoteExp('${e.id}')">Promote</button>` : ''}
+        <button class="btn btn-sm" onclick="showLog('${e.id}')">Log</button>
+      </td>
+    </tr>`).join('');
+}
+
+async function stopExp(id) { await api('POST', `/api/experiments/${id}/stop`, {}); refreshExperiments(); }
+async function promoteExp(id) { await api('POST', `/api/experiments/${id}/promote`, {}); refreshExperiments(); }
+
+// ── Cluster ──
+async function refreshCluster() {
+  const data = await api('GET', '/api/cluster');
+  const grid = document.getElementById('cluster-grid');
+  if (!data.nodes) { grid.innerHTML = '<div class="card">No nodes configured</div>'; return; }
+  grid.innerHTML = Object.entries(data.nodes).map(([host, n]) => `
+    <div class="node-card ${n.status}">
+      <div class="node-header">
+        <b>${esc(n.label || host)}</b>
+        <span class="badge badge-${n.status === 'online' ? 'active' : 'failed'}">${n.status}</span>
+      </div>
+      <div style="font-size:11px;color:var(--text-dim);margin-bottom:8px">${host} &middot; ${n.total_gpus} GPUs (${n.free_gpus} free)</div>
+      ${(n.gpus || []).map(g => {
+        const pct = g.mem_total_mb ? Math.round(g.mem_used_mb / g.mem_total_mb * 100) : 0;
+        const cls = pct > 80 ? 'high' : pct > 40 ? 'mid' : 'low';
+        return `<div class="gpu-row">
+          <span class="gpu-label">GPU ${g.index}</span>
+          <div class="gpu-bar"><div class="gpu-bar-fill ${cls}" style="width:${pct}%"></div></div>
+          <span class="gpu-label">${pct}% ${g.temp_c}°C</span>
+          <span class="gpu-exp">${g.experiment || ''}</span>
+        </div>`;
+      }).join('')}
+    </div>`).join('');
+}
+
+// ── Events ──
+async function refreshEvents() {
+  const data = await api('GET', '/api/events?limit=100');
+  const feed = document.getElementById('event-feed');
+  feed.innerHTML = (data.events || []).map(e => {
+    const p = typeof e.payload === 'string' ? JSON.parse(e.payload || '{}') : (e.payload || {});
+    return `<div class="event-item">
+      <span class="event-time">${e.timestamp}</span>
+      <span class="event-type">${e.event_type}</span>
+      <span>${e.entity_type}/${e.entity_id} ${Object.entries(p).map(([k,v]) => `${k}=${v}`).join(' ')}</span>
+    </div>`;
+  }).join('');
+}
+
+// ── Research ──
+async function refreshResearch() {
+  const sota = await api('GET', '/api/research/sota');
+  document.getElementById('sota-info').innerHTML = sota.best_sota
+    ? `<b>${fmt(sota.best_sota.val_bpb)} BPB</b> from ${sota.best_sota.source} (${sota.best_sota.technique || 'unknown'})`
+    : 'No SOTA entries yet';
+  const events = await api('GET', '/api/events?entity_type=research&limit=30');
+  document.getElementById('research-events').innerHTML = (events.events || []).map(e => {
+    const p = typeof e.payload === 'string' ? JSON.parse(e.payload || '{}') : (e.payload || {});
+    return `<div class="event-item">
+      <span class="event-time">${e.timestamp}</span>
+      <span class="event-type">${e.event_type}</span>
+      <span>${p.title || e.entity_id} ${p.worth ? '✓ worth exploring' : ''}</span>
+    </div>`;
+  }).join('') || '<div style="color:var(--text-dim)">No research events yet. Click "Poll Now" to start.</div>';
+}
+
+async function triggerPoll() {
+  const r = await api('POST', '/api/research/poll', {});
+  alert(`Poll complete: ${r.new_prs || 0} new PRs, ${r.new_papers || 0} new papers`);
+  refreshResearch();
+}
+
+// ── Log viewer ──
+async function showLog(expId) {
+  document.getElementById('log-title').textContent = `Log: ${expId}`;
+  document.getElementById('log-content').textContent = 'Loading...';
+  document.getElementById('modal-log').classList.add('show');
+  const data = await api('GET', `/api/experiments/${expId}/logs?lines=200`);
+  document.getElementById('log-content').textContent = data.log || '(no log output)';
+}
+
+// ── Modals ──
+function showNewIdeaModal() { document.getElementById('modal-new-idea').classList.add('show'); }
+function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+
+async function submitNewIdea() {
+  const title = document.getElementById('idea-title').value;
+  const hypothesis = document.getElementById('idea-hypothesis').value;
+  if (!title || !hypothesis) { alert('Title and hypothesis required'); return; }
+  await api('POST', '/api/ideas', {
+    title, hypothesis,
+    priority: parseInt(document.getElementById('idea-priority').value),
+    tags: document.getElementById('idea-tags').value.split(',').map(t => t.trim()).filter(Boolean),
+    notes: document.getElementById('idea-notes').value,
+  });
+  closeModal('modal-new-idea');
+  ['idea-title','idea-hypothesis','idea-tags','idea-notes'].forEach(id => document.getElementById(id).value = '');
+  refreshIdeas();
+}
+
+function showNewExpModal(ideaId) {
+  const name = prompt('Experiment name:');
+  if (!name) return;
+  const envStr = prompt('Env overrides (JSON, e.g. {"MUON_LR":"0.03"}):', '{}');
+  try {
+    const env = JSON.parse(envStr || '{}');
+    api('POST', `/api/ideas/${ideaId}/experiments`, { name, env_overrides: env });
+    setTimeout(refreshIdeas, 500);
+  } catch(e) { alert('Invalid JSON for env overrides'); }
+}
+
+async function stopAll() {
+  if (confirm('Stop ALL running experiments?')) {
+    await api('POST', '/api/stop-all', {});
+    setTimeout(refresh, 1000);
+  }
+}
+
+// ── Helpers ──
+function fmt(v) { return v != null ? v.toFixed(4) : '-'; }
+function esc(s) { const d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
+
+// ── Auto-refresh ──
+async function refresh() {
+  try {
+    const status = await api('GET', '/api/status');
+    const s = status.stats || {};
+    document.getElementById('stat-ideas').textContent = s.total_ideas || 0;
+    document.getElementById('stat-exps').textContent = s.total_experiments || 0;
+    document.getElementById('stat-running').textContent = s.running_experiments || 0;
+    document.getElementById('stat-nodes').textContent = (status.cluster || {}).online_nodes || 0;
+    document.getElementById('stat-gpus').textContent = (status.cluster || {}).free_gpus || 0;
+    document.getElementById('last-update').textContent = 'Updated ' + new Date().toLocaleTimeString();
+  } catch(e) {}
+
+  // Refresh active panel
+  const active = document.querySelector('.panel.active');
+  if (active) {
+    const id = active.id.replace('panel-', '');
+    if (id === 'ideas') refreshIdeas();
+    else if (id === 'experiments') refreshExperiments();
+    else if (id === 'cluster') refreshCluster();
+  }
+}
+
+// Initial load + auto-refresh every 10s
+refresh();
+refreshIdeas();
+setInterval(refresh, 10000);
+
+// Close modals on backdrop click
+document.querySelectorAll('.modal-overlay').forEach(m => {
+  m.addEventListener('click', e => { if (e.target === m) m.classList.remove('show'); });
+});
+</script>
+</body>
+</html>

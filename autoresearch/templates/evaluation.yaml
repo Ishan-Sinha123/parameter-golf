@@ -1,0 +1,24 @@
+id: "{{ EXP_ID }}"
+name: "{{ EXP_NAME }}"
+parent: "{{ PARENT_ID }}"
+hypothesis: "{{ HYPOTHESIS }}"
+category: evaluation
+priority: "{{ PRIORITY }}"
+
+# Evaluation-only experiments re-run the gate/promote pipeline on an
+# existing checkpoint without retraining.
+env_overrides:
+  CHECKPOINT_PATH: "{{ CHECKPOINT_PATH }}"
+  EVAL_STRIDE: "{{ EVAL_STRIDE }}"
+  # Sliding window evaluation parameters.
+  SLIDING_WINDOW_SIZE: "{{ SLIDING_WINDOW_SIZE }}"
+  SLIDING_WINDOW_STRIDE: "{{ SLIDING_WINDOW_STRIDE }}"
+  SLIDING_WINDOW_OVERLAP: "{{ SLIDING_WINDOW_OVERLAP }}"
+
+# Evaluation experiments only run gate and promote pipelines (no training).
+stages:
+  - gate
+  - promote
+
+# Evaluation differences should be minimal; use a tight threshold.
+reject_if_worse_by: 0.02

@@ -1,0 +1,19 @@
+id: rec_20260410_swiglu_with_higher_mlp_ratio_1beaf6e2
+name: SwiGLU with higher MLP ratio
+description: Auto-migrated from experiment idea_swiglu_activation_for_mlp_laye_exp002
+parent_recipe: rec_20260410_naive_baseline_5467eac1
+features:
+- activation=swiglu
+- mlp_mult=3.0
+feature_set_hash: 1beaf6e2bcb49548
+env_overrides:
+  ACTIVATION: swiglu
+  MLP_MULT: '3.0'
+script_path: train_gpt.py
+base_commit: ec4d2ee1656ee38f080d98e8f9d01d988850de00
+base_branch: ''
+source_experiment: idea_swiglu_activation_for_mlp_laye_exp002
+best_val_bpb: 1.322
+best_int6_bpb: null
+best_artifact_mb: null
+best_experiment_id: idea_swiglu_activation_for_mlp_laye_exp002

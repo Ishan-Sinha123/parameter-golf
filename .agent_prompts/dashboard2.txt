@@ -1,0 +1,61 @@
+Read new_autoresearcher.md in the project root — that is the full system specification.
+
+You are building the DASHBOARD AND HTTP API from scratch inside autoresearch_v2/dashboard/.
+
+First read these existing files to understand the data model:
+  autoresearch_v2/core/types.py     — ExperimentStatus enum, ExperimentConfig, etc.
+  autoresearch_v2/core/registry.py  — SQLite schema and query methods
+
+YOU MUST CREATE ALL OF THESE FILES:
+  autoresearch_v2/dashboard/__init__.py
+  autoresearch_v2/dashboard/types.py       — Response dataclasses (ExperimentSummary, MetricsData, GPUStatus)
+  autoresearch_v2/dashboard/gpu_monitor.py — Parse nvidia-smi into list[GPUStatus], cache for 5s
+  autoresearch_v2/dashboard/api.py         — Read-only SQLite + metrics.jsonl readers, returns dicts for JSON
+  autoresearch_v2/dashboard/server.py      — stdlib http.server, routes to api handlers, serves dashboard.html
+  autoresearch_v2/dashboard/dashboard.html — Single-file dark-theme dashboard (HTML+CSS+JS, zero deps)
+
+DO NOT modify any file outside autoresearch_v2/dashboard/.
+
+SERVER (server.py):
+- Subclass http.server.BaseHTTPRequestHandler
+- Router class: dict mapping regex patterns → handler methods
+- Routes: GET / (serve html), GET /api/status, GET /api/experiment/{id}, GET /api/metrics/{id}, GET /api/gpus, GET /api/comparison?ids=a,b,c
+- JSON responses with proper Content-Type headers
+- CORS headers for local dev
+- CLI: python3 -m autoresearch_v2.dashboard.server --port 8080 --db-path autoresearch_v2/db/registry.db
+
+API (api.py):
+- DatabaseReader context manager, opens SQLite with ?mode=ro URI
+- Handle missing DB: return empty results, don't crash
+- Each endpoint is a method returning dict (serialized by server)
+- Read metrics.jsonl files from experiments/ directory for live chart data
+
+GPU MONITOR (gpu_monitor.py):
+- Parse: nvidia-smi --query-gpu=index,name,memory.used,memory.total,utilization.gpu,temperature.gpu --format=csv,noheader,nounits
+- GPUStatus frozen dataclass: index, name, memory_used_mb, memory_total_mb, utilization_pct, temperature_c
+- Handle nvidia-smi not found: return empty list, log warning
+- TTL cache: store result + timestamp, return cached if <5s old
+
+DASHBOARD (dashboard.html):
+- SINGLE FILE. No external dependencies. No build step.
+- Dark theme: bg #0d1117, text #c9d1d9, accent #58a6ff, borders #30363d
+- Status pills: green(DONE), blue(SCREENING), yellow(GATING), purple(PROMOTING), red(REJECTED/FAILED), gray(QUEUED/DEFINED)
+- VIEWS:
+  a) Status Board (default): sortable table of experiments. Columns: ID, Name, Status, Screen BPB, Gate Int6, Quant Gap, Artifact MB, Steps, ms/step, Priority. Auto-refresh 10s.
+  b) Live Curves: <canvas> loss curves for running experiments. X=wall-clock seconds. Baseline overlay in gray dashed. Poll /api/metrics/{id} every 10s.
+  c) Comparison: checkbox select 2-4 experiments → overlay chart + metric table.
+  d) GPU Monitor: horizontal bar charts for per-GPU memory% and compute%.
+  e) Detail: click row → slide-out panel with config, hypothesis, lineage, log tail.
+- Vanilla JS only. fetch() for API. Single global state object. Hash-based tab navigation.
+- font-variant-numeric: tabular-nums for all numbers. Monospace font for data.
+- Compact, information-dense. Not responsive (single monitor tool).
+
+CODE STANDARDS:
+- Full type annotations on all Python functions
+- frozen=True dataclasses for all value objects
+- Context managers for DB connections
+- logging module, not print()
+- No bare except:
+- After each .py file: python3 -m py_compile <file>
+
+IMPLEMENTATION ORDER: types.py → gpu_monitor.py → api.py → server.py → dashboard.html → __init__.py

@@ -1,0 +1,19 @@
+id: "{{ EXP_ID }}"
+name: "{{ EXP_NAME }}"
+parent: "{{ PARENT_ID }}"
+hypothesis: "{{ HYPOTHESIS }}"
+category: ttt
+priority: "{{ PRIORITY }}"
+
+# Test-Time Training (TTT) overrides.
+env_overrides:
+  TTT_LR: "{{ TTT_LR }}"
+  TTT_STEPS: "{{ TTT_STEPS }}"
+  TTT_BATCH_SIZE: "{{ TTT_BATCH_SIZE }}"
+
+# TTT benefits from longer training; skip screen and go straight to promote.
+stages:
+  - promote
+
+# TTT experiments may show unusual scaling; use a slightly looser threshold.
+reject_if_worse_by: 0.08

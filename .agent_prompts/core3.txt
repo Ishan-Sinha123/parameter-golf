@@ -1,0 +1,45 @@
+Read new_autoresearcher.md in the project root THOROUGHLY — that is the full system specification. Pay special attention to:
+- Section 3.1 (DEFINE stage: agent-assisted definition, agent-define command)
+- Section 3.1 (QUEUE stage: compute pre-flight via h100_time_guess)
+- Section 3.1 (INSPECT stage: generate_demo.py integration, 7-stage pipeline)
+- Section 4.1.1 (TSV migration: import-tsv command)
+- Section 5.2 (Runner: EXPERIMENT_DESC, RESULTS_TSV_PATH, post-run compute verification)
+- Section 8 Phase 0 (External tool integration)
+- Section 9.6 (Autonomous agent loop)
+
+Then read ALL existing files in autoresearch_v2/core/ and autoresearch_v2/autoresearch.py to understand what's already built.
+
+YOUR JOB: Add the features from the spec that are MISSING from the existing code. The base system works but is missing several spec requirements. You must:
+
+1. UPDATE autoresearch_v2/core/types.py:
+   - Add INSPECTING to ExperimentStatus enum if missing
+   - Add inspect field (bool, default False) to ExperimentConfig
+   - Add screen_h100_estimate_s (Optional[float]) to ExperimentResult
+   - Add warnings (list[str]) to ExperimentConfig
+
+2. UPDATE autoresearch_v2/core/scheduler.py:
+   - Add INSPECT stage handling: after GATING passes, if config.inspect is True, run generate_demo.py and transition to INSPECTING. If inspect is False, skip directly to promote queue.
+   - Add compute pre-flight in queue_experiment(): call h100_time_guess if parent log exists, store warnings.
+   - Add post-screen compute verification in handle_screen_completion().
+
+3. UPDATE autoresearch_v2/core/runner.py:
+   - Set EXPERIMENT_DESC and RESULTS_TSV_PATH env vars when launching training.
+   - Add run_inspect() method that invokes scripts/generate_demo.py --plain --prompt "The most important thing about" --max-new-tokens 128 on a checkpoint, captures output to inspect_samples.txt.
+
+4. UPDATE autoresearch_v2/autoresearch.py:
+   - Add 'agent-define' subcommand: mines records/ for 3 mechanistically-diverse routes, presents to user, generates YAML configs. See spec §3.1 and §9.1 step 5b.
+   - Add 'agent-loop' subcommand: autonomous iteration loop per spec §9.6. Takes --parent, --branch, --autonomous flags. Submits experiments to scheduler queue, monitors results, keeps/reverts, proposes new routes when exhausted.
+   - Add 'import-tsv' subcommand: reads a results.tsv file (columns: commit, val_bpb, memory_gb, status, description), creates registry entries with auto-generated IDs (legacy_{commit_hash}), status done/rejected based on keep/discard/crash.
+
+5. CREATE autoresearch_v2/scripts/compute_estimator.py:
+   - Wrapper around h100_time_guess logic. Functions: estimate_screen_time(parent_log: Path) -> Optional[float], estimate_promote_time(screen_log: Path) -> Optional[float], check_within_budget(log: Path, budget_s: float) -> tuple[bool, float].
+   - If the actual h100_time_guess.py doesn't exist yet in scripts/, implement a simplified version: parse "train_time:...ms" and "step:N/M" from logs, use a TFLOPS lookup table for common GPUs, extrapolate.
+
+DO NOT delete or rewrite existing code. READ each file first, then ADD to it using minimal, surgical changes. Use str_replace-style additions — append new methods to existing classes, add new enum members, add new subcommands to existing argparse setup.
+
+CODE STANDARDS:
+- Full type annotations on every function
+- frozen=True dataclasses for new value objects
+- logging module, not print()
+- After modifying each file, run: python3 -m py_compile <file>
+- Use only Python stdlib. No pip installs.

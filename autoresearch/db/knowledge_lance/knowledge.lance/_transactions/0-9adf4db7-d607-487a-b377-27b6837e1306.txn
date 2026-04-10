@@ -1,0 +1,5 @@
+$9adf4db7-d607-487a-b377-27b6837e1306² id ÿÿÿÿÿÿÿÿÿ*int6408&source_type ÿÿÿÿÿÿÿÿÿ*string08%
+source_ref ÿÿÿÿÿÿÿÿÿ*string08 title ÿÿÿÿÿÿÿÿÿ*string08"content ÿÿÿÿÿÿÿÿÿ*string08tags ÿÿÿÿÿÿÿÿÿ*string08#metadata ÿÿÿÿÿÿÿÿÿ*string08%
+created_at ÿÿÿÿÿÿÿÿÿ*string084vector ÿÿÿÿÿÿÿÿÿ*fixed_size_list:float:38408"'
+lance.auto_cleanup.older_than14days"!
+lance.auto_cleanup.interval20

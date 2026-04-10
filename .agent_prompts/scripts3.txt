@@ -1,0 +1,45 @@
+Read new_autoresearcher.md in the project root THOROUGHLY. Pay special attention to:
+- Section 2.1 (Tooling Plane: compute estimator, terminal playground, agent loop)
+- Section 3.1 (INSPECT stage: generate_demo.py)
+- Section 3.1 (QUEUE: compute pre-flight)
+- Section 5.6 (Research Retriever: records-mining, propose subcommands)
+- Section 8 Phase 0 (External tool integration)
+- Section 10.6 (Why integrate JianYan11 tools)
+
+Then read ALL existing files in autoresearch_v2/scripts/ and autoresearch_v2/templates/ to understand what's built.
+
+YOUR JOB: Add missing scripts and expand the retriever.
+
+1. CREATE autoresearch_v2/scripts/h100_time_guess.py:
+   A compute time estimator. Since we can't vendor the real JianYan11 script without network access, implement a clean version from the spec:
+   - GPU_TFLOPS lookup: dict mapping GPU names to peak FP16 TFLOPS (H100 SXM: 989, H100 PCIe: 756, A100 80GB: 312, A100 40GB: 312, etc.)
+   - parse_train_log(log_path: Path) -> TrainLogStats: extract total_steps, avg_ms_per_step, total_time_s from training logs by grepping for step timing lines
+   - estimate_h100_time(log_path: Path, target_gpus: int = 8, target_gpu: str = "H100 SXM") -> float: uses TFLOPS ratio to scale from actual hardware to target
+   - check_within_budget(log_path: Path, budget_s: float = 600) -> BudgetCheck (frozen dataclass: estimated_s, budget_s, passes, margin_pct)
+   - CLI: python3 -m autoresearch_v2.scripts.h100_time_guess check <log_path>
+
+2. CREATE autoresearch_v2/scripts/generate_demo.py:
+   A checkpoint token-streaming tool for qualitative inspection:
+   - load_checkpoint(path: Path, device: str = "cpu") -> tuple[model, tokenizer]
+   - generate_tokens(model, tokenizer, prompt: str, max_new_tokens: int = 128, temperature: float = 0.9) -> str
+   - CLI: python3 -m autoresearch_v2.scripts.generate_demo --checkpoint PATH --tokenizer PATH --prompt "text" --max-new-tokens N --temperature T --plain
+   - In --plain mode: just output generated text to stdout (machine-parseable). Without --plain: interactive prompt loop.
+   - Handle checkpoint formats: look for 'model_state_dict' key, strip 'module.' DDP prefixes, handle both .pt and .ptz files.
+   - Runs on CPU by default. Accept --device flag.
+
+3. UPDATE autoresearch_v2/scripts/retriever.py:
+   Add two new subcommands (keep all existing subcommands):
+   - 'records' subcommand: scans records/ directory in the parameter-golf repo. For each submission, parses submission.json (extract val_bpb, bytes_total, author, summary) and README.md (extract technique descriptions, ablation tables). Returns structured JSON results ranked by relevance to a --bottleneck query.
+   - 'propose' subcommand: uses records-mining output to propose exactly 3 experiment routes that differ in mechanism (architecture vs quant vs optimizer). Each route includes: name, hypothesis, cited records with val_bpb gaps, env_overrides, and caveats. Output: JSON array of 3 route objects. Takes --parent and --bottleneck flags.
+
+4. CREATE autoresearch_v2/templates/evaluation.yaml if it doesn't exist yet. Template for evaluation-time experiments (stride changes, sliding window params).
+
+DO NOT modify files outside autoresearch_v2/scripts/ and autoresearch_v2/templates/.
+
+CODE STANDARDS:
+- Full type annotations on every function
+- frozen=True dataclasses for value objects (TrainLogStats, BudgetCheck, RecordEntry, ProposedRoute)
+- Protocols where appropriate
+- logging module, not print()
+- After each file, run: python3 -m py_compile <file>
+- torch is available for generate_demo.py. Everything else stdlib only.

@@ -1,0 +1,39 @@
+Read new_autoresearcher.md in the project root — that is the full system specification.
+
+You are building the GPTQ GATE PIPELINE inside autoresearch_v2/gate/.
+
+The following file already exists — read it first:
+  autoresearch_v2/gate/types.py  — GateResult and related types
+
+Also read these for shared types:
+  autoresearch_v2/core/types.py
+  autoresearch_v2/core/exceptions.py
+
+CRITICAL FIRST STEP: Read train_gpt.py in the project root. Search for all occurrences of "gptq", "int6", "quantiz", "lzma", "zlib", "compress", "roundtrip", "calibrat" to understand the existing GPTQ and evaluation pipeline. Your gate module must extract and adapt this logic.
+
+YOU MUST CREATE ONLY THESE FILES:
+  autoresearch_v2/gate/__init__.py
+  autoresearch_v2/gate/criteria.py     — RejectionCriteria: pass/fail rules as methods returning Optional[str]
+  autoresearch_v2/gate/compress.py     — LZMA compression wrapper, returns compressed size + ratio
+  autoresearch_v2/gate/quantize.py     — GPTQ int6 quantization extracted from train_gpt.py, behind a Quantizer Protocol
+  autoresearch_v2/gate/evaluate.py     — Int6 roundtrip BPB evaluation
+  autoresearch_v2/gate/gptq_gate.py    — CLI entry: load checkpoint → quantize → evaluate → check criteria → write JSON
+
+DO NOT modify autoresearch_v2/gate/types.py or any file outside autoresearch_v2/gate/.
+
+DESIGN:
+1. criteria.py: RejectionCriteria dataclass with max_quant_gap_ratio (default 2.0), max_artifact_mb (default 15.5), max_bpb_regression (default 0.05). Three check methods, each returning Optional[str]. An evaluate() method returning GateVerdict (pass + list of reasons).
+2. compress.py: compress_artifact(data: bytes, preset: int = 6) -> CompressedArtifact (frozen dataclass: compressed_bytes, original_size, compressed_size, ratio).
+3. quantize.py: Define a Quantizer Protocol with quantize(model, calibration_data) -> QuantizedModel. Implement GPTQQuantizer that adapts the logic from train_gpt.py.
+4. evaluate.py: Function that loads quantized weights, runs forward pass on validation data, returns BPB.
+5. gptq_gate.py: CLI via argparse. --checkpoint, --output, --parent-results, --device. Orchestrates the full pipeline.
+
+CODE STANDARDS:
+- Full type annotations everywhere
+- frozen=True dataclasses for value objects
+- Protocol for Quantizer interface
+- Custom exceptions inheriting from AutoResearchError (import from core.exceptions)
+- logging module, not print()
+- After creating each file, run: python3 -m py_compile <file>
+
+IMPLEMENTATION ORDER: criteria.py → compress.py → quantize.py → evaluate.py → gptq_gate.py → __init__.py

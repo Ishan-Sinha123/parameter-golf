@@ -1,0 +1,31 @@
+Read new_autoresearcher.md in the project root. Pay attention to:
+- Section 3.1 (INSPECT stage — dashboard "Inspect" button)
+- Section 5.4 (Dashboard views — compute estimate in Comparison Table)
+- The 7-stage pipeline (INSPECTING status needs a color pill)
+
+Then read ALL existing files in autoresearch_v2/dashboard/ to understand the current implementation.
+
+YOUR JOB: Update the existing dashboard to support spec features that may be missing.
+
+1. UPDATE autoresearch_v2/dashboard/dashboard.html:
+   - Ensure INSPECTING status has a color pill (use orange/amber: #d29922)
+   - Add an "Inspect" button on experiments with status GATING→passed. The button calls POST /api/inspect/{id} which triggers generate_demo.py on the checkpoint.
+   - Add a "Samples" tab in Experiment Detail that shows inspect_samples.txt content (fetched via GET /api/inspect-samples/{id})
+   - Add "H100 Est." column to the Status Board and Comparison Table showing the estimated H100 time from screen runs
+   - Add compute budget indicator: green if est < 480s, yellow if 480-570s, red if > 570s (for 600s budget)
+
+2. UPDATE autoresearch_v2/dashboard/api.py:
+   - Add GET /api/inspect-samples/{id}: reads experiments/{id}/inspect_samples.txt, returns {"samples": "text content"} or {"samples": null} if file doesn't exist
+   - Add POST /api/inspect/{id}: triggers generate_demo.py on the experiment's checkpoint (subprocess, non-blocking). Returns {"status": "started"}.
+   - Add screen_h100_estimate_s to experiment detail responses if available in registry
+
+3. UPDATE autoresearch_v2/dashboard/server.py:
+   - Add routes for the new API endpoints
+   - Support POST method for /api/inspect/{id}
+
+DO NOT modify files outside autoresearch_v2/dashboard/.
+
+CODE STANDARDS:
+- Full type annotations on all Python functions
+- After modifying each file, run: python3 -m py_compile <file>
+- For HTML changes: keep it single-file, vanilla JS, dark theme, no external deps

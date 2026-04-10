@@ -1,0 +1,66 @@
+Read new_autoresearcher.md in the project root first — that is the full system specification.
+
+You are building the GPTQ GATE PIPELINE inside autoresearch_v2/gate/.
+
+YOUR FILES (create these and ONLY these):
+  autoresearch_v2/gate/__init__.py
+  autoresearch_v2/gate/gptq_gate.py     — Main entry point: load checkpoint, quantize, evaluate, write JSON
+  autoresearch_v2/gate/quantize.py       — GPTQ int6 quantization (extract + adapt from train_gpt.py)
+  autoresearch_v2/gate/evaluate.py       — Int6 roundtrip BPB evaluation
+  autoresearch_v2/gate/compress.py       — LZMA compression + artifact size estimation
+  autoresearch_v2/gate/criteria.py       — Pass/fail rejection criteria (dataclass-based rules)
+  autoresearch_v2/gate/types.py          — Gate-specific types (GateResult dataclass, etc.)
+
+DO NOT create or modify files outside autoresearch_v2/gate/.
+
+CRITICAL FIRST STEP: Read train_gpt.py in the project root. Search for "gptq", "int6", "quantiz", "lzma", "zlib", "compress", "roundtrip" to understand how the existing SOTA does quantization and evaluation. Your gate module must replicate this logic as a standalone pipeline that can be invoked on any checkpoint.
+
+DESIGN REQUIREMENTS:
+1. gptq_gate.py: CLI interface via argparse. Invoked as:
+   python -m autoresearch_v2.gate.gptq_gate --checkpoint PATH --output gate_results.json --parent-results PARENT_GATE.json --device cuda:0
+2. GateResult (frozen dataclass in types.py):
+   passed: bool, int6_bpb: float, quant_gap: float, artifact_mb: float, rejection_reason: Optional[str], gptq_time_s: float, calibration_tokens: int, peak_memory_mb: float
+3. RejectionCriteria (dataclass in criteria.py): Encapsulates the three auto-reject rules:
+   - quant_gap > max_quant_gap_ratio * parent_quant_gap -> REJECT
+   - artifact_mb > max_artifact_mb -> REJECT
+   - int6_bpb > parent_int6_bpb + max_bpb_regression -> REJECT
+   Each rule is a method returning Optional[str] (rejection reason or None). Aggregate check returns GateVerdict.
+4. Quantization: Extract the GPTQ logic from train_gpt.py into a clean class. Use a Protocol for the quantizer interface so alternative quantization methods can be swapped in later.
+5. Compression: LZMA with preset 6 (match SOTA). Return both compressed size and compression ratio.
+6. Error handling: GPTQ OOM -> catch RuntimeError, return GateResult with passed=False. Checkpoint not found -> FileNotFoundError. Corrupted weights -> catch and report.
+
+
+CODE STANDARDS (mandatory for all files you write):
+
+1. TYPING: Every function signature must have full type annotations (params + return). Use typing module: Optional, List, Dict, Union, Protocol, TypeVar, etc. Use dataclasses or NamedTuple for structured data — no raw dicts for internal state. Use Enum for finite state sets (experiment status, priority, stage).
+
+2. LINTING: Your code must pass: python -m py_compile <file> at minimum. Write code that would pass ruff/mypy strict. No bare except:, no mutable default args, no unused imports.
+
+3. PATTERNS:
+   - @property for computed attributes (never expose raw internal state)
+   - Builder pattern for complex object construction (experiment configs)
+   - Abstract base classes (abc.ABC + @abstractmethod) for interfaces that have multiple implementations
+   - Context managers (__enter__/__exit__) for resource lifecycle (DB connections, GPU locks, file handles)
+   - dataclasses with frozen=True for immutable value objects
+   - Protocols (typing.Protocol) for structural subtyping where ABC is overkill
+
+4. STYLE: Minimal comments — code should be self-documenting via types and names. Docstrings on public classes and non-obvious public methods only (Google style). No inline comments that restate what the code does. Private methods prefixed with underscore. Constants in UPPER_SNAKE_CASE at module top.
+
+5. ERROR HANDLING: Define custom exception hierarchy (AutoResearchError base). Never catch Exception broadly — catch specific types. Use logging module, not print(). Log level: DEBUG for step-by-step, INFO for stage transitions, WARNING for retries, ERROR for failures.
+
+6. IMPORTS: stdlib first, then third-party, then local. One import per line. No wildcard imports.
+
+7. STRUCTURE: Each module should have a clear single responsibility. If a file exceeds 300 lines, it probably needs splitting. __all__ exports at top of each module.
+
+IMPLEMENTATION ORDER:
+1. types.py (GateResult, GateVerdict)
+2. criteria.py (RejectionCriteria — pure logic, no deps)
+3. compress.py (LZMA wrapper — small, testable)
+4. Read train_gpt.py thoroughly for GPTQ implementation details
+5. quantize.py (extract + adapt GPTQ from train_gpt.py)
+6. evaluate.py (int6 roundtrip eval)
+7. gptq_gate.py (wire together as CLI)
+
+After each file, run: python -m py_compile autoresearch_v2/gate/<file>.py
+
+Dependencies: torch (already installed), plus whatever train_gpt.py imports for GPTQ. No new pip installs.

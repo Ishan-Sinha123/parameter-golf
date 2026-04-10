@@ -1,0 +1,119 @@
+W0403 04:33:26.296000 238644 site-packages/torch/distributed/run.py:851] 
+W0403 04:33:26.296000 238644 site-packages/torch/distributed/run.py:851] *****************************************
+W0403 04:33:26.296000 238644 site-packages/torch/distributed/run.py:851] Setting OMP_NUM_THREADS environment variable for each process to be 1 in default, to avoid your system being overloaded, please further tune the variable for optimal performance in your application as needed. 
+W0403 04:33:26.296000 238644 site-packages/torch/distributed/run.py:851] *****************************************
+logs/C1_stride_32.txt
+val_bpb:enabled tokenizer_kind=sentencepiece tokenizer_path=./data/tokenizers/fineweb_1024_bpe.model
+train_loader:dataset:fineweb10B_sp1024 train_shards:10
+val_loader:shards pattern=./data/datasets/fineweb10B_sp1024/fineweb_val_*.bin tokens:62021632
+model_params:26993756
+mtp_num_heads:0 mtp_loss_weight:0.2 mtp_params:0
+XSA:last_11 active_layers:[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+world_size:4 grad_accum_steps:2
+sdp_backends:cudnn=False flash=True mem_efficient=False math=False
+attention_mode:gqa num_heads:8 num_kv_heads:4
+tie_embeddings:True embed_lr:0.035 head_lr:0.0 matrix_lr:0.025 scalar_lr:0.025
+train_batch_tokens:786432 train_seq_len:2048 iterations:20000 warmup_steps:20 max_wallclock_seconds:180.000
+seed:1337
+warmup_step:1/20
+warmup_step:2/20
+warmup_step:3/20
+warmup_step:4/20
+warmup_step:5/20
+warmup_step:6/20
+warmup_step:7/20
+warmup_step:8/20
+warmup_step:9/20
+warmup_step:10/20
+warmup_step:11/20
+warmup_step:12/20
+warmup_step:13/20
+warmup_step:14/20
+warmup_step:15/20
+warmup_step:16/20
+warmup_step:17/20
+warmup_step:18/20
+warmup_step:19/20
+warmup_step:20/20
+step:0/20000 val_loss:6.9309 val_bpb:4.1049 train_time:0ms step_avg:0.02ms
+step:1/20000 train_loss:6.9314 train_time:217ms step_avg:216.75ms
+step:2/20000 train_loss:8.6932 train_time:340ms step_avg:170.03ms
+step:3/20000 train_loss:8.2276 train_time:510ms step_avg:169.92ms
+step:4/20000 train_loss:7.5710 train_time:679ms step_avg:169.76ms
+step:5/20000 train_loss:6.9323 train_time:849ms step_avg:169.73ms
+step:6/20000 train_loss:6.5091 train_time:1018ms step_avg:169.64ms
+step:7/20000 train_loss:6.2933 train_time:1188ms step_avg:169.75ms
+step:8/20000 train_loss:6.0481 train_time:1366ms step_avg:170.70ms
+step:9/20000 train_loss:5.9378 train_time:1537ms step_avg:170.74ms
+step:10/20000 train_loss:5.8513 train_time:1707ms step_avg:170.73ms
+step:100/20000 train_loss:3.4854 train_time:17116ms step_avg:171.16ms
+step:200/20000 train_loss:2.7694 train_time:34320ms step_avg:171.60ms
+step:200/20000 val_loss:2.9018 val_bpb:1.7186 train_time:34372ms step_avg:171.86ms
+step:300/20000 train_loss:2.6736 train_time:51550ms step_avg:171.83ms
+swa:start step:350
+step:400/20000 train_loss:2.5199 train_time:68865ms step_avg:172.16ms
+step:400/20000 val_loss:2.5213 val_bpb:1.4933 train_time:68992ms step_avg:172.48ms
+step:500/20000 train_loss:2.4414 train_time:86185ms step_avg:172.37ms
+late_qat:enabled step:519 scale:0.1497
+step:600/20000 train_loss:2.4103 train_time:103488ms step_avg:172.48ms
+step:600/20000 val_loss:2.3806 val_bpb:1.4099 train_time:103603ms step_avg:172.67ms
+step:700/20000 train_loss:2.4403 train_time:120784ms step_avg:172.55ms
+step:800/20000 train_loss:2.2821 train_time:138091ms step_avg:172.61ms
+step:800/20000 val_loss:2.3049 val_bpb:1.3651 train_time:138202ms step_avg:172.75ms
+step:900/20000 train_loss:2.1632 train_time:155441ms step_avg:172.71ms
+step:1000/20000 train_loss:2.3083 train_time:172718ms step_avg:172.72ms
+step:1000/20000 val_loss:2.2628 val_bpb:1.3401 train_time:172829ms step_avg:172.83ms
+step:1042/20000 val_loss:2.2596 val_bpb:1.3382 train_time:180095ms step_avg:172.84ms
+stopping_early: wallclock_cap train_time:180095ms step:1042/20000
+peak memory allocated: 23141 MiB reserved: 23522 MiB
+ema:applying EMA weights
+DIAGNOSTIC post_ema val_loss:2.3838 val_bpb:1.4118 eval_time:4110ms
+Serialized model: 106158518 bytes
+Code size: 103457 bytes
+gptq:building non-banked model for Hessian collection...
+gptq:generating autoregressive calibration data (64 seqs x 2048 tokens, temp=0.8)...
+gptq:generated 64 sequences in 159.8s
+gptq:collecting hessians from autoregressive data...
+gptq:collected hessians for 68 layers (AR self-gen)
+selective_prune: 10608288 ±1 candidates, unpruned=7.61MB target=15.9MB
+selective_prune: already fits, no pruning needed
+Serialized model int6+lzma: 7876864 bytes
+Total submission size int6+lzma: 7980321 bytes
+final_int6_roundtrip val_loss:2.8843 val_bpb:1.7083 eval_time:17841ms
+final_int6_roundtrip_exact val_loss:2.88432706 val_bpb:1.70826095
+final_int6_sliding_window val_loss:2.8570 val_bpb:1.6921 stride:32 eval_time:302122ms
+final_int6_sliding_window_exact val_loss:2.85702191 val_bpb:1.69209491
+final_int8_zlib_roundtrip_exact val_loss:2.85702191 val_bpb:1.69209491
+W0403 04:48:25.193000 238644 site-packages/torch/distributed/elastic/agent/server/api.py:739] Received 15 death signal, shutting down workers
+W0403 04:48:25.197000 238644 site-packages/torch/distributed/elastic/multiprocessing/api.py:1012] Sending process 238722 closing signal SIGTERM
+W0403 04:48:25.198000 238644 site-packages/torch/distributed/elastic/multiprocessing/api.py:1012] Sending process 238723 closing signal SIGTERM
+W0403 04:48:25.198000 238644 site-packages/torch/distributed/elastic/multiprocessing/api.py:1012] Sending process 238724 closing signal SIGTERM
+W0403 04:48:25.198000 238644 site-packages/torch/distributed/elastic/multiprocessing/api.py:1012] Sending process 238725 closing signal SIGTERM
+Traceback (most recent call last):
+  File "/venv/main/bin/torchrun", line 10, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "/venv/main/lib/python3.12/site-packages/torch/distributed/elastic/multiprocessing/errors/__init__.py", line 362, in wrapper
+    return f(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^
+  File "/venv/main/lib/python3.12/site-packages/torch/distributed/run.py", line 990, in main
+    run(args)
+  File "/venv/main/lib/python3.12/site-packages/torch/distributed/run.py", line 981, in run
+    elastic_launch(
+  File "/venv/main/lib/python3.12/site-packages/torch/distributed/launcher/api.py", line 170, in __call__
+    return launch_agent(self._config, self._entrypoint, list(args))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/venv/main/lib/python3.12/site-packages/torch/distributed/launcher/api.py", line 308, in launch_agent
+    result = agent.run()
+             ^^^^^^^^^^^
+  File "/venv/main/lib/python3.12/site-packages/torch/distributed/elastic/metrics/api.py", line 134, in wrapper
+    result = f(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^
+  File "/venv/main/lib/python3.12/site-packages/torch/distributed/elastic/agent/server/api.py", line 731, in run
+    result = self._invoke_run(role)
+             ^^^^^^^^^^^^^^^^^^^^^^
+  File "/venv/main/lib/python3.12/site-packages/torch/distributed/elastic/agent/server/api.py", line 908, in _invoke_run
+    time.sleep(monitor_interval)
+  File "/venv/main/lib/python3.12/site-packages/torch/distributed/elastic/multiprocessing/api.py", line 86, in _terminate_process_handler
+    raise SignalException(f"Process {os.getpid()} got signal: {sigval}", sigval=sigval)
+torch.distributed.elastic.multiprocessing.api.SignalException: Process 238644 got signal: 15

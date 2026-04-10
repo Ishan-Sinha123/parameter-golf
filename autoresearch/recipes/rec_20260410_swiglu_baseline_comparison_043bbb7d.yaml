@@ -1,0 +1,19 @@
+id: rec_20260410_swiglu_baseline_comparison_043bbb7d
+name: SwiGLU baseline comparison
+description: Auto-migrated from experiment idea_swiglu_activation_for_mlp_laye_exp001
+parent_recipe: rec_20260410_naive_baseline_5467eac1
+features:
+- activation=swiglu
+- mlp_mult=2.67
+feature_set_hash: 043bbb7d43629d1a
+env_overrides:
+  ACTIVATION: swiglu
+  MLP_MULT: '2.67'
+script_path: train_gpt.py
+base_commit: ec4d2ee1656ee38f080d98e8f9d01d988850de00
+base_branch: ''
+source_experiment: idea_swiglu_activation_for_mlp_laye_exp001
+best_val_bpb: 1.318
+best_int6_bpb: 1.695
+best_artifact_mb: 7.2
+best_experiment_id: idea_swiglu_activation_for_mlp_laye_exp001

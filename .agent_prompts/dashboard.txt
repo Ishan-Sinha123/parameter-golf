@@ -1,0 +1,72 @@
+Read new_autoresearcher.md in the project root first — that is the full system specification.
+
+You are building the DASHBOARD AND HTTP API inside autoresearch_v2/dashboard/.
+
+YOUR FILES (create these and ONLY these):
+  autoresearch_v2/dashboard/__init__.py
+  autoresearch_v2/dashboard/server.py      — HTTP server (stdlib http.server) with API routing
+  autoresearch_v2/dashboard/api.py         — API handlers: read SQLite + metrics.jsonl -> JSON responses
+  autoresearch_v2/dashboard/gpu_monitor.py — Parse nvidia-smi output into structured data
+  autoresearch_v2/dashboard/types.py       — Dashboard-specific response types
+  autoresearch_v2/dashboard/dashboard.html — Single-file dashboard (HTML + CSS + JS, zero dependencies)
+
+DO NOT create or modify files outside autoresearch_v2/dashboard/.
+
+DESIGN REQUIREMENTS:
+1. server.py: Subclass http.server.BaseHTTPRequestHandler. Route:
+   GET /                     -> serve dashboard.html
+   GET /api/status           -> all experiments summary
+   GET /api/experiment/{id}  -> single experiment detail
+   GET /api/metrics/{id}     -> metrics.jsonl content (for live charts)
+   GET /api/gpus             -> GPU utilization (nvidia-smi parsed)
+   GET /api/comparison?ids=a,b,c -> side-by-side metrics
+   Use a Router class (dict mapping path patterns -> handler methods). Support path params via simple regex.
+
+2. api.py: Read-only access to SQLite at autoresearch_v2/db/registry.db. Open with ?mode=ro URI. Each handler returns a dict (serialized to JSON by server.py). Use a DatabaseReader context manager. Handle missing DB gracefully (return empty state).
+
+3. gpu_monitor.py: Parse nvidia-smi --query-gpu=index,name,memory.used,memory.total,utilization.gpu,temperature.gpu --format=csv,noheader,nounits. Return list[GPUStatus] dataclass. Handle nvidia-smi not found (return empty list). Cache results for 5 seconds.
+
+4. dashboard.html — SINGLE FILE, no external deps, no build step:
+   a. STATUS BOARD: Table of all experiments. Columns: ID, Name, Status (color pill: green=DONE, blue=SCREENING, yellow=GATING, purple=PROMOTING, red=REJECTED/FAILED, gray=QUEUED), Screen BPB, Gate Int6, Quant Gap, Artifact MB, Steps, ms/step, Priority. Sortable columns. Auto-refresh 10s.
+   b. LIVE CURVES: Canvas-drawn loss curves for running experiments. X-axis = wall-clock seconds. Overlay baseline in gray dashed. Poll every 10s.
+   c. COMPARISON: Checkboxes to select 2-4 experiments, "Compare" button shows overlay chart + metric table.
+   d. GPU MONITOR: Horizontal bars for per-GPU memory and compute utilization.
+   e. DETAIL: Click row -> slide-out panel with full config, hypothesis, lineage, log tail, all metrics.
+
+   THEME: Dark (#0d1117 bg, #c9d1d9 text). Monospace numbers (font-variant-numeric: tabular-nums). Compact layout, information-dense. No animations except subtle transitions. Not responsive (single monitor tool).
+
+   JS: Vanilla only. fetch() for API. requestAnimationFrame for canvas. Simple hash router. Single global state object refreshed on poll.
+
+
+CODE STANDARDS (mandatory for all files you write):
+
+1. TYPING: Every function signature must have full type annotations (params + return). Use typing module: Optional, List, Dict, Union, Protocol, TypeVar, etc. Use dataclasses or NamedTuple for structured data — no raw dicts for internal state. Use Enum for finite state sets (experiment status, priority, stage).
+
+2. LINTING: Your code must pass: python -m py_compile <file> at minimum. Write code that would pass ruff/mypy strict. No bare except:, no mutable default args, no unused imports.
+
+3. PATTERNS:
+   - @property for computed attributes (never expose raw internal state)
+   - Builder pattern for complex object construction (experiment configs)
+   - Abstract base classes (abc.ABC + @abstractmethod) for interfaces that have multiple implementations
+   - Context managers (__enter__/__exit__) for resource lifecycle (DB connections, GPU locks, file handles)
+   - dataclasses with frozen=True for immutable value objects
+   - Protocols (typing.Protocol) for structural subtyping where ABC is overkill
+
+4. STYLE: Minimal comments — code should be self-documenting via types and names. Docstrings on public classes and non-obvious public methods only (Google style). No inline comments that restate what the code does. Private methods prefixed with underscore. Constants in UPPER_SNAKE_CASE at module top.
+
+5. ERROR HANDLING: Define custom exception hierarchy (AutoResearchError base). Never catch Exception broadly — catch specific types. Use logging module, not print(). Log level: DEBUG for step-by-step, INFO for stage transitions, WARNING for retries, ERROR for failures.
+
+6. IMPORTS: stdlib first, then third-party, then local. One import per line. No wildcard imports.
+
+7. STRUCTURE: Each module should have a clear single responsibility. If a file exceeds 300 lines, it probably needs splitting. __all__ exports at top of each module.
+
+IMPLEMENTATION ORDER:
+1. types.py (response dataclasses: ExperimentSummary, MetricsData, GPUStatus)
+2. gpu_monitor.py (standalone, testable without DB)
+3. api.py (DB reader + handlers)
+4. server.py (HTTP routing + JSON serialization)
+5. dashboard.html (mock data first, then wire to API)
+
+After each .py file, run: python -m py_compile autoresearch_v2/dashboard/<file>.py
+
+Use only Python stdlib (http.server, sqlite3, json, subprocess, dataclasses, pathlib, typing, re). No pip installs.

@@ -1,0 +1,22 @@
+
+CODE STANDARDS (mandatory for all files you write):
+
+1. TYPING: Every function signature must have full type annotations (params + return). Use typing module: Optional, List, Dict, Union, Protocol, TypeVar, etc. Use dataclasses or NamedTuple for structured data — no raw dicts for internal state. Use Enum for finite state sets (experiment status, priority, stage).
+
+2. LINTING: Your code must pass: python -m py_compile <file> at minimum. Write code that would pass ruff/mypy strict. No bare except:, no mutable default args, no unused imports.
+
+3. PATTERNS:
+   - @property for computed attributes (never expose raw internal state)
+   - Builder pattern for complex object construction (experiment configs)
+   - Abstract base classes (abc.ABC + @abstractmethod) for interfaces that have multiple implementations
+   - Context managers (__enter__/__exit__) for resource lifecycle (DB connections, GPU locks, file handles)
+   - dataclasses with frozen=True for immutable value objects
+   - Protocols (typing.Protocol) for structural subtyping where ABC is overkill
+
+4. STYLE: Minimal comments — code should be self-documenting via types and names. Docstrings on public classes and non-obvious public methods only (Google style). No inline comments that restate what the code does. Private methods prefixed with underscore. Constants in UPPER_SNAKE_CASE at module top.
+
+5. ERROR HANDLING: Define custom exception hierarchy (AutoResearchError base). Never catch Exception broadly — catch specific types. Use logging module, not print(). Log level: DEBUG for step-by-step, INFO for stage transitions, WARNING for retries, ERROR for failures.
+
+6. IMPORTS: stdlib first, then third-party, then local. One import per line. No wildcard imports.
+
+7. STRUCTURE: Each module should have a clear single responsibility. If a file exceeds 300 lines, it probably needs splitting. __all__ exports at top of each module.

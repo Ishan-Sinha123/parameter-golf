@@ -1,0 +1,17 @@
+id: rec_20260410_muon_lr_0_035_42e52bc8
+name: Muon LR=0.035
+description: Auto-migrated from experiment idea_muon_lr_sweep_around_0_03_exp005
+parent_recipe: rec_20260410_naive_baseline_5467eac1
+features:
+- muon_lr=0.035
+feature_set_hash: 42e52bc8dc43934b
+env_overrides:
+  MUON_LR: '0.035'
+script_path: train_gpt.py
+base_commit: ec4d2ee1656ee38f080d98e8f9d01d988850de00
+base_branch: ''
+source_experiment: idea_muon_lr_sweep_around_0_03_exp005
+best_val_bpb: null
+best_int6_bpb: null
+best_artifact_mb: null
+best_experiment_id: null

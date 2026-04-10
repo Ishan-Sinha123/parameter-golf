@@ -1,0 +1,77 @@
+workspace_dir: /home/azureuser/parameter-golf/autoresearch
+db_path: db/autoresearch.db
+logs_dir: logs
+ideas_dir: logs/ideas
+queue_dir: queue
+recipes_dir: recipes
+
+# GPU cluster nodes — add your GPU machines here
+# Each node is reached via SSH from this Azure VM
+nodes:
+  # Example:
+  # - host: gpu-node-1.internal
+  #   user: azureuser
+  #   ssh_key: ~/.ssh/id_rsa
+  #   work_dir: /workspace/parameter-golf
+  #   label: "4xH100 Node 1"
+  # - host: gpu-node-2.internal
+  #   user: azureuser
+  #   work_dir: /workspace/parameter-golf
+  #   label: "8xA100 Node 2"
+  - host: 206.125.32.60
+    user: root
+    ssh_port: 58063
+    ssh_key: ~/.ssh/id_ed25519
+    work_dir: /workspace/parameter-golf
+    label: "vast-h100"
+    enabled: true
+    env_setup: "source /workspace/parameter-golf/.venv/bin/activate"
+
+
+# Scheduler
+tick_interval_s: 10.0
+screen_wallclock_s: 180
+gate_wallclock_s: 300
+promote_wallclock_s: 600
+screen_gpus_per_job: 2
+max_retries: 2
+stall_timeout_s: 120.0
+health_check_interval_s: 10.0
+log_stream_interval_s: 5.0
+log_sync_to_experiment_logs: true
+
+# Git-based deployment
+# Azure VM commits+pushes → GPU node does git pull → runs exact code
+deploy_branch: ""  # auto-detect current branch if empty
+deploy_auto_commit: true
+deploy_repo_dir: ""  # auto-detect repo root if empty
+
+# Research agent
+github_repo: openai/parameter-golf
+poll_interval_m: 30
+agent_enabled: true
+
+# Claude Code subprocess runner (spawns `claude -p` for agent tasks)
+claude_enabled: true
+claude_bin: claude
+claude_model: opus
+claude_effort: max
+claude_max_concurrent: 3
+claude_auto_report: true        # auto-write experiment reports
+claude_auto_assess_pr: true     # auto-evaluate new PRs against mission
+claude_auto_implement: true     # auto-run implement_technique (guarded)
+claude_auto_reproduce: true     # auto-rerun records/ submissions
+claude_monitor_enabled: true    # monitor_run anomaly detection
+
+# Mission statement — seeds framing for PR evaluation, idea proposals,
+# and web research queries. Relative to workspace_dir.
+mission_file: prompts/mission.md
+
+# Parallel Web Systems API (deep web research)
+# Get your key at https://platform.parallel.ai
+parallel_api_key: "PNUmmNHCRnuw5N0fzNLaX9Z66TJCJRIOtn1I7ayb"
+parallel_default_processor: "pro"  # pro, ultra, pro-fast, ultra-fast
+
+# Dashboard
+http_host: "0.0.0.0"
+http_port: 8765

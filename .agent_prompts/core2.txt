@@ -1,0 +1,48 @@
+Read new_autoresearcher.md in the project root — that is the full system specification.
+
+You are finishing the CORE SYSTEM. The following files already exist and compile clean — read them first to understand the types, interfaces, and patterns already established:
+  autoresearch_v2/core/types.py        — ExperimentStatus, ExperimentPriority, Stage, ExperimentConfig, ExperimentResult, GPUSlot, MetricEvent, etc.
+  autoresearch_v2/core/exceptions.py   — AutoResearchError hierarchy
+  autoresearch_v2/core/config.py       — YAML config loader
+  autoresearch_v2/core/registry.py     — SQLite experiment registry
+  autoresearch_v2/core/gpu_manager.py  — GPU slot allocation
+  autoresearch_v2/core/runner.py       — torchrun wrapper + metrics parsing
+  autoresearch_v2/core/monitor.py      — Health check watchdog
+
+YOU MUST CREATE ONLY THESE TWO FILES:
+  autoresearch_v2/core/scheduler.py    — Main scheduling loop
+  autoresearch_v2/autoresearch.py      — CLI entry point
+
+DO NOT modify any existing files. Import from the existing modules.
+
+Read ALL existing core/*.py files first so you use the exact class names, method signatures, and types that are already defined. Do not redefine or duplicate anything.
+
+SCHEDULER REQUIREMENTS (scheduler.py):
+1. Main class: Scheduler with a _tick() method called every 5 seconds.
+2. _tick() returns a list of Action objects (dataclasses: LaunchScreen, LaunchGate, LaunchPromote, KillExperiment, RejectExperiment, TransitionState). Actions are then executed separately — this makes the scheduler testable without GPUs.
+3. Logic per tick: scan queue/ directory for new YAML configs → register via registry. Check running processes for completion → handle results. Schedule pending experiments onto free GPU slots. Run health checks on active experiments.
+4. State machine transitions: DEFINED→QUEUED→SCREENING→GATING→PROMOTING→DONE (or REJECTED/FAILED at any stage).
+5. Priority ordering: CRITICAL > HIGH > NORMAL > LOW.
+6. GPU consolidation: when a promote is queued, drain all screen slots first, then allocate all 8 GPUs.
+7. Signal handling: SIGTERM/SIGINT trigger graceful shutdown (finish current tick, kill child processes, close DB).
+8. Use threading.Event for the main loop so shutdown is clean.
+
+CLI REQUIREMENTS (autoresearch.py):
+1. argparse with subparsers for: daemon, status, promote, kill, kill-all, sweep, export, tree
+2. 'daemon' — instantiates Scheduler and runs the loop
+3. 'status' — queries registry, prints table of all experiments with key metrics
+4. 'promote EXP_ID' — sets experiment status to queue for promotion
+5. 'kill EXP_ID' — kills a running experiment
+6. 'kill-all' — kills all running experiments and stops daemon
+7. 'sweep --template T --param P --values V --parent PARENT' — calls sweep generator from templates/sweep.py
+8. 'export results.tsv' — dumps registry to TSV
+9. 'tree' — shows experiment lineage tree
+
+CODE STANDARDS:
+- Full type annotations on every function (params + return)
+- Use dataclasses for Action types (frozen=True)
+- Import from existing core modules — do not redefine types
+- Use logging module, not print()
+- Context managers for resources
+- No bare except:
+- After creating each file, run: python3 -m py_compile <file>
