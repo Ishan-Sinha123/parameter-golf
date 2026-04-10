@@ -1,75 +1,117 @@
 # MLP_MULT=3
 
 ## Hypothesis
-Increasing the MLP inner expansion ratio to 3× is expected to trade a
-larger parameter count (and a larger post-quant artifact) for faster
-per-step convergence, hopefully netting a lower validation BPB within
-the 8-minute training wallclock cap.
+
+Widening the MLP inner expansion from the baseline 2× to 3× should trade a
+larger parameter count (and therefore a larger post-quant artifact) for
+faster per-step convergence, with the bet that a wider MLP nets a lower
+validation BPB inside the 480 s training wallclock. The idea only wins if
+the extra capacity still fits under the 16,000,000-byte decimal artifact
+cap after int6/zlib compression *and* if the slower per-step time does
+not starve the schedule.
 
 ## Configuration
+
 | Env var | Value |
 |---|---|
 | `MLP_MULT` | `3` |
 
-- Recipe: _none_ (single env override on default baseline)
-- Branch / commit: `autoresearch-deploy` @ `071de03a`
-- Stage: `gate`
-- Tokenizer: `fineweb_1024_bpe` (SentencePiece, vocab 1024)
-- Arch: GQA 8/4 heads, tied embeddings, `model_params=21,778,504`
-- Train: `iterations=20000`, `warmup_steps=20`, `train_batch_tokens=524288`,
-  `seq_len=1024`, `max_wallclock_seconds=480`, `seed=1337`
-- Hardware: single GPU (`world_size:1`, `grad_accum_steps:8`, GPU 2 on
-  host `206.125.32.60`)
+- **Recipe:** none — single env-override on the default baseline.
+- **Source ref:** *(not set)*
+- **Reproduction:** no
+- **Arch (from log):** GQA `num_heads=8 num_kv_heads=4`, tied embeddings,
+  SentencePiece vocab 1024, `model_params=21,778,504`.
+- **Schedule (from log):** `iterations=20000 warmup_steps=20
+  train_batch_tokens=524288 train_seq_len=1024
+  max_wallclock_seconds=480 seed=1337`.
+- **Hardware (from log):** `world_size:1 grad_accum_steps:8`.
 
 ## Results
 
-Quoted from `train.log`:
+Key lines from `idea_mlp_expansion_sweep_2x_3x_4x/idea_mlp_expansion_sweep_2x_3x_4x_exp001/train.log`:
 
 ```
 model_params:21778504
 step:1000/20000 val_loss:2.2794 val_bpb:1.3500 train_time:382895ms
+step:1200/20000 train_loss:2.2339 train_time:459558ms step_avg:382.96ms
 step:1254/20000 val_loss:2.2374 val_bpb:1.3251 train_time:480267ms
 stopping_early: wallclock_cap train_time:480267ms step:1254/20000
 Serialized model int8+zlib: 16671539 bytes (payload:21906720 raw_torch:21951833 payload_ratio:3.93x)
 Total submission size int8+zlib: 16719232 bytes
-final_int8_zlib_roundtrip val_loss:2.2394 val_bpb:1.32628009
+final_int8_zlib_roundtrip val_loss:2.2394 val_bpb:1.3263 eval_time:11859ms
+final_int8_zlib_roundtrip_exact val_loss:2.23936838 val_bpb:1.32628009
 ```
 
-| Metric | Value | Δ vs baseline (1.081) |
+| Metric | Value | Δ vs baseline (1.10625) |
 |---|---|---|
-| Screen EMA val_bpb | 1.31622 | **+0.2352** |
-| Gate int6 val_bpb (int8+zlib roundtrip) | 1.32628 | **+0.2453** |
-| Quant gap (ema→int6) | 1.99e-05 | — |
-| Total submission (int8+zlib) | **16,719,232 bytes** | **+719,232 over 16,000,000 cap** |
+| `screen_ema_bpb` | 1.31622 | **+0.20997** |
+| `gate_int6_bpb` (int8+zlib roundtrip) | 1.32628 | **+0.22003** |
+| Quant gap (ema → int6) | 1.99e-05 | — (lossless) |
+| **Total int8+zlib artifact** | **16,719,232 B** | **+719,232 over 16,000,000 cap** |
+| `model_params` | 21,778,504 | — |
 | Steps completed | 1254 / 20000 | early-stopped by `wallclock_cap` |
-| `gate_passed` flag | `true` (metadata) | — |
+| `step_avg` | ~383 ms | — |
+| `gate_passed` (metadata) | `true` | misleading — see anomalies |
+| `gate_artifact_mb` (metadata) | 0.0 | not populated |
 
-Anomalies:
-- **Artifact-cap violation.** Post-quant submission is 16.72 MB, over the
-  16,000,000-byte decimal cap. The `gate_passed=true` flag in
-  `experiment.json` appears to only reflect the negligible quant gap, not
-  the absolute size constraint — this is misleading.
-- **Severely under-trained.** Hit `wallclock_cap` at step 1254/20000
-  (6.3% of the planned schedule). Step time ≈ 383 ms because the 3× MLP
-  blew up both params (21.8 M) and per-step FLOPs.
-- Training loss was still descending (val_bpb 1.3500 → 1.3251 between
-  step 1000 and 1254), so the model never approached convergence.
+Anomalies and warnings:
+
+- **Hard-rule violation — artifact cap.** Post-int8+zlib total is
+  16,719,232 bytes, exceeding the 16,000,000-byte *decimal* cap by
+  ~719 KB. Any submission built from this config would be disqualified.
+  The metadata `gate_passed=true` appears to reflect only the negligible
+  quant gap, not the absolute size, and `gate_artifact_mb=0.0` is clearly
+  a reporting gap rather than a true zero-byte artifact.
+- **Severely under-trained.** `stopping_early: wallclock_cap` fires at
+  step 1254/20000 — 6.3% of the planned schedule. At `step_avg ≈ 383 ms`
+  the 3× MLP is ~2× slower per step than the 2× baseline, so the
+  schedule can never complete.
+- **Loss still descending at stop.** val_bpb dropped 1.3500 → 1.3251
+  between steps 1000 and 1254, so the model was nowhere near convergence
+  — the final BPB is not a fair estimate of 3×-MLP asymptote, just of a
+  starved run.
+- **Early-step instability.** Train loss spiked to 17.03 at step 2
+  before recovering by step 10; not catastrophic (warmup absorbs it)
+  but worth noting for any follow-up at this width.
 
 ## Verdict
-**regression** — +0.245 BPB vs the 1.081 baseline, produces a
-disqualifying >16 MB artifact, and starves the 480 s wallclock budget so
-the model only completes ~6% of planned steps. The `gate_passed=true` in
-metadata is misleading because the size cap is violated.
+
+**broken**
+
+Not a fair regression — this run violates a hard competition rule
+(16 MB decimal artifact cap) and is simultaneously starved for wallclock
+(6% of planned steps). The +0.22 BPB vs the 1.10625 baseline is partly
+genuine and partly an artifact of under-training. The config cannot be
+submitted as-is regardless of how training continues, so the correct
+call is "broken config, needs shrinking before the idea can be evaluated
+fairly" rather than "3× MLP loses to 2× MLP on the merits".
+
+The `gate_passed=true` flag in metadata should be treated as a gate
+instrumentation bug: the gate is checking quant gap but not the absolute
+artifact size.
 
 ## Suggested follow-ups
-- Return `MLP_MULT` to the baseline (2×) and instead sweep depth
-  (10L / 11L), where leaderboard history shows the real BPB unlocks live.
-- If 3× MLP is still desired, pair it with shrinkage elsewhere (`DIM`,
-  layer count, head count) to land params well under 14 M so int6/zlib
-  fits ≤16,000,000 bytes with headroom.
-- Try `MLP_MULT=2` with MLP int5/ternary quant to see if width savings
-  buy enough additional steps to beat the baseline.
-- Add an artifact-size precheck to the gate so over-cap configs are
-  killed before the full 8-minute burn.
-- Fix the `gate_passed` logic to fail any run whose `Total submission
-  size` exceeds 16,000,000 bytes regardless of quant gap.
+
+- **Fix the gate first.** Add an artifact-size precheck (`total_bytes <=
+  16_000_000`) so any over-cap run is flagged and not promoted,
+  regardless of quant gap. Also backfill `gate_artifact_mb` — it is
+  currently always 0.0.
+- **Shrink to fit, then re-test.** Re-run MLP_MULT=3 with a reduced `DIM`
+  and/or fewer layers so `model_params` drops to ≈13–14 M and the
+  int8+zlib artifact lands ≤15.5 MB with headroom. Only then is the 3×
+  vs 2× comparison meaningful.
+- **Couple to stronger quant.** Try MLP_MULT=3 with int5 / int4 / ternary
+  MLP weights (leaderboard has ternary at 1.1570 and 1-bit at 1.1239);
+  the 3× width may fit if the MLP params are quantized harder than the
+  rest.
+- **Sweep ratios within the budget.** Once size is fixed, run
+  `MLP_MULT ∈ {2, 2.5, 3}` at matched `model_params` (compensating with
+  `DIM` or depth) to isolate the effect of *shape* from the effect of
+  *total capacity*.
+- **Composability.** If a shrunk MLP_MULT=3 variant ever beats its
+  matched-param 2× control, stack it onto the current SOTA chain
+  (PR #1019 / 11L AR Self-Gen GPTQ + XSA, 1.1147) before claiming a win —
+  the 11L XSA/EMA backbone changes the FLOP/param tradeoff significantly.
+- **Kill the other cells of this sweep early** if they also exceed the
+  cap at default `DIM`/depth — no point burning 8 minutes on
+  configurations that cannot be submitted.

@@ -21,7 +21,7 @@ current deeper-narrower SOTA baseline within the 10-minute budget.
 - **Source ref:** —
 - **Is reproduction:** false
 
-Other relevant run settings (from `train.log`):
+Other relevant run settings (from the previously inspected `train.log`):
 - `model_params:19025350` (~19.0 M)
 - `attention_mode:gqa num_heads:10 num_kv_heads:2`
 - `tie_embeddings:True embed_lr:0.05 head_lr:0.0 matrix_lr:0.04 scalar_lr:0.04`
@@ -32,7 +32,7 @@ Other relevant run settings (from `train.log`):
 
 ## Results
 
-Key lines from `train.log`:
+Key lines from `train.log` (captured in prior inspection; log not re-read this pass):
 - `step:0/20000 val_loss:6.9469 val_bpb:4.1143 train_time:0ms`
 - `step:1000/20000 val_loss:2.3194 val_bpb:1.3737 train_time:322557ms`
 - `step:1489/20000 val_loss:2.2444 val_bpb:1.3293 train_time:480124ms`
@@ -42,17 +42,19 @@ Key lines from `train.log`:
 - `Total submission size int8+zlib: 15181061 bytes`
 - `final_int8_zlib_roundtrip_exact val_loss:2.24736472 val_bpb:1.33101597`
 
-| Metric               | Value        | Delta vs baseline (1.081) |
-|----------------------|--------------|---------------------------|
-| screen_ema_bpb       | **1.29712**  | **+0.21612 (worse)**      |
-| gate_int6_bpb        | **1.33100**  | **+0.25000 (worse)**      |
+Baseline val_bpb for delta calc: **1.10625353**
+
+| Metric               | Value        | Delta vs baseline (1.10625) |
+|----------------------|--------------|-----------------------------|
+| screen_ema_bpb       | **1.29712**  | **+0.19087 (worse)**        |
+| gate_int6_bpb        | **1.33100**  | **+0.22475 (worse)**        |
 | gate_quant_gap       | −1.597e−05   | — (negligible, effectively zero) |
 | gate_artifact_mb     | 0.0 reported (actual int8+zlib ≈ 15.18 MB, under 16 MB cap) | — |
-| gate_passed          | true         | — |
+| gate_passed          | true         | —                           |
 | wallclock            | 480.124 s (hit cap at step 1489/20000) | — |
-| peak GPU mem         | 9537 MiB     | — |
-| promote_ema_bpb      | —            | — |
-| promote_int6_bpb     | —            | — |
+| peak GPU mem         | 9537 MiB     | —                           |
+| promote_ema_bpb      | null         | —                           |
+| promote_int6_bpb     | null         | —                           |
 
 Notes:
 - Near-zero quantization gap is excellent — the 7L/640d shape quantizes
@@ -62,16 +64,18 @@ Notes:
   multi-GPU collectives were absent from this environment.
 - Only 1489/20000 steps were completed before the wallclock cap, so the run
   is deeply undertrained relative to the 8×H100 SOTA regime that produced
-  the 1.081 baseline.
+  the 1.106 baseline.
 - No warnings or divergence in the log; loss curve is monotone after the
   initial spike at step 2 (`train_loss:19.6042`) which recovers by step 4.
+- Gate flag flipped to passed against a weaker screening threshold, not
+  against the 1.106 leaderboard baseline.
 
 ## Verdict
 
-**regression** — absolute val_bpb (EMA 1.297, int6 1.331) is ~0.22–0.25 nats
-worse than the 1.081 baseline. The tactical gate flag flipped to passed
-(likely against a weaker screening reference), but this point in the shape
-sweep is a large regression against the current SOTA. The single-GPU,
+**regression** — absolute val_bpb (EMA 1.297, int6 1.331) is ~0.19–0.22 nats
+worse than the 1.10625 baseline. The tactical gate flag flipped to passed
+(against the weaker screening reference), but this point in the shape sweep
+is a large regression against the current SOTA. The single-GPU,
 wallclock-truncated screening harness also undersells the hypothesis's core
 claim (sync-point reduction), so the result does not by itself falsify
 shallower-wider — it just shows that at ~19 M params and 1489 steps,
@@ -93,7 +97,7 @@ shallower-wider — it just shows that at ~19 M params and 1489 steps,
   compensate for reduced depth by extending effective receptive field.
 - **Fix screening budget:** The 480 s single-GPU gate starves shallow
   configs of steps. Before declaring further shape regressions, match the
-  effective step count of the 1.081 baseline or gate on tokens/sec-adjusted
+  effective step count of the 1.106 baseline or gate on tokens/sec-adjusted
   projected BPB.
 - **Defer env-only forks:** Further shallow-wide experiments should layer on
   top of the current SOTA recipe (`sp8192 3-layer recur parresid`) rather
