@@ -1,17 +1,16 @@
 {
   "experiment_id": "idea_kv_head_count_sweep_exp001",
   "idea_id": "idea_kv_head_count_sweep",
-  "stage": "screen",
+  "stage": "gate",
   "host": "206.125.32.60",
   "gpus": [
-    0,
-    1
+    0
   ],
-  "commit_sha": "5aea8e51f88a0a45d154bfd9909104b0ebcd379a",
+  "commit_sha": "4f5cc82b94efe0f724105ea7af46063094d4d28b",
   "branch": "autoresearch-deploy",
   "env_overrides": {
     "NUM_KV_HEADS": "2"
   },
-  "wallclock_s": 420,
-  "started_at": "2026-04-10T11:06:55.821851"
+  "wallclock_s": 540,
+  "started_at": "2026-04-10T11:15:35.055186"
 }
