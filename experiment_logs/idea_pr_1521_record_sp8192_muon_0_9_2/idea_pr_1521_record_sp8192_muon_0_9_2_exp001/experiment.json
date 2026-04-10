@@ -6,13 +6,13 @@
   "gpus": [
     0
   ],
-  "commit_sha": "f2428cd678d8620017080e5dc85ee20f4cb76977",
+  "commit_sha": "080c7b597e72d58aba97fc036fa8cacc1c56f403",
   "branch": "autoresearch-deploy",
   "env_overrides": {
     "ACTIVATION": "swiglu",
     "MLP_MULT": "3.0",
     "MUON_MOMENTUM": "0.97"
   },
-  "wallclock_s": 300,
-  "started_at": "2026-04-10T10:07:47.205203"
+  "wallclock_s": 380,
+  "started_at": "2026-04-10T10:11:44.427666"
 }
