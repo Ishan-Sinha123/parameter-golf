@@ -1,109 +1,3 @@
-W0410 10:18:11.705000 83645 torch/distributed/run.py:851] 
-W0410 10:18:11.705000 83645 torch/distributed/run.py:851] *****************************************
-W0410 10:18:11.705000 83645 torch/distributed/run.py:851] Setting OMP_NUM_THREADS environment variable for each process to be 1 in default, to avoid your system being overloaded, please further tune the variable for optimal performance in your application as needed. 
-W0410 10:18:11.705000 83645 torch/distributed/run.py:851] *****************************************
-logs/43d5d7a6-985f-4485-ab95-a124a4bca5c3.txt
-val_bpb:enabled tokenizer_kind=sentencepiece tokenizer_path=./data/tokenizers/fineweb_1024_bpe.model
-train_loader:dataset:fineweb10B_sp1024 train_shards:10
-val_loader:shards pattern=./data/datasets/fineweb10B_sp1024/fineweb_val_*.bin tokens:62021632
-model_params:26497096
-world_size:2 grad_accum_steps:4
-sdp_backends:cudnn=False flash=True mem_efficient=False math=False
-attention_mode:gqa num_heads:8 num_kv_heads:4
-tie_embeddings:True embed_lr:0.05 head_lr:0.0 matrix_lr:0.04 scalar_lr:0.04
-train_batch_tokens:524288 train_seq_len:1024 iterations:20000 warmup_steps:20 max_wallclock_seconds:260.000
-seed:1337
-warmup_step:1/20
-warmup_step:2/20
-warmup_step:3/20
-warmup_step:4/20
-warmup_step:5/20
-warmup_step:6/20
-warmup_step:7/20
-warmup_step:8/20
-warmup_step:9/20
-warmup_step:10/20
-warmup_step:11/20
-warmup_step:12/20
-warmup_step:13/20
-warmup_step:14/20
-warmup_step:15/20
-warmup_step:16/20
-warmup_step:17/20
-warmup_step:18/20
-warmup_step:19/20
-warmup_step:20/20
-step:0/20000 val_loss:6.9357 val_bpb:4.1077 train_time:0ms step_avg:0.01ms
-step:1/20000 train_loss:6.9355 train_time:199ms step_avg:198.99ms
-step:2/20000 train_loss:16.6466 train_time:396ms step_avg:197.78ms
-step:3/20000 train_loss:8.6418 train_time:591ms step_avg:197.11ms
-step:4/20000 train_loss:6.6807 train_time:787ms step_avg:196.81ms
-step:5/20000 train_loss:6.7711 train_time:983ms step_avg:196.66ms
-step:6/20000 train_loss:6.8668 train_time:1178ms step_avg:196.39ms
-step:7/20000 train_loss:6.3834 train_time:1374ms step_avg:196.31ms
-step:8/20000 train_loss:6.1796 train_time:1571ms step_avg:196.43ms
-step:9/20000 train_loss:6.0694 train_time:1766ms step_avg:196.24ms
-step:10/20000 train_loss:5.9596 train_time:1962ms step_avg:196.22ms
-step:200/20000 train_loss:2.7470 train_time:39571ms step_avg:197.85ms
-step:400/20000 train_loss:2.3379 train_time:79183ms step_avg:197.96ms
-step:600/20000 train_loss:2.4817 train_time:118816ms step_avg:198.03ms
-step:800/20000 train_loss:2.2538 train_time:158355ms step_avg:197.94ms
-step:1000/20000 train_loss:2.2738 train_time:197900ms step_avg:197.90ms
-step:1000/20000 val_loss:2.2631 val_bpb:1.3403 train_time:197902ms step_avg:197.90ms
-step:1200/20000 train_loss:2.2231 train_time:237446ms step_avg:197.87ms
-step:1315/20000 val_loss:2.2104 val_bpb:1.3092 train_time:260159ms step_avg:197.84ms
-stopping_early: wallclock_cap train_time:260159ms step:1315/20000
-peak memory allocated: 12967 MiB reserved: 13372 MiB
-Serialized model: 104973719 bytes
-Code size: 47693 bytes
-Total submission size: 105021412 bytes
-Serialized model int8+zlib: 20338512 bytes (payload:26634528 raw_torch:26679641 payload_ratio:3.94x)
-Total submission size int8+zlib: 20386205 bytes
-final_int8_zlib_roundtrip val_loss:2.2123 val_bpb:1.3103 eval_time:6691ms
-final_int8_zlib_roundtrip_exact val_loss:2.21232420 val_bpb:1.31026301
-logs/5235fde2-d124-4551-aa45-62c5d0ce56c4.txt
-val_bpb:enabled tokenizer_kind=sentencepiece tokenizer_path=./data/tokenizers/fineweb_1024_bpe.model
-train_loader:dataset:fineweb10B_sp1024 train_shards:10
-val_loader:shards pattern=./data/datasets/fineweb10B_sp1024/fineweb_val_*.bin tokens:62021632
-model_params:26497096
-world_size:1 grad_accum_steps:8
-sdp_backends:cudnn=False flash=True mem_efficient=False math=False
-attention_mode:gqa num_heads:8 num_kv_heads:4
-tie_embeddings:True embed_lr:0.05 head_lr:0.0 matrix_lr:0.04 scalar_lr:0.04
-train_batch_tokens:524288 train_seq_len:1024 iterations:20000 warmup_steps:20 max_wallclock_seconds:380.000
-seed:1337
-warmup_step:1/20
-warmup_step:2/20
-warmup_step:3/20
-warmup_step:4/20
-warmup_step:5/20
-warmup_step:6/20
-warmup_step:7/20
-warmup_step:8/20
-warmup_step:9/20
-warmup_step:10/20
-warmup_step:11/20
-warmup_step:12/20
-warmup_step:13/20
-warmup_step:14/20
-warmup_step:15/20
-warmup_step:16/20
-warmup_step:17/20
-warmup_step:18/20
-warmup_step:19/20
-warmup_step:20/20
-step:0/20000 val_loss:6.9357 val_bpb:4.1077 train_time:0ms step_avg:0.02ms
-step:1/20000 train_loss:6.9357 train_time:392ms step_avg:392.06ms
-step:2/20000 train_loss:16.6546 train_time:782ms step_avg:391.01ms
-step:3/20000 train_loss:9.3822 train_time:1183ms step_avg:394.35ms
-step:4/20000 train_loss:6.6566 train_time:1582ms step_avg:395.49ms
-step:5/20000 train_loss:6.5257 train_time:1977ms step_avg:395.39ms
-step:6/20000 train_loss:6.6353 train_time:2373ms step_avg:395.55ms
-step:7/20000 train_loss:6.3451 train_time:2774ms step_avg:396.32ms
-step:8/20000 train_loss:6.1927 train_time:3170ms step_avg:396.21ms
-step:9/20000 train_loss:6.0580 train_time:3565ms step_avg:396.16ms
-step:10/20000 train_loss:5.9534 train_time:3962ms step_avg:396.18ms
-step:200/20000 train_loss:2.7183 train_time:79510ms step_avg:397.55ms
 logs/c17554ce-93bb-4979-810b-b037f2324e69.txt
 val_bpb:enabled tokenizer_kind=sentencepiece tokenizer_path=./data/tokenizers/fineweb_1024_bpe.model
 train_loader:dataset:fineweb10B_sp1024 train_shards:10
@@ -152,3 +46,13 @@ step:600/20000 train_loss:2.4463 train_time:240603ms step_avg:401.00ms
 step:800/20000 train_loss:2.2831 train_time:320572ms step_avg:400.72ms
 step:1000/20000 train_loss:2.2931 train_time:400636ms step_avg:400.64ms
 step:1000/20000 val_loss:2.2588 val_bpb:1.3378 train_time:400637ms step_avg:400.64ms
+step:1199/20000 val_loss:2.2260 val_bpb:1.3184 train_time:480205ms step_avg:400.50ms
+stopping_early: wallclock_cap train_time:480205ms step:1199/20000
+peak memory allocated: 13017 MiB reserved: 13386 MiB
+Serialized model: 104973719 bytes
+Code size: 47693 bytes
+Total submission size: 105021412 bytes
+Serialized model int8+zlib: 19775260 bytes (payload:26634528 raw_torch:26679641 payload_ratio:3.94x)
+Total submission size int8+zlib: 19822953 bytes
+final_int8_zlib_roundtrip val_loss:2.2280 val_bpb:1.3195 eval_time:13493ms
+final_int8_zlib_roundtrip_exact val_loss:2.22798977 val_bpb:1.31954104
