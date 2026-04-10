@@ -32,3 +32,25 @@ warmup_step:16/20
 warmup_step:17/20
 warmup_step:18/20
 warmup_step:19/20
+warmup_step:20/20
+step:0/20000 val_loss:6.9357 val_bpb:4.1077 train_time:0ms step_avg:0.01ms
+step:1/20000 train_loss:6.9371 train_time:84ms step_avg:83.60ms
+step:2/20000 train_loss:16.8504 train_time:168ms step_avg:84.05ms
+step:3/20000 train_loss:8.9640 train_time:253ms step_avg:84.43ms
+step:4/20000 train_loss:6.6032 train_time:338ms step_avg:84.61ms
+step:5/20000 train_loss:6.6551 train_time:424ms step_avg:84.74ms
+step:6/20000 train_loss:6.5702 train_time:509ms step_avg:84.86ms
+step:7/20000 train_loss:6.3650 train_time:594ms step_avg:84.93ms
+step:8/20000 train_loss:6.1364 train_time:680ms step_avg:84.95ms
+step:9/20000 train_loss:6.0263 train_time:765ms step_avg:84.97ms
+step:10/20000 train_loss:5.9809 train_time:850ms step_avg:84.99ms
+step:200/20000 train_loss:2.9867 train_time:16999ms step_avg:84.99ms
+step:400/20000 train_loss:2.6274 train_time:34029ms step_avg:85.07ms
+step:600/20000 train_loss:2.5460 train_time:51013ms step_avg:85.02ms
+step:800/20000 train_loss:2.4050 train_time:68044ms step_avg:85.06ms
+step:1000/20000 train_loss:2.4186 train_time:85032ms step_avg:85.03ms
+step:1000/20000 val_loss:2.4612 val_bpb:1.4577 train_time:85035ms step_avg:85.03ms
+step:1200/20000 train_loss:2.5197 train_time:102080ms step_avg:85.07ms
+step:1400/20000 train_loss:2.4443 train_time:119154ms step_avg:85.11ms
+step:1600/20000 train_loss:2.3330 train_time:136220ms step_avg:85.14ms
+step:1800/20000 train_loss:2.3261 train_time:153239ms step_avg:85.13ms

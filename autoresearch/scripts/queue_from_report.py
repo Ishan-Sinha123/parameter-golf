@@ -118,7 +118,8 @@ IDEAS: list[IdeaSpec] = [
             ),
             ExpSpec(
                 name="shallower-wider 7L x 640d",
-                env={"NUM_LAYERS": "7", "MODEL_DIM": "640", "NUM_HEADS": "10"},
+                env={"NUM_LAYERS": "7", "MODEL_DIM": "640", "NUM_HEADS": "10",
+                     "NUM_KV_HEADS": "2"},  # 10 % 4 != 0, must lower GQA
                 hypothesis="Fewer layers = fewer sync points, more tokens/sec, may offset capacity loss.",
                 mechanism="Bounded wallclock favors throughput; report mentions minimizing per-loop sync.",
                 confounds="NUM_HEADS must divide MODEL_DIM; head_dim changes.",
