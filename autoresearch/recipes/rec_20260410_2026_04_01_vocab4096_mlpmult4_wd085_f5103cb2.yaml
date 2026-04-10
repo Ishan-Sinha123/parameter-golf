@@ -1,0 +1,74 @@
+id: rec_20260410_2026_04_01_vocab4096_mlpmult4_wd085_f5103cb2
+name: 2026-04-01_Vocab4096_MLPMult4_WD085
+description: 'Forked from 2026-04-01_Vocab4096_MLPMult4_WD085. '
+parent_recipe: null
+features:
+- sota_fork
+feature_set_hash: f5103cb2a4724bfe
+env_overrides:
+  ITERATIONS: '20000'
+  WARMDOWN_FRAC: '0.667'
+  WARMUP_STEPS: '20'
+  TRAIN_BATCH_TOKENS: 2048 * 48 * 8
+  TRAIN_SEQ_LEN: '2048'
+  EVAL_SEQ_LEN: '2048'
+  TRAIN_LOG_EVERY: '500'
+  VAL_BATCH_TOKENS: 2048 * 32 * 8
+  VAL_LOSS_EVERY: '4000'
+  SLIDING_WINDOW_ENABLED: '1'
+  VOCAB_SIZE: '4096'
+  NUM_LAYERS: '11'
+  XSA_LAST_N: '11'
+  NUM_KV_HEADS: '4'
+  MODEL_DIM: '512'
+  EMBEDDING_DIM: '512'
+  NUM_HEADS: '8'
+  MLP_MULT: '4.0'
+  SKIP_GATES_ENABLED: '1'
+  TIE_EMBEDDINGS: '1'
+  LOGIT_SOFTCAP: '30.0'
+  ROPE_BASE: '10000.0'
+  ROPE_DIMS: '16'
+  ROPE_TRAIN_SEQ_LEN: '2048'
+  LN_SCALE: '1'
+  VE_ENABLED: '1'
+  VE_DIM: '128'
+  VE_LAYERS: 9,10
+  QK_GAIN_INIT: '4.0'
+  MIN_LR: '0.0'
+  EMBED_LR: '0.6'
+  HEAD_LR: '0.008'
+  TIED_EMBED_LR: '0.03'
+  TIED_EMBED_INIT_STD: '0.005'
+  MATRIX_LR: '0.02'
+  SCALAR_LR: '0.02'
+  MUON_MOMENTUM: '0.99'
+  MUON_BACKEND_STEPS: '5'
+  MUON_MOMENTUM_WARMUP_START: '0.92'
+  MUON_MOMENTUM_WARMUP_STEPS: '1500'
+  BETA1: '0.9'
+  BETA2: '0.95'
+  ADAM_EPS: 1e-8
+  GRAD_CLIP_NORM: '0.3'
+  EVAL_STRIDE: '64'
+  MUON_BETA2: '0.95'
+  ADAM_WD: '0.02'
+  MUON_WD: '0.085'
+  EMBED_WD: '0.085'
+  EMA_DECAY: '0.997'
+  COMPRESSOR: brotli
+  GPTQ_ENABLED: '1'
+  GPTQ_CALIBRATION_BATCHES: '64'
+  GPTQ_RESERVE_SECONDS: '10.0'
+  RANK: '0'
+  WORLD_SIZE: '1'
+  LOCAL_RANK: '0'
+  CONTROL_TENSOR_NAME_PATTERNS: '"attn_scale,attn_scales,mlp_scale,mlp_scales,resid_mix,resid_mixes,q_gain,skip_weight,skip_weights,skip_gates,ve_layer_scales,ve_shared.scale",'
+script_path: train_gpt.py
+base_commit: ''
+base_branch: ''
+source_experiment: null
+best_val_bpb: null
+best_int6_bpb: null
+best_artifact_mb: null
+best_experiment_id: null
