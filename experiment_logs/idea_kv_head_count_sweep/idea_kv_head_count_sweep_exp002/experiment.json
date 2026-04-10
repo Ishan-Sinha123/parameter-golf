@@ -1,0 +1,17 @@
+{
+  "experiment_id": "idea_kv_head_count_sweep_exp002",
+  "idea_id": "idea_kv_head_count_sweep",
+  "stage": "screen",
+  "host": "206.125.32.60",
+  "gpus": [
+    0,
+    5
+  ],
+  "commit_sha": "edccd5ed756e062dd5f37937348607a0027b08a2",
+  "branch": "autoresearch-deploy",
+  "env_overrides": {
+    "NUM_KV_HEADS": "8"
+  },
+  "wallclock_s": 360,
+  "started_at": "2026-04-10T10:55:51.774247"
+}
