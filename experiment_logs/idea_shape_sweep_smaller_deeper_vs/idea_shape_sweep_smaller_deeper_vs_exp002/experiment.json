@@ -4,16 +4,17 @@
   "stage": "screen",
   "host": "206.125.32.60",
   "gpus": [
-    2,
-    3
+    0,
+    1
   ],
-  "commit_sha": "2dbfa1daa3e17106e76fa56e9323453574d117c1",
+  "commit_sha": "165fdc2c5cbd754cdff032b07653d7f7d5ad9c2d",
   "branch": "autoresearch-deploy",
   "env_overrides": {
     "NUM_LAYERS": "7",
     "MODEL_DIM": "640",
-    "NUM_HEADS": "10"
+    "NUM_HEADS": "10",
+    "NUM_KV_HEADS": "2"
   },
   "wallclock_s": 180,
-  "started_at": "2026-04-10T09:54:30.394979"
+  "started_at": "2026-04-10T09:58:21.476025"
 }
