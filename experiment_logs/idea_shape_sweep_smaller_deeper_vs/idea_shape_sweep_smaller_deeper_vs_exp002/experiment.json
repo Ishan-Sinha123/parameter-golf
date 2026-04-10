@@ -4,10 +4,10 @@
   "stage": "screen",
   "host": "206.125.32.60",
   "gpus": [
-    0,
-    1
+    2,
+    3
   ],
-  "commit_sha": "d0687d9813244955b1ea00409e7e09fecf695ed4",
+  "commit_sha": "2dbfa1daa3e17106e76fa56e9323453574d117c1",
   "branch": "autoresearch-deploy",
   "env_overrides": {
     "NUM_LAYERS": "7",
@@ -15,5 +15,5 @@
     "NUM_HEADS": "10"
   },
   "wallclock_s": 180,
-  "started_at": "2026-04-10T09:50:07.441842"
+  "started_at": "2026-04-10T09:54:30.394979"
 }
