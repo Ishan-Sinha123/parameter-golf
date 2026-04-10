@@ -1,0 +1,9 @@
+{
+  "recipe_id": "rec_20260410_2026_03_20_11l_xsa4_ema_int6_mlp3x_wd04__92c7fb4a",
+  "source_ref": "/home/azureuser/parameter-golf/records/track_10min_16mb/2026-03-20_11L_XSA4_EMA_Int6_MLP3x_WD04_1.1271",
+  "val_bpb": 1.12707468,
+  "artifact_mb": null,
+  "features": [
+    "sota_fork"
+  ]
+}
