@@ -1,45 +1,96 @@
-W0410 23:04:29.792000 73975 site-packages/torch/distributed/run.py:851] 
-W0410 23:04:29.792000 73975 site-packages/torch/distributed/run.py:851] *****************************************
-W0410 23:04:29.792000 73975 site-packages/torch/distributed/run.py:851] Setting OMP_NUM_THREADS environment variable for each process to be 1 in default, to avoid your system being overloaded, please further tune the variable for optimal performance in your application as needed. 
-W0410 23:04:29.792000 73975 site-packages/torch/distributed/run.py:851] *****************************************
+W0410 23:47:00.198000 306936 torch/distributed/run.py:851] 
+W0410 23:47:00.198000 306936 torch/distributed/run.py:851] *****************************************
+W0410 23:47:00.198000 306936 torch/distributed/run.py:851] Setting OMP_NUM_THREADS environment variable for each process to be 1 in default, to avoid your system being overloaded, please further tune the variable for optimal performance in your application as needed. 
+W0410 23:47:00.198000 306936 torch/distributed/run.py:851] *****************************************
+logs/31a504fc-98da-42b5-b917-937cc2e212c6.txt
+[rank4]: Traceback (most recent call last):
+[rank4]:   File "/workspace/parameter-golf/autoresearch/baselines/rec_20260410_2026_03_31_parallelresiduals_minidepthre_4d594ac1/train_gpt.py", line 880, in <module>
+[rank4]:     if __name__=='__main__':main()
+[rank4]:                             ^^^^^^
+[rank4]:   File "/workspace/parameter-golf/autoresearch/baselines/rec_20260410_2026_03_31_parallelresiduals_minidepthre_4d594ac1/train_gpt.py", line 733, in main
+[rank4]:     if int(sp.vocab_size())!=args.vocab_size:raise ValueError(f"VOCAB_SIZE={args.vocab_size} does not match tokenizer vocab_size={int(sp.vocab_size())}")
+[rank4]:                                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank4]: ValueError: VOCAB_SIZE=4096 does not match tokenizer vocab_size=1024
+[rank7]: Traceback (most recent call last):
+[rank7]:   File "/workspace/parameter-golf/autoresearch/baselines/rec_20260410_2026_03_31_parallelresiduals_minidepthre_4d594ac1/train_gpt.py", line 880, in <module>
+[rank7]:     if __name__=='__main__':main()
+[rank7]:                             ^^^^^^
+[rank7]:   File "/workspace/parameter-golf/autoresearch/baselines/rec_20260410_2026_03_31_parallelresiduals_minidepthre_4d594ac1/train_gpt.py", line 733, in main
+[rank7]:     if int(sp.vocab_size())!=args.vocab_size:raise ValueError(f"VOCAB_SIZE={args.vocab_size} does not match tokenizer vocab_size={int(sp.vocab_size())}")
+[rank7]:                                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank7]: ValueError: VOCAB_SIZE=4096 does not match tokenizer vocab_size=1024
+[rank5]: Traceback (most recent call last):
+[rank5]:   File "/workspace/parameter-golf/autoresearch/baselines/rec_20260410_2026_03_31_parallelresiduals_minidepthre_4d594ac1/train_gpt.py", line 880, in <module>
+[rank5]:     if __name__=='__main__':main()
+[rank5]:                             ^^^^^^
+[rank5]:   File "/workspace/parameter-golf/autoresearch/baselines/rec_20260410_2026_03_31_parallelresiduals_minidepthre_4d594ac1/train_gpt.py", line 733, in main
+[rank5]:     if int(sp.vocab_size())!=args.vocab_size:raise ValueError(f"VOCAB_SIZE={args.vocab_size} does not match tokenizer vocab_size={int(sp.vocab_size())}")
+[rank5]:                                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank5]: ValueError: VOCAB_SIZE=4096 does not match tokenizer vocab_size=1024
+[rank6]: Traceback (most recent call last):
+[rank6]:   File "/workspace/parameter-golf/autoresearch/baselines/rec_20260410_2026_03_31_parallelresiduals_minidepthre_4d594ac1/train_gpt.py", line 880, in <module>
+[rank6]:     if __name__=='__main__':main()
+[rank6]:                             ^^^^^^
+[rank6]:   File "/workspace/parameter-golf/autoresearch/baselines/rec_20260410_2026_03_31_parallelresiduals_minidepthre_4d594ac1/train_gpt.py", line 733, in main
+[rank6]:     if int(sp.vocab_size())!=args.vocab_size:raise ValueError(f"VOCAB_SIZE={args.vocab_size} does not match tokenizer vocab_size={int(sp.vocab_size())}")
+[rank6]:                                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank6]: ValueError: VOCAB_SIZE=4096 does not match tokenizer vocab_size=1024
+[rank0]: Traceback (most recent call last):
+[rank0]:   File "/workspace/parameter-golf/autoresearch/baselines/rec_20260410_2026_03_31_parallelresiduals_minidepthre_4d594ac1/train_gpt.py", line 880, in <module>
+[rank0]:     if __name__=='__main__':main()
+[rank0]:                             ^^^^^^
+[rank0]:   File "/workspace/parameter-golf/autoresearch/baselines/rec_20260410_2026_03_31_parallelresiduals_minidepthre_4d594ac1/train_gpt.py", line 733, in main
+[rank0]:     if int(sp.vocab_size())!=args.vocab_size:raise ValueError(f"VOCAB_SIZE={args.vocab_size} does not match tokenizer vocab_size={int(sp.vocab_size())}")
+[rank0]:                                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]: ValueError: VOCAB_SIZE=4096 does not match tokenizer vocab_size=1024
+[rank1]: Traceback (most recent call last):
+[rank1]:   File "/workspace/parameter-golf/autoresearch/baselines/rec_20260410_2026_03_31_parallelresiduals_minidepthre_4d594ac1/train_gpt.py", line 880, in <module>
+[rank1]:     if __name__=='__main__':main()
+[rank1]:                             ^^^^^^
+[rank1]:   File "/workspace/parameter-golf/autoresearch/baselines/rec_20260410_2026_03_31_parallelresiduals_minidepthre_4d594ac1/train_gpt.py", line 733, in main
+[rank1]:     if int(sp.vocab_size())!=args.vocab_size:raise ValueError(f"VOCAB_SIZE={args.vocab_size} does not match tokenizer vocab_size={int(sp.vocab_size())}")
+[rank1]:                                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank1]: ValueError: VOCAB_SIZE=4096 does not match tokenizer vocab_size=1024
+[rank3]: Traceback (most recent call last):
+[rank3]:   File "/workspace/parameter-golf/autoresearch/baselines/rec_20260410_2026_03_31_parallelresiduals_minidepthre_4d594ac1/train_gpt.py", line 880, in <module>
+[rank3]:     if __name__=='__main__':main()
+[rank3]:                             ^^^^^^
+[rank3]:   File "/workspace/parameter-golf/autoresearch/baselines/rec_20260410_2026_03_31_parallelresiduals_minidepthre_4d594ac1/train_gpt.py", line 733, in main
+[rank3]:     if int(sp.vocab_size())!=args.vocab_size:raise ValueError(f"VOCAB_SIZE={args.vocab_size} does not match tokenizer vocab_size={int(sp.vocab_size())}")
+[rank3]:                                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank3]: ValueError: VOCAB_SIZE=4096 does not match tokenizer vocab_size=1024
+[rank2]: Traceback (most recent call last):
+[rank2]:   File "/workspace/parameter-golf/autoresearch/baselines/rec_20260410_2026_03_31_parallelresiduals_minidepthre_4d594ac1/train_gpt.py", line 880, in <module>
+[rank2]:     if __name__=='__main__':main()
+[rank2]:                             ^^^^^^
+[rank2]:   File "/workspace/parameter-golf/autoresearch/baselines/rec_20260410_2026_03_31_parallelresiduals_minidepthre_4d594ac1/train_gpt.py", line 733, in main
+[rank2]:     if int(sp.vocab_size())!=args.vocab_size:raise ValueError(f"VOCAB_SIZE={args.vocab_size} does not match tokenizer vocab_size={int(sp.vocab_size())}")
+[rank2]:                                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank2]: ValueError: VOCAB_SIZE=4096 does not match tokenizer vocab_size=1024
+[rank0]:[W410 23:47:15.173834397 ProcessGroupNCCL.cpp:1575] Warning: WARNING: destroy_process_group() was not called before program exit, which can leak resources. For more info, please see https://pytorch.org/docs/stable/distributed.html#shutdown (function operator())
+W0410 23:47:15.459000 306936 torch/distributed/elastic/multiprocessing/api.py:1012] Sending process 307007 closing signal SIGTERM
+W0410 23:47:15.462000 306936 torch/distributed/elastic/multiprocessing/api.py:1012] Sending process 307008 closing signal SIGTERM
+W0410 23:47:15.462000 306936 torch/distributed/elastic/multiprocessing/api.py:1012] Sending process 307009 closing signal SIGTERM
+W0410 23:47:15.463000 306936 torch/distributed/elastic/multiprocessing/api.py:1012] Sending process 307010 closing signal SIGTERM
+W0410 23:47:15.463000 306936 torch/distributed/elastic/multiprocessing/api.py:1012] Sending process 307011 closing signal SIGTERM
+W0410 23:47:15.463000 306936 torch/distributed/elastic/multiprocessing/api.py:1012] Sending process 307012 closing signal SIGTERM
+W0410 23:47:15.463000 306936 torch/distributed/elastic/multiprocessing/api.py:1012] Sending process 307013 closing signal SIGTERM
+E0410 23:47:16.279000 306936 torch/distributed/elastic/multiprocessing/api.py:986] failed (exitcode: 1) local_rank: 7 (pid: 307014) of binary: /workspace/parameter-golf/.venv/bin/python
 Traceback (most recent call last):
-  File "/workspace/parameter-golf/autoresearch/baselines/rec_20260410_2026_03_31_parallelresiduals_minidepthre_4d594ac1/train_gpt.py", line 880, in <module>
-    if __name__=='__main__':main()
-                            ^^^^^^
-  File "/workspace/parameter-golf/autoresearch/baselines/rec_20260410_2026_03_31_parallelresiduals_minidepthre_4d594ac1/train_gpt.py", line 721, in main
-    device=torch.device(_F,local_rank);torch.cuda.set_device(device)
-                                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/venv/main/lib/python3.12/site-packages/torch/cuda/__init__.py", line 638, in set_device
-    torch._C._cuda_setDevice(device)
-torch.AcceleratorError: CUDA error: CUDA-capable device(s) is/are busy or unavailable
-Search for `cudaErrorDevicesUnavailable' in https://docs.nvidia.com/cuda/cuda-runtime-api/group__CUDART__TYPES.html for more information.
-CUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.
-For debugging consider passing CUDA_LAUNCH_BLOCKING=1
-Compile with `TORCH_USE_CUDA_DSA` to enable device-side assertions.
-
-W0410 23:04:36.931000 73975 site-packages/torch/distributed/elastic/multiprocessing/api.py:1012] Sending process 74061 closing signal SIGTERM
-W0410 23:04:36.932000 73975 site-packages/torch/distributed/elastic/multiprocessing/api.py:1012] Sending process 74062 closing signal SIGTERM
-W0410 23:04:36.932000 73975 site-packages/torch/distributed/elastic/multiprocessing/api.py:1012] Sending process 74063 closing signal SIGTERM
-W0410 23:04:36.932000 73975 site-packages/torch/distributed/elastic/multiprocessing/api.py:1012] Sending process 74064 closing signal SIGTERM
-W0410 23:04:36.932000 73975 site-packages/torch/distributed/elastic/multiprocessing/api.py:1012] Sending process 74065 closing signal SIGTERM
-W0410 23:04:36.932000 73975 site-packages/torch/distributed/elastic/multiprocessing/api.py:1012] Sending process 74066 closing signal SIGTERM
-W0410 23:04:36.932000 73975 site-packages/torch/distributed/elastic/multiprocessing/api.py:1012] Sending process 74067 closing signal SIGTERM
-E0410 23:04:37.376000 73975 site-packages/torch/distributed/elastic/multiprocessing/api.py:986] failed (exitcode: 1) local_rank: 0 (pid: 74060) of binary: /venv/main/bin/python3
-Traceback (most recent call last):
-  File "/venv/main/bin/torchrun", line 10, in <module>
+  File "/workspace/parameter-golf/.venv/bin/torchrun", line 6, in <module>
     sys.exit(main())
              ^^^^^^
-  File "/venv/main/lib/python3.12/site-packages/torch/distributed/elastic/multiprocessing/errors/__init__.py", line 362, in wrapper
+  File "/workspace/parameter-golf/.venv/lib/python3.12/site-packages/torch/distributed/elastic/multiprocessing/errors/__init__.py", line 362, in wrapper
     return f(*args, **kwargs)
            ^^^^^^^^^^^^^^^^^^
-  File "/venv/main/lib/python3.12/site-packages/torch/distributed/run.py", line 990, in main
+  File "/workspace/parameter-golf/.venv/lib/python3.12/site-packages/torch/distributed/run.py", line 990, in main
     run(args)
-  File "/venv/main/lib/python3.12/site-packages/torch/distributed/run.py", line 981, in run
+  File "/workspace/parameter-golf/.venv/lib/python3.12/site-packages/torch/distributed/run.py", line 981, in run
     elastic_launch(
-  File "/venv/main/lib/python3.12/site-packages/torch/distributed/launcher/api.py", line 170, in __call__
+  File "/workspace/parameter-golf/.venv/lib/python3.12/site-packages/torch/distributed/launcher/api.py", line 170, in __call__
     return launch_agent(self._config, self._entrypoint, list(args))
            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/venv/main/lib/python3.12/site-packages/torch/distributed/launcher/api.py", line 317, in launch_agent
+  File "/workspace/parameter-golf/.venv/lib/python3.12/site-packages/torch/distributed/launcher/api.py", line 317, in launch_agent
     raise ChildFailedError(
 torch.distributed.elastic.multiprocessing.errors.ChildFailedError: 
 ============================================================
@@ -47,61 +98,61 @@ autoresearch/baselines/rec_20260410_2026_03_31_parallelresiduals_minidepthre_4d5
 ------------------------------------------------------------
 Failures:
 [1]:
-  time      : 2026-04-10_23:04:37
-  host      : f46767b720d0
-  rank      : 1 (local_rank: 1)
-  exitcode  : -15 (pid: 74061)
+  time      : 2026-04-10_23:47:16
+  host      : 07537c0cc9a4
+  rank      : 0 (local_rank: 0)
+  exitcode  : -15 (pid: 307007)
   error_file: <N/A>
-  traceback : Signal 15 (SIGTERM) received by PID 74061
+  traceback : Signal 15 (SIGTERM) received by PID 307007
 [2]:
-  time      : 2026-04-10_23:04:37
-  host      : f46767b720d0
-  rank      : 2 (local_rank: 2)
-  exitcode  : -15 (pid: 74062)
+  time      : 2026-04-10_23:47:16
+  host      : 07537c0cc9a4
+  rank      : 1 (local_rank: 1)
+  exitcode  : -15 (pid: 307008)
   error_file: <N/A>
-  traceback : Signal 15 (SIGTERM) received by PID 74062
+  traceback : Signal 15 (SIGTERM) received by PID 307008
 [3]:
-  time      : 2026-04-10_23:04:37
-  host      : f46767b720d0
-  rank      : 3 (local_rank: 3)
-  exitcode  : -15 (pid: 74063)
+  time      : 2026-04-10_23:47:16
+  host      : 07537c0cc9a4
+  rank      : 2 (local_rank: 2)
+  exitcode  : -15 (pid: 307009)
   error_file: <N/A>
-  traceback : Signal 15 (SIGTERM) received by PID 74063
+  traceback : Signal 15 (SIGTERM) received by PID 307009
 [4]:
-  time      : 2026-04-10_23:04:37
-  host      : f46767b720d0
-  rank      : 4 (local_rank: 4)
-  exitcode  : -15 (pid: 74064)
+  time      : 2026-04-10_23:47:16
+  host      : 07537c0cc9a4
+  rank      : 3 (local_rank: 3)
+  exitcode  : -15 (pid: 307010)
   error_file: <N/A>
-  traceback : Signal 15 (SIGTERM) received by PID 74064
+  traceback : Signal 15 (SIGTERM) received by PID 307010
 [5]:
-  time      : 2026-04-10_23:04:37
-  host      : f46767b720d0
-  rank      : 5 (local_rank: 5)
-  exitcode  : -15 (pid: 74065)
+  time      : 2026-04-10_23:47:16
+  host      : 07537c0cc9a4
+  rank      : 4 (local_rank: 4)
+  exitcode  : 1 (pid: 307011)
   error_file: <N/A>
-  traceback : Signal 15 (SIGTERM) received by PID 74065
+  traceback : To enable traceback see: https://pytorch.org/docs/stable/elastic/errors.html
 [6]:
-  time      : 2026-04-10_23:04:37
-  host      : f46767b720d0
-  rank      : 6 (local_rank: 6)
-  exitcode  : -15 (pid: 74066)
+  time      : 2026-04-10_23:47:16
+  host      : 07537c0cc9a4
+  rank      : 5 (local_rank: 5)
+  exitcode  : 1 (pid: 307012)
   error_file: <N/A>
-  traceback : Signal 15 (SIGTERM) received by PID 74066
+  traceback : To enable traceback see: https://pytorch.org/docs/stable/elastic/errors.html
 [7]:
-  time      : 2026-04-10_23:04:37
-  host      : f46767b720d0
-  rank      : 7 (local_rank: 7)
-  exitcode  : -15 (pid: 74067)
+  time      : 2026-04-10_23:47:16
+  host      : 07537c0cc9a4
+  rank      : 6 (local_rank: 6)
+  exitcode  : -15 (pid: 307013)
   error_file: <N/A>
-  traceback : Signal 15 (SIGTERM) received by PID 74067
+  traceback : Signal 15 (SIGTERM) received by PID 307013
 ------------------------------------------------------------
 Root Cause (first observed failure):
 [0]:
-  time      : 2026-04-10_23:04:36
-  host      : f46767b720d0
-  rank      : 0 (local_rank: 0)
-  exitcode  : 1 (pid: 74060)
+  time      : 2026-04-10_23:47:15
+  host      : 07537c0cc9a4
+  rank      : 7 (local_rank: 7)
+  exitcode  : 1 (pid: 307014)
   error_file: <N/A>
   traceback : To enable traceback see: https://pytorch.org/docs/stable/elastic/errors.html
 ============================================================

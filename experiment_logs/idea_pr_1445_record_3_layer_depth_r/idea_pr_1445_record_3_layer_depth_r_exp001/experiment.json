@@ -2,7 +2,7 @@
   "experiment_id": "idea_pr_1445_record_3_layer_depth_r_exp001",
   "idea_id": "idea_pr_1445_record_3_layer_depth_r",
   "stage": "screen",
-  "host": "34.69.145.155",
+  "host": "206.125.32.60",
   "gpus": [
     0,
     1,
@@ -13,7 +13,7 @@
     6,
     7
   ],
-  "commit_sha": "276261c1b3102929236a1a39666e39ef141af4aa",
+  "commit_sha": "d578891f0a50b98cca6810250ad4ee5eba45d2e8",
   "branch": "autoresearch-deploy",
   "script_path": "autoresearch/baselines/rec_20260410_2026_03_31_parallelresiduals_minidepthre_4d594ac1/train_gpt.py",
   "recipe_id": "rec_20260410_pr1445_depth_recur_3layer_ab54b6f3",
@@ -109,5 +109,5 @@
     "EMBED_WD": 0.095
   },
   "wallclock_s": 420,
-  "started_at": "2026-04-10T23:04:29.293579"
+  "started_at": "2026-04-10T23:46:59.632864"
 }
