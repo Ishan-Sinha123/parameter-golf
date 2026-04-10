@@ -1,0 +1,9 @@
+{
+  "recipe_id": "rec_20260410_2026_03_21_11l_xsa4_ema_partialrope_late_4714765e",
+  "source_ref": "/home/azureuser/parameter-golf/records/track_10min_16mb/2026-03-21_11L_XSA4_EMA_PartialRoPE_LateQAT_1.1248",
+  "val_bpb": 1.12484502,
+  "artifact_mb": null,
+  "features": [
+    "sota_fork"
+  ]
+}
