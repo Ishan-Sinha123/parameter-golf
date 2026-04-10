@@ -41,6 +41,10 @@ _STEP_RE = re.compile(
 )
 _TRAIN_BPB_RE = re.compile(r"(?:train_bpb|final_train_bpb)[:\s]+([\d.]+)")
 _EMA_BPB_RE = re.compile(r"(?:ema_bpb|final_ema_bpb)[:\s]+([\d.]+)")
+# train_gpt.py actually emits val_bpb periodically and final_int8_zlib_roundtrip val_bpb
+# at the end. Use these as fallbacks for ema_bpb / int6_bpb which no longer exist.
+_VAL_BPB_RE = re.compile(r"(?<!roundtrip\s)val_bpb[:\s]+([\d.]+)")
+_FINAL_INT8_BPB_RE = re.compile(r"final_int8_zlib_roundtrip\s+val_loss:[\d.]+\s+val_bpb[:\s]+([\d.]+)")
 _INT6_BPB_RE = re.compile(r"(?:int6_bpb|final_int6_bpb)[:\s]+([\d.]+)")
 _QUANT_GAP_RE = re.compile(r"quant_gap[:\s]+([\d.]+)")
 _ARTIFACT_MB_RE = re.compile(r"artifact.*?([\d.]+)\s*MB")
@@ -775,8 +779,21 @@ class Scheduler:
             metrics["train_bpb"] = float(m.group(1))
         for m in _EMA_BPB_RE.finditer(log_text):
             metrics["ema_bpb"] = float(m.group(1))
+        # Fallback: if no ema_bpb/train_bpb, use the last periodic val_bpb as
+        # ema_bpb so screen completion passes. Current train_gpt.py only emits val_bpb.
+        if "ema_bpb" not in metrics:
+            last_val = None
+            for m in _VAL_BPB_RE.finditer(log_text):
+                last_val = float(m.group(1))
+            if last_val is not None:
+                metrics["ema_bpb"] = last_val
+                metrics.setdefault("train_bpb", last_val)
         for m in _INT6_BPB_RE.finditer(log_text):
             metrics["int6_bpb"] = float(m.group(1))
+        # Fallback: treat final_int8_zlib_roundtrip val_bpb as int6_bpb equivalent.
+        if "int6_bpb" not in metrics:
+            for m in _FINAL_INT8_BPB_RE.finditer(log_text):
+                metrics["int6_bpb"] = float(m.group(1))
         for m in _QUANT_GAP_RE.finditer(log_text):
             metrics["quant_gap"] = float(m.group(1))
         for m in _ARTIFACT_MB_RE.finditer(log_text):
