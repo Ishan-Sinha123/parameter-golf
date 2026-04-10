@@ -2,54 +2,80 @@
 
 ## Hypothesis
 
-Halving both sequence length (1024 -> 512) and batch tokens (524K -> 262K) should yield roughly 2x more optimizer steps within the same wallclock budget, since each forward/backward pass is cheaper with shorter sequences. More gradient updates could improve convergence and final BPB even though fewer total tokens are processed per step.
+Halving the training sequence length to 512 while keeping
+`TRAIN_BATCH_TOKENS=262144` was expected to roughly double the number of
+optimizer steps that fit inside the 10-minute wallclock window. The bet:
+more SGD updates at shorter context would compound faster than the loss
+we give up from the missing long-range tokens, yielding a lower final
+BPB than the default-context baseline.
 
 ## Configuration
 
-| Parameter | Value |
+| Env override | Value |
 |---|---|
 | `TRAIN_SEQ_LEN` | `512` |
 | `TRAIN_BATCH_TOKENS` | `262144` |
-| Recipe | None (default baseline) |
-| Model | 9L, 512 dim, 1024 vocab, tied embeddings, 4 KV heads |
-| GPUs | 1 (screening run) |
 
-No recipe was applied. Only the sequence length and batch token count were modified relative to the default baseline.
+Recipe: none (`recipe_id: null`) — run against the current repo default.
+From the log: `model_params:17059912`, `attention_mode:gqa num_heads:8
+num_kv_heads:4`, `tie_embeddings:True`, `embed_lr:0.05 matrix_lr:0.04
+scalar_lr:0.04`, `warmup_steps:20`, planned `iterations:20000`,
+`max_wallclock_seconds:480.000`, `world_size:1 grad_accum_steps:8`,
+`seed:1337`.
 
 ## Results
 
-| Metric | Value | Notes |
+Key lines from
+`experiment_logs/idea_shorter_sequences_more_updates/idea_shorter_sequences_more_updates_exp001/train.log`:
+
+```
+step:1000/20000 val_loss:2.4654 val_bpb:1.4601
+step:2000/20000 val_loss:2.3270 val_bpb:1.3782
+step:2735/20000 val_loss:2.2548 val_bpb:1.3354 train_time:480159ms step_avg:175.56ms
+stopping_early: wallclock_cap train_time:480159ms step:2735/20000
+Serialized model int8+zlib: 15577728 bytes (payload:17178912 raw_torch:17224025 payload_ratio:3.91x)
+Total submission size int8+zlib: 15625421 bytes
+final_int8_zlib_roundtrip val_loss:2.2583 val_bpb:1.3375 eval_time:9940ms
+final_int8_zlib_roundtrip_exact val_loss:2.25825552 val_bpb:1.33746612
+```
+
+| Metric | Value | Δ vs baseline (1.081) |
 |---|---|---|
-| EMA val_bpb (screen) | **1.3151** | — |
-| Int6 val_bpb (gate) | **1.3375** | — |
-| Quant gap | **0.0000339** | Extremely small |
-| Artifact size | 0.0 MB (not recorded) | — |
-| Gate passed | Yes | — |
-| Promoted | No | promote fields null |
+| screen_ema_bpb | 1.31512 | **+0.23412** |
+| gate_int6_bpb (int8+zlib roundtrip) | 1.33747 | **+0.25647** |
+| gate_quant_gap | 3.39e-05 | negligible |
+| gate_artifact_mb (recorded) | 0.0 | (pipeline reported 0; raw artifact = 15.625 MB, under cap) |
+| Steps completed | 2735 / 20000 | wallclock-capped at 480 s |
+| step_avg | 175.56 ms | — |
+| Gate passed (pipeline) | `true` | — |
+| Promoted | no | `promote_*` fields null |
 
-Training log was not captured for this run.
-
-### Context from companion experiment (exp002)
-
-The exp002 report documents both runs side-by-side. Key metrics for exp001 from that report:
-
-| Metric | exp001 (seq512) | Default (seq1024, warmup report) |
-|---|---|---|
-| Steps completed | ~2162 | ~1439 |
-| Step avg | ~176 ms | ~334 ms |
-| Tokens seen | ~566M | ~754M |
-| EMA val_bpb | ~1.315 | ~1.289 |
-
-The 1.5x increase in optimizer steps did not compensate for the 25% reduction in total tokens seen. Default seq1024 configuration outperforms seq512 by ~0.026 EMA BPB on similar 1-GPU screening runs.
+No warnings in the log. The pipeline flagged `gate_passed: true` purely
+because the quant gap was tiny — the absolute BPB is nowhere near the
+1.081 SOTA baseline (+0.256 nats worse). The run was step-capped: at
+~175 ms/step the 480 s wall only buys ~2735 of the 20000 planned steps,
+so the "2× more updates" claim is better tested against a same-setup
+seq1024 screen than against SOTA.
 
 ## Verdict
 
-**Regression.** Shorter sequences (512) with half-batch tokens produced more optimizer steps (~2162 vs ~1439) but worse BPB than the default seq1024 configuration (~1.315 vs ~1.289 EMA). Total token throughput matters more than update frequency at this model scale and training budget. The one bright spot is an exceptionally small quantization gap (0.00003), suggesting int6 compression works well with shorter-context weight distributions. The gate passed in absolute terms but the configuration is strictly inferior to the default.
+**regression** — int8+zlib gate BPB 1.3375 is +0.2565 nats above the
+1.081 baseline, and the screen EMA (1.3151) is +0.2341 above. The
+shorter-sequence configuration does not come close to current SOTA; any
+"more steps" benefit is swamped by lost per-token signal and by the run
+still being wallclock-bound.
 
 ## Suggested follow-ups
 
-- **seq512 with full batch tokens (524K):** Keep shorter sequences but maintain the same token throughput per step. This would test whether shorter attention windows help or hurt when total tokens are held constant.
-- **seq256 extreme:** Push the sequence-length/step-count tradeoff further to map out the Pareto frontier, even if diminishing returns are expected.
-- **Mixed-length curriculum:** Start with seq512 for fast early convergence (more steps), then switch to seq1024 or seq2048 for the final phase to capture longer-range dependencies.
-- **Combine with Muon optimizer:** The higher step count from seq512 might interact positively with Muon's update dynamics, which were tuned for ~1400-step budgets in other experiments.
-- **seq512 on 8-GPU full budget:** The 1-GPU screening may understate the technique's potential; at 8-GPU scale the step count could exceed 10K, possibly changing the convergence dynamics.
+- Step-count-matched control at the default seq_len on the same 1-GPU
+  screen rig, so we isolate "more steps" from "shorter context."
+- Softer midpoint: `TRAIN_SEQ_LEN=1024` with default batch tokens, to
+  keep some extra step headroom without crushing long-range signal.
+- Pair short sequences with a retuned LR schedule (higher peak LR,
+  shorter warmdown) since the current 20-step warmup is tuned for
+  longer-context budgets.
+- Mixed-length curriculum: seq512 early for fast updates, switch to
+  seq1024+ in the final phase to recover long-range loss.
+- Cross-check exp002 in the same idea bucket before closing the idea,
+  and avoid re-running this exact combo until the bottleneck is
+  reclassified (step-cost vs token-cost).

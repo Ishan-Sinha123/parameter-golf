@@ -33,7 +33,9 @@ tick_interval_s: 10.0
 screen_wallclock_s: 420   # deep/slow models: 260s train + compile + final eval + SSH poll lag ~ 310s; kv_heads=8 seen ~445s; pad
 gate_wallclock_s: 540
 promote_wallclock_s: 600
-screen_gpus_per_job: 2
+screen_gpus_per_job: 8
+gate_gpus_per_job: 8
+promote_gpus_per_job: 8
 max_retries: 2
 stall_timeout_s: 120.0
 health_check_interval_s: 10.0

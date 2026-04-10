@@ -2,73 +2,65 @@
 
 ## Hypothesis
 
-Muon optimizer momentum of 0.96 may be optimal for the constrained wallclock budget. This is part of a fine sweep (0.93, 0.96, 0.97, 0.98) to determine the best momentum setting. Moderate momentum balances gradient history retention against responsiveness -- too low wastes information, too high tracks stale gradients when total steps are capped by wallclock.
+Muon optimizer momentum of 0.96 may be optimal at the current screening wallclock budget. This run is part of a fine sweep (0.93 / 0.96 / 0.97 / 0.98) probing just above the default 0.95 — moderate momentum balances gradient history retention against responsiveness, so when total steps are capped by wallclock a small bump can meaningfully change the effective trajectory.
 
 ## Configuration
 
-| Parameter | Value |
-|---|---|
+| Env var | Value |
+| --- | --- |
 | `MUON_MOMENTUM` | `0.96` |
-| Model params | 17,059,912 |
-| Attention | GQA (8 heads, 4 KV heads) |
-| Tied embeddings | Yes |
-| Sequence length | 1024 |
-| Batch tokens | 524,288 |
-| Grad accum steps | 8 |
-| Warmup steps | 20 |
-| Max wallclock | 480 s |
-| Seed | 1337 |
 
-Recipe: None (single env-var override on baseline).
+- **Recipe id:** `null` (single env-var override on the screening default)
+- **Source ref:** _(none)_
+- **Model params:** 17,059,912
+- **Attention:** GQA, 8 heads / 4 KV heads, tied embeddings
+- **Seq len / batch tokens:** 1024 / 524,288, grad_accum 8
+- **LRs:** embed 0.05, matrix 0.04, scalar 0.04, head 0.0
+- **Warmup / wallclock cap:** 20 steps / 480 s
+- **Seed:** 1337
 
 ## Results
 
-Training stopped early at step 1435/20000 due to wallclock cap (480 s). Step average: ~334.54 ms.
+Training stopped early at step 1435 / 20000 via the 480 s wallclock cap (~334.5 ms/step). Baseline for Δ is the current SOTA `val_bpb=1.0810`.
 
-| Metric | Value |
-|---|---|
-| Final val_bpb (step 1435, fp16) | 1.3226 |
-| screen_ema_bpb | 1.2901 |
-| gate_int6_bpb (int8+zlib roundtrip) | 1.3236 |
-| gate_quant_gap | ~0.000005 (negligible) |
-| Artifact size (int8+zlib) | 13.41 MB |
-| Gate passed | Yes |
-| Delta vs baseline | Unknown |
+Key log lines:
 
-### Sweep comparison
+- `step:1000/20000 val_loss:2.3015 val_bpb:1.3631 train_time:334387ms`
+- `step:1435/20000 val_loss:2.2331 val_bpb:1.3226 train_time:480064ms`
+- `stopping_early: wallclock_cap train_time:480064ms step:1435/20000`
+- `Serialized model int8+zlib: 14017080 bytes (payload_ratio:3.91x)`
+- `final_int8_zlib_roundtrip val_loss:2.2348 val_bpb:1.3236`
+- `final_int8_zlib_roundtrip_exact val_bpb:1.32359505`
 
-| Experiment | MUON_MOMENTUM | gate_int6_bpb | screen_ema_bpb | Steps reached |
-|---|---|---|---|---|
-| exp001 | 0.93 | 1.3301 | 1.2949 | 1431 |
-| **exp002** | **0.96** | **1.3236** | **1.2901** | **1435** |
-| exp003 | 0.97 | 1.3227 | 1.2897 | 1434 |
-| exp004 | 0.98 | — | — | (different hardware, not directly comparable) |
+| Metric | Value | Δ vs baseline (1.0810) |
+| --- | --- | --- |
+| screen_ema_bpb | 1.29013 | +0.20913 |
+| gate_int6_bpb | 1.32360 | +0.24260 |
+| gate_quant_gap | 4.95e-06 | — |
+| gate_artifact_mb | ~13.4 | under 16 MB cap |
+| gate_passed | ✅ | — |
+| promote_ema_bpb | — | not promoted |
+| promote_int6_bpb | — | not promoted |
 
-Among comparable runs (exp001-003, all ~335 ms/step, 480 s cap), momentum 0.96 sits in the middle of a monotonically improving trend:
+Sweep context (comparable exp001–exp003 all ran ~335 ms/step under the same 480 s cap):
 
-- 0.93 -> 0.96: **-0.0065** int6_bpb (large gain)
-- 0.96 -> 0.97: **-0.0009** int6_bpb (diminishing return)
+| Exp | MUON_MOMENTUM | screen_ema_bpb | gate_int6_bpb |
+| --- | --- | --- | --- |
+| exp001 | 0.93 | 1.2949 | 1.3301 |
+| **exp002** | **0.96** | **1.2901** | **1.3236** |
+| exp003 | 0.97 | 1.2897 | 1.3227 |
+| exp004 | 0.98 | (different hw, not directly comparable) | — |
 
-### Key log lines
-
-```
-model_params:17059912
-step:1000/20000 val_loss:2.3015 val_bpb:1.3631 train_time:334387ms step_avg:334.39ms
-step:1435/20000 val_loss:2.2331 val_bpb:1.3226 train_time:480064ms step_avg:334.54ms
-stopping_early: wallclock_cap train_time:480064ms step:1435/20000
-final_int8_zlib_roundtrip val_loss:2.2348 val_bpb:1.3236
-Serialized model int8+zlib: 14017080 bytes
-```
-
-No warnings or anomalies. Loss curve decreased steadily through training.
+Within the comparable subset, 0.93 → 0.96 → 0.97 is a monotonically improving trend: 0.93 → 0.96 drops int6_bpb by −0.0065 (large), 0.96 → 0.97 drops it a further −0.0009 (diminishing). No warnings in the log; loss curve decreased steadily.
 
 ## Verdict
 
-**Neutral.** Momentum 0.96 is a solid improvement over 0.93 (-0.0065 int6_bpb) but is outperformed by 0.97 (-0.0009 int6_bpb further). The sweep confirms that the optimum lies at or above 0.96, with 0.97 currently the best comparable setting. This run's primary value is confirming the monotonic trend across the sweep.
+**neutral.** 0.96 passes the screening gate with a near-zero quant gap and a clean int8+zlib roundtrip, but the screen EMA BPB of 1.2901 is +0.209 nats above the SOTA 1.0810 baseline and it is outperformed within its own sweep by 0.97. This run's value is confirming the monotonic sweep trend, not an independent win.
 
 ## Suggested follow-ups
 
-- Re-run exp004 (momentum 0.98) on the same GPU class as exp001-003 to complete the apples-to-apples comparison and determine if the optimum is 0.97 or 0.98.
-- If 0.97 wins the sweep, run 3 seeds at that value for statistical significance before promoting.
-- Test the winning momentum combined with stacking techniques (warmdown, EMA, GPTQ-lite) to confirm the improvement composes.
-- The large jump from 0.93 to 0.96 suggests the default momentum may be sub-optimal -- verify what the current default is and whether this sweep changes it.
+- Re-run exp004 (0.98) on the same GPU class as exp001–003 to finish the apples-to-apples comparison and pin the optimum at 0.97 vs 0.98.
+- If 0.97 wins the sweep, run 3 seeds at that value for the ≥0.005-nat / p<0.01 significance bar before promoting.
+- Stack the winning momentum on top of the current SOTA recipe (`rec_20260410_2026_04_09_sp8192_3layerrecur_parresid_q`, 1.0810) rather than the screening default, since the screening baseline is far off-SOTA.
+- Sanity-check interaction with Parallel Muon and warmdown3500, which changed the effective update scale in recent SOTA chains and may shift the momentum optimum.
+- If the default Muon momentum in `train_gpt.py` is still 0.95, consider bumping it to the sweep winner to benefit every downstream experiment.

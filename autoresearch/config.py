@@ -45,7 +45,9 @@ class AutoResearchConfig:
     screen_wallclock_s: int = 180
     gate_wallclock_s: int = 300
     promote_wallclock_s: int = 600
-    screen_gpus_per_job: int = 2
+    screen_gpus_per_job: int = 8
+    gate_gpus_per_job: int = 8
+    promote_gpus_per_job: int = 8
     max_retries: int = 2
     stall_timeout_s: float = 120.0
     health_check_interval_s: float = 10.0   # how often to health-check active jobs

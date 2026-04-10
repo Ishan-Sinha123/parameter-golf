@@ -97,6 +97,12 @@ class Scheduler:
             Path(config.workspace_dir).parent
         )
 
+        # Recipe store — used to roll experiment results onto recipe
+        # best_val_bpb so the leaderboard reflects completed runs, and to
+        # resolve baseline script_path + env_overrides at launch time.
+        from ..db.recipes import RecipeStore
+        self._recipes = RecipeStore(registry, config.abs_recipes_dir)
+
     # ── Main Loop ──────────────────────────────────────────────────────
 
     def run(self):
@@ -444,6 +450,10 @@ class Scheduler:
             gpu_count=len(run.gpu_indices),
         )
 
+        # Roll val_bpb proxy (ema_bpb) up to the recipe so it lands on the
+        # leaderboard even before gate runs.
+        self._roll_to_recipe(exp_id, val_bpb=ema_bpb)
+
         exp = self.registry.get_experiment(exp_id)
         if exp and "gate" in exp.stages:
             self.registry.update_experiment_status(exp_id, ExperimentStatus.QUEUED)
@@ -467,6 +477,10 @@ class Scheduler:
                 quant_gap=quant_gap or 0,
                 artifact_mb=metrics.get("artifact_mb", 0),
                 gate_passed=gate_passed,
+            )
+            self._roll_to_recipe(
+                exp_id, int6_bpb=int6_bpb,
+                artifact_mb=metrics.get("artifact_mb"),
             )
             if gate_passed:
                 exp = self.registry.get_experiment(exp_id)
@@ -493,6 +507,12 @@ class Scheduler:
             ema_bpb=metrics.get("ema_bpb"),
             int6_bpb=metrics.get("int6_bpb"),
             sw_bpb=metrics.get("sw_bpb"),
+            artifact_mb=metrics.get("artifact_mb"),
+        )
+        self._roll_to_recipe(
+            exp_id,
+            val_bpb=metrics.get("ema_bpb"),
+            int6_bpb=metrics.get("int6_bpb"),
             artifact_mb=metrics.get("artifact_mb"),
         )
         self.registry.update_experiment_status(exp_id, ExperimentStatus.DONE)
@@ -607,14 +627,110 @@ class Scheduler:
                 host, indices = alloc
                 self._launch_experiment(exp, stage, host, indices)
 
+    def _ensure_experiment_recipe(self, exp: Experiment) -> Optional[str]:
+        """Bind `exp.recipe_id` to the current_best_baseline if missing.
+
+        Every experiment should reference a recipe so (a) it runs on top
+        of the current SOTA baseline script, and (b) its results roll up
+        into the leaderboard. Experiments created via the dashboard or
+        research agent often have no recipe — this lazily attaches the
+        current best on first launch.
+        """
+        if exp.recipe_id:
+            return exp.recipe_id
+        try:
+            best = self._recipes.current_best()
+            if best is not None:
+                self.registry.set_experiment_recipe(exp.id, best.id)
+                exp.recipe_id = best.id
+                return best.id
+        except Exception as e:
+            log.warning("ensure_experiment_recipe failed for %s: %s", exp.id, e)
+        return None
+
+    def _resolve_script_path(self, exp: Experiment) -> str:
+        """Resolve the training script for an experiment.
+
+        Preference: exp.recipe_id → recipe.script_path, else
+        current_best_baseline, else exp.script_path, else root train_gpt.py.
+        """
+        try:
+            self._ensure_experiment_recipe(exp)
+            if exp.recipe_id:
+                r = self._recipes.get(exp.recipe_id)
+                if r and r.script_path:
+                    return r.script_path
+            best = self._recipes.current_best()
+            if best and best.script_path:
+                return best.script_path
+        except Exception as e:
+            log.warning("recipe script_path resolution failed for %s: %s",
+                        exp.id, e)
+        return exp.script_path or "train_gpt.py"
+
+    def _resolve_env_overrides(self, exp: Experiment) -> dict:
+        """Merge the resolved baseline recipe env with the experiment's env.
+
+        Recipe env is the floor; experiment overrides are layered on top so
+        an idea tuning LEARNING_RATE doesn't drop the SOTA recipe's
+        NUM_LAYERS / MODEL_DIM / etc.
+        """
+        merged: dict = {}
+        try:
+            self._ensure_experiment_recipe(exp)
+            source = None
+            if exp.recipe_id:
+                source = self._recipes.get(exp.recipe_id)
+            if source is None:
+                source = self._recipes.current_best()
+            if source and source.env_overrides:
+                merged.update(source.env_overrides)
+        except Exception as e:
+            log.warning("recipe env resolution failed for %s: %s", exp.id, e)
+        if exp.env_overrides:
+            merged.update(exp.env_overrides)
+        return merged
+
+    def _roll_to_recipe(
+        self, exp_id: str,
+        val_bpb: Optional[float] = None,
+        int6_bpb: Optional[float] = None,
+        artifact_mb: Optional[float] = None,
+    ):
+        """Push an experiment's metrics onto its recipe's best-so-far.
+
+        Keeps the leaderboard (which sources from recipes) in sync with
+        completed experiments. No-op if the experiment has no recipe_id.
+        """
+        try:
+            exp = self.registry.get_experiment(exp_id)
+            if not exp or not exp.recipe_id:
+                return
+            self._recipes.update_best_metrics(
+                recipe_id=exp.recipe_id,
+                experiment_id=exp_id,
+                val_bpb=val_bpb,
+                int6_bpb=int6_bpb,
+                artifact_mb=artifact_mb,
+            )
+        except Exception as e:
+            log.warning("_roll_to_recipe failed for %s: %s", exp_id, e)
+
     def _next_stage(self, exp: Experiment) -> tuple[Optional[str], int]:
-        """Determine next stage and GPU count for an experiment."""
+        """Determine next stage and GPU count for an experiment.
+
+        All stages default to 8 GPUs — on a single 8-GPU node experiments
+        serialize, but each one trains under conditions comparable to the
+        SOTA record (which was tuned on 8×H100 × 600s). Running gate on
+        1 GPU only reached ~1608/20000 steps and gave a fundamentally
+        broken signal.
+        """
         if exp.screen_ema_bpb is None and "screen" in exp.stages:
             return "screen", self.config.screen_gpus_per_job
         if exp.gate_int6_bpb is None and "gate" in exp.stages and exp.screen_ema_bpb is not None:
-            return "gate", 1
+            return "gate", self.config.gate_gpus_per_job
         if exp.promote_ema_bpb is None and "promote" in exp.stages and exp.gate_passed:
-            return "promote", 8
+            return "promote", self.config.promote_gpus_per_job
         return None, 0
 
     def _launch_experiment(self, exp: Experiment, stage: str,
@@ -646,9 +762,17 @@ class Scheduler:
         # Step 2-3: Deploy via git pull + launch
         branch = self._get_deploy_branch()
         job_dir = self.config.abs_ideas_dir / exp.idea_id / exp.id
+
+        # Resolve the training script: prefer the recipe's baseline file
+        # (sota_fork writes decoded SOTAs to autoresearch/baselines/<id>/),
+        # falling back to the experiment's own script_path and finally
+        # the vanilla root train_gpt.py.
+        script_path = self._resolve_script_path(exp)
+        resolved_env = self._resolve_env_overrides(exp)
+
         success = self.cluster.deploy_experiment(
-            exp.id, job_dir=job_dir, env_overrides=exp.env_overrides,
-            script=exp.script_path, wallclock_s=wallclock,
+            exp.id, job_dir=job_dir, env_overrides=resolved_env,
+            script=script_path, wallclock_s=wallclock,
             branch=branch,
         )
 
@@ -675,7 +799,9 @@ class Scheduler:
                 "gpus": gpu_indices,
                 "commit_sha": commit_sha,
                 "branch": branch,
-                "env_overrides": exp.env_overrides,
+                "script_path": script_path,
+                "recipe_id": exp.recipe_id,
+                "env_overrides": resolved_env,
                 "wallclock_s": wallclock,
                 "started_at": datetime.utcnow().isoformat(),
             }

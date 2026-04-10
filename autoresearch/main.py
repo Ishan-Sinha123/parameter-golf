@@ -440,6 +440,60 @@ def cmd_migrate_recipes(args, config: AutoResearchConfig):
     print(f"Total recipes: {len(store.list(limit=10000))}")
 
 
+def cmd_sync_baselines(args, config: AutoResearchConfig):
+    """Decode records/ SOTAs into baseline recipes and bump current_best."""
+    from .db.recipes import RecipeStore
+    from .research import sota_fork
+
+    registry = Registry(config.abs_db_path)
+    store = RecipeStore(registry, config.abs_recipes_dir)
+    repo_root = Path(config.workspace_dir).parent
+    records_dir = repo_root / "records" / "track_10min_16mb"
+    if not records_dir.exists():
+        print(f"No records directory: {records_dir}")
+        return
+    installed = sota_fork.sync_from_records(
+        records_dir, recipes_store=store, repo_root=repo_root,
+    )
+    print(f"Installed {len(installed)} baseline recipe(s)")
+    for r in installed:
+        print(f"  {r.id}  best_val_bpb={r.best_val_bpb}  script={r.script_path}")
+    current = store.current_best()
+    if current:
+        print(f"current_best_baseline -> {current.id} (val_bpb={current.best_val_bpb})")
+    else:
+        print("No current_best_baseline set")
+
+
+def cmd_backfill_ideas(args, config: AutoResearchConfig):
+    """Re-dispatch Claude assess_pr for orphan PROPOSED PR ideas.
+
+    Finds ideas with source=github_pr in PROPOSED state with zero
+    experiments and fires a new Claude assess_pr task for each. The
+    callback will compose a recipe + queue an experiment on the existing
+    idea row.
+    """
+    from .research.agent import ResearchAgent
+
+    registry, knowledge, _cluster, ideas, claude = _build_core(config)
+    if claude is None:
+        print("Claude runner disabled — cannot dispatch assess_pr tasks.")
+        return
+    agent = ResearchAgent(config, registry, ideas=ideas, knowledge=knowledge,
+                           claude=claude)
+
+    count = agent.backfill_orphan_pr_ideas(limit=args.limit)
+    print(f"Dispatched {count} assess_pr task(s) for orphan PR ideas")
+    threads = getattr(agent, "_backfill_threads", [])
+    if threads:
+        print(f"Waiting for {len(threads)} Claude task thread(s)...")
+        for i, t in enumerate(threads, 1):
+            t.join()
+            if i % 5 == 0:
+                print(f"  {i}/{len(threads)} done")
+        print("All assess_pr tasks complete.")
+
+
 def cmd_import_v2(args, config: AutoResearchConfig):
     """Import experiments from autoresearch registry."""
     import sqlite3
@@ -523,6 +577,13 @@ def main():
     sub.add_parser("cluster-status", help="Show cluster status")
     sub.add_parser("migrate-recipes",
                    help="Seed naive baseline recipe and bind existing experiments")
+    sub.add_parser("sync-baselines",
+                   help="Fork records/track_10min_16mb SOTAs into baseline recipes")
+    p_backfill = sub.add_parser(
+        "backfill-ideas",
+        help="Re-dispatch Claude assess_pr for orphan PROPOSED PR ideas",
+    )
+    p_backfill.add_argument("--limit", type=int, default=100)
 
     p_idea = sub.add_parser("create-idea", help="Create a research idea")
     p_idea.add_argument("--title", required=True)
@@ -551,6 +612,8 @@ def main():
         "seed-demo": cmd_seed_demo,
         "cluster-status": cmd_cluster_status,
         "migrate-recipes": cmd_migrate_recipes,
+        "sync-baselines": cmd_sync_baselines,
+        "backfill-ideas": cmd_backfill_ideas,
         "create-idea": cmd_create_idea,
         "import-v2": cmd_import_v2,
     }

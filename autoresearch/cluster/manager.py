@@ -87,6 +87,32 @@ class ClusterManager:
     def _probe_node(self, host: str) -> NodeState:
         client = self._clients[host]
         state = client.get_node_state()
+
+        # Preserve the previous NodeState on transient probe failure.
+        # A single timed-out nvidia-smi should not flip a healthy node to
+        # ERROR/OFFLINE and evict running jobs from the dashboard view.
+        # We only accept the ERROR state after a run of consecutive
+        # failures exceeds the tolerance (default: 3).
+        if state.status in (NodeStatus.OFFLINE, NodeStatus.ERROR):
+            prior = self._nodes.get(host)
+            fail_counts = getattr(self, "_probe_fails", None)
+            if fail_counts is None:
+                fail_counts = {}
+                self._probe_fails = fail_counts
+            fail_counts[host] = fail_counts.get(host, 0) + 1
+            tolerance = 3
+            if prior and prior.status == NodeStatus.ONLINE and fail_counts[host] < tolerance:
+                log.info(
+                    "Probe failed for %s (%d/%d) — keeping prior ONLINE state",
+                    host, fail_counts[host], tolerance,
+                )
+                prior.last_heartbeat = datetime.utcnow()
+                return prior
+        else:
+            # Success — reset the failure counter
+            if hasattr(self, "_probe_fails"):
+                self._probe_fails.pop(host, None)
+
         state.last_heartbeat = datetime.utcnow()
 
         # Restore GPU assignments from running jobs

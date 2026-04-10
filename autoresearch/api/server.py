@@ -190,8 +190,12 @@ class APIHandler(BaseHTTPRequestHandler):
                     "gate_quant_gap": e.gate_quant_gap,
                     "gate_passed": e.gate_passed,
                     "promote_ema_bpb": e.promote_ema_bpb,
+                    "promote_int6_bpb": e.promote_int6_bpb,
                     "node_host": e.node_host,
-                    "created_at": str(e.created_at),
+                    "created_at": str(e.created_at) if e.created_at else None,
+                    "started_at": str(e.started_at) if e.started_at else None,
+                    "completed_at": str(e.completed_at) if e.completed_at else None,
+                    "recipe_id": getattr(e, "recipe_id", None),
                 }
                 for e in exps
             ],

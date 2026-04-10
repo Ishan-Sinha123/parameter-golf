@@ -194,6 +194,12 @@ class ResearchAgent:
         # 4. Mine local records
         self._mine_records()
 
+        # 5. Check recently-merged PRs that touch records/ and fork them
+        try:
+            self._poll_merged_prs()
+        except Exception as e:
+            log.warning("_poll_merged_prs failed: %s", e)
+
         log.info("Research poll cycle done: %d new PRs, %d new papers",
                  new_prs, new_papers)
 
@@ -378,8 +384,14 @@ class ResearchAgent:
                 log.warning("assess_pr spawn failed for PR#%d: %s",
                             pr.number, e)
 
-    def _spawn_claude_pr_assessment(self, pr: PRInfo):
-        """Fire assess_pr on a background thread + react to the result."""
+    def _spawn_claude_pr_assessment(self, pr: PRInfo,
+                                     existing_idea_id: str | None = None):
+        """Fire assess_pr on a background thread + react to the result.
+
+        If `existing_idea_id` is provided, the downstream compose step will
+        attach the composed recipe + experiment to that idea instead of
+        creating a fresh one (used by the orphan backfill path).
+        """
         from ..claude import build_task
 
         def _on_complete(result):
@@ -387,17 +399,20 @@ class ResearchAgent:
                 log.warning("assess_pr PR#%d returned no parsed result: %s",
                             pr.number, result.error or "(none)")
                 return
-            self._apply_pr_assessment(pr, result.parsed)
+            self._apply_pr_assessment(
+                pr, result.parsed, existing_idea_id=existing_idea_id)
 
         spec = build_task(
             "assess_pr",
             config=self.config, registry=self.registry,
             pr_number=pr.number, pr_url=pr.url, repo=self.config.github_repo,
         )
-        self.claude.run_async(spec, on_complete=_on_complete)
+        t = self.claude.run_async(spec, on_complete=_on_complete)
         log.info("PR#%d: dispatched assess_pr task to Claude", pr.number)
+        return t
 
-    def _apply_pr_assessment(self, pr: PRInfo, assessment: dict):
+    def _apply_pr_assessment(self, pr: PRInfo, assessment: dict,
+                              existing_idea_id: str | None = None):
         """React to a Claude assess_pr result.
 
         Depending on the `recommendation` field, this either:
@@ -408,6 +423,9 @@ class ResearchAgent:
         - reproduce: record the PR as an idea marked is_reproduction
         - ignore: just emit an event, no further action
         - implement_clone: open an implement_technique task (guarded)
+
+        If `existing_idea_id` is passed, the compose path reuses that
+        idea row rather than creating a new one.
         """
         recommendation = assessment.get("recommendation", "ignore")
         technique = assessment.get("technique", "") or pr.title
@@ -428,6 +446,14 @@ class ResearchAgent:
                 pr=pr, assessment=assessment,
                 new_feature=new_feature, env_overrides=env_overrides,
                 is_reproduction=(recommendation == "reproduce"),
+                existing_idea_id=existing_idea_id,
+            )
+        elif existing_idea_id and recommendation == "ignore":
+            # Backfill: Claude said "ignore" — mark the orphan rejected so
+            # it doesn't clutter the dashboard indefinitely.
+            self.ideas.reject_idea(
+                existing_idea_id,
+                f"claude assess_pr: ignore — {assessment.get('notes','')[:200]}",
             )
         elif recommendation == "implement_clone":
             if not self.config.claude_auto_implement:
@@ -440,8 +466,14 @@ class ResearchAgent:
     def _compose_and_queue_from_pr(self, pr: PRInfo, assessment: dict,
                                     new_feature: str,
                                     env_overrides: dict,
-                                    is_reproduction: bool):
-        """Stack the PR's env overrides onto the current best recipe."""
+                                    is_reproduction: bool,
+                                    existing_idea_id: str | None = None):
+        """Stack the PR's env overrides onto the current best recipe.
+
+        When `existing_idea_id` is set we attach the new experiment to
+        that idea row instead of creating a fresh one — used by the
+        orphan-idea backfill path.
+        """
         from ..db.recipes import RecipeStore
         from ..db.models import ExperimentStatus, ExperimentCategory
         store = RecipeStore(self.registry, self.config.abs_recipes_dir)
@@ -465,17 +497,26 @@ class ResearchAgent:
         )
         log.info("PR#%d: composed recipe %s", pr.number, recipe.id)
 
-        # Create the idea + experiment so the scheduler will pick it up
-        idea = self.ideas.create_idea(
-            title=f"PR#{pr.number}: {pr.title[:80]}",
-            hypothesis=(assessment.get("notes") or pr.title)[:500],
-            source=IdeaSource.GITHUB_PR,
-            source_ref=pr.url,
-            priority=3,
-            tags=(pr.techniques or []) + ["pr_ingestion"],
-            notes=f"Auto-ingested from {pr.url}",
-        )
-        self.ideas.approve_idea(idea.id, "auto-approved by assess_pr")
+        # Reuse the existing orphan idea if provided, otherwise create new.
+        if existing_idea_id:
+            idea = self.registry.get_idea(existing_idea_id)
+            if idea is None:
+                log.warning("PR#%d: existing_idea_id %s not found, creating new",
+                            pr.number, existing_idea_id)
+            else:
+                self.ideas.approve_idea(
+                    idea.id, "auto-approved by assess_pr (backfill)")
+        if not existing_idea_id or self.registry.get_idea(existing_idea_id) is None:
+            idea = self.ideas.create_idea(
+                title=f"PR#{pr.number}: {pr.title[:80]}",
+                hypothesis=(assessment.get("notes") or pr.title)[:500],
+                source=IdeaSource.GITHUB_PR,
+                source_ref=pr.url,
+                priority=3,
+                tags=(pr.techniques or []) + ["pr_ingestion"],
+                notes=f"Auto-ingested from {pr.url}",
+            )
+            self.ideas.approve_idea(idea.id, "auto-approved by assess_pr")
         exp = self.ideas.create_experiment(
             idea_id=idea.id,
             name=f"PR#{pr.number} {new_feature}"[:60],
@@ -500,6 +541,102 @@ class ResearchAgent:
         else:
             log.info("PR#%d: experiment %s created (not auto-queued)",
                      pr.number, exp.id)
+
+    def backfill_orphan_pr_ideas(self, limit: int = 100) -> int:
+        """Re-dispatch Claude assess_pr for PROPOSED github_pr ideas with
+        no experiments. Returns the count dispatched.
+
+        Used to recover from a prior run where assess_pr tasks crashed or
+        were interrupted before they could compose + queue experiments,
+        leaving orphan ideas behind in the dashboard.
+        """
+        from ..db.models import IdeaStatus, IdeaSource
+        if self.claude is None:
+            log.warning("backfill: no claude runner available")
+            return 0
+
+        orphans = [
+            i for i in self.registry.list_ideas(IdeaStatus.PROPOSED)
+            if i.source == IdeaSource.GITHUB_PR
+        ]
+        # Filter to those with zero experiments
+        orphans = [
+            i for i in orphans
+            if not self.registry.list_experiments(idea_id=i.id)
+        ]
+        log.info("backfill: found %d orphan PR ideas", len(orphans))
+
+        dispatched = 0
+        threads = []
+        for idea in orphans[:limit]:
+            pr_num = self._extract_pr_number(idea)
+            if pr_num is None:
+                log.warning("backfill: could not extract PR# from %s (ref=%s)",
+                            idea.id, idea.source_ref)
+                continue
+            pr = self._fetch_single_pr(pr_num)
+            if pr is None:
+                log.warning("backfill: gh pr view failed for PR#%d", pr_num)
+                continue
+            try:
+                t = self._spawn_claude_pr_assessment(
+                    pr, existing_idea_id=idea.id)
+                if t is not None:
+                    threads.append(t)
+                dispatched += 1
+            except Exception as e:
+                log.warning("backfill: dispatch failed for PR#%d: %s",
+                            pr_num, e)
+        log.info("backfill: dispatched %d assess_pr tasks", dispatched)
+        self._backfill_threads = threads  # expose for CLI wait loop
+        return dispatched
+
+    def _extract_pr_number(self, idea) -> int | None:
+        """Pull PR number out of an idea's source_ref URL or id slug."""
+        import re as _re
+        if idea.source_ref:
+            m = _re.search(r"/pull/(\d+)", idea.source_ref)
+            if m:
+                return int(m.group(1))
+        m = _re.search(r"pr_(\d+)", idea.id or "")
+        if m:
+            return int(m.group(1))
+        return None
+
+    def _fetch_single_pr(self, pr_number: int) -> PRInfo | None:
+        """Fetch a single PR by number (used by backfill)."""
+        try:
+            r = subprocess.run(
+                ["gh", "pr", "view", str(pr_number),
+                 "--repo", self.config.github_repo,
+                 "--json", "number,title,author,body,url,createdAt,labels,state"],
+                capture_output=True, text=True, timeout=30,
+            )
+            if r.returncode != 0:
+                return None
+            item = json.loads(r.stdout)
+            body = (item.get("body") or "")[:4000]
+            pr = PRInfo(
+                number=item["number"],
+                title=item["title"],
+                author=(item.get("author") or {}).get("login", "unknown"),
+                body=body,
+                url=item["url"],
+                created_at=item.get("createdAt", ""),
+                state=item.get("state", "open").lower(),
+                labels=[la.get("name", "") for la in item.get("labels", [])],
+            )
+            bpb_match = re.search(r"val_bpb[:\s]+([\d.]+)", pr.body)
+            if bpb_match:
+                pr.val_bpb = float(bpb_match.group(1))
+            mb_match = re.search(r"(\d+\.?\d*)\s*MB", pr.body)
+            if mb_match:
+                pr.artifact_mb = float(mb_match.group(1))
+            pr.techniques = extract_techniques(pr.title + " " + body)
+            return pr
+        except Exception as e:
+            log.warning("fetch_single_pr(%d) failed: %s", pr_number, e)
+            return None
 
     def _dispatch_implement_technique(self, pr: PRInfo, assessment: dict):
         """Open an implement_technique task for a novel PR."""
@@ -980,6 +1117,71 @@ class ResearchAgent:
                   f"{paper.abstract[:500]}",
         )
 
+    # ── Merged PR Polling ──────────────────────────────────────────────
+
+    def _poll_merged_prs(self):
+        """Scan recently-merged PRs for new records/ submissions and fork them.
+
+        This is the remote counterpart to `_mine_records`: when a SOTA PR
+        lands upstream but we haven't pulled it locally yet, `gh pr list
+        --state merged` surfaces it and we `git fetch` to make the record
+        files available before running sota_fork.sync_from_records.
+        """
+        try:
+            r = subprocess.run(
+                ["gh", "pr", "list", "--repo", self.config.github_repo,
+                 "--state", "merged", "--limit", "20",
+                 "--search", "records/track_10min_16mb in:path",
+                 "--json", "number,title,mergedAt,files"],
+                capture_output=True, text=True, timeout=30,
+            )
+            if r.returncode != 0:
+                return
+            merged = json.loads(r.stdout or "[]")
+        except Exception as e:
+            log.debug("gh pr list --merged failed: %s", e)
+            return
+
+        seen_key = "_seen_merged_prs"
+        if not hasattr(self, seen_key):
+            setattr(self, seen_key, set())
+        seen: set[int] = getattr(self, seen_key)
+
+        touches_records = False
+        for item in merged:
+            num = item.get("number")
+            if num in seen:
+                continue
+            seen.add(num)
+            files = item.get("files") or []
+            if any("records/track_10min_16mb" in (f.get("path") or "")
+                   for f in files):
+                touches_records = True
+                log.info("Merged PR#%s touches records/ — will re-sync baselines",
+                         num)
+
+        if not touches_records:
+            return
+
+        # Fetch + pull main so local records/ includes the newly merged files.
+        repo_root = Path(self.config.workspace_dir).parent
+        try:
+            subprocess.run(
+                ["git", "fetch", "origin", "main"],
+                cwd=repo_root, capture_output=True, timeout=30,
+            )
+            # Non-destructive: update records/ tree from main without
+            # touching the current branch.
+            subprocess.run(
+                ["git", "checkout", "origin/main", "--", "records/"],
+                cwd=repo_root, capture_output=True, timeout=15,
+            )
+        except Exception as e:
+            log.warning("git fetch/checkout records/ failed: %s", e)
+
+        # Now re-run the local records sync — which will pick up anything new.
+        self._mine_records()
+
     # ── Local Records Mining ───────────────────────────────────────────
 
     def _mine_records(self):
@@ -987,6 +1189,21 @@ class ResearchAgent:
         records_dir = Path(self.config.workspace_dir).parent / "records"
         if not records_dir.exists():
             return
+
+        # Fork any SOTA records that beat our current_best_baseline pointer.
+        # This is idempotent — existing recipes dedupe by feature hash.
+        try:
+            from ..db.recipes import RecipeStore
+            from . import sota_fork
+            store = RecipeStore(self.registry, self.config.abs_recipes_dir)
+            repo_root = Path(self.config.workspace_dir).parent
+            sota_fork.sync_from_records(
+                records_dir / "track_10min_16mb",
+                recipes_store=store,
+                repo_root=repo_root,
+            )
+        except Exception as e:
+            log.warning("sota_fork.sync_from_records failed: %s", e)
 
         for track_dir in records_dir.iterdir():
             if not track_dir.is_dir():

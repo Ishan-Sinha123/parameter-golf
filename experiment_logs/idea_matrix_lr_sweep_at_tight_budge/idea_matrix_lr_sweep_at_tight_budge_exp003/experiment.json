@@ -1,17 +1,16 @@
 {
   "experiment_id": "idea_matrix_lr_sweep_at_tight_budge_exp003",
   "idea_id": "idea_matrix_lr_sweep_at_tight_budge",
-  "stage": "screen",
+  "stage": "gate",
   "host": "206.125.32.60",
   "gpus": [
-    0,
-    1
+    0
   ],
-  "commit_sha": "01993c857692f9d655e1057d47f69ee5520d31a8",
+  "commit_sha": "ecf92e28006e7369e31bf12f50250f86b3657b74",
   "branch": "autoresearch-deploy",
   "env_overrides": {
     "MATRIX_LR": "0.06"
   },
-  "wallclock_s": 420,
-  "started_at": "2026-04-10T11:26:38.968310"
+  "wallclock_s": 540,
+  "started_at": "2026-04-10T11:35:08.315726"
 }

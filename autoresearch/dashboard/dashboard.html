@@ -125,7 +125,6 @@ tr:hover { background: rgba(88, 166, 255, 0.04); }
 <div class="nav">
   <button class="active" onclick="showPanel('leaderboard')">Leaderboard</button>
   <button onclick="showPanel('ideas')">Ideas</button>
-  <button onclick="showPanel('experiments')">Experiments</button>
   <button onclick="showPanel('cluster')">Cluster</button>
   <button onclick="showPanel('claude')">Claude</button>
   <button onclick="showPanel('events')">Events</button>
@@ -158,43 +157,23 @@ tr:hover { background: rgba(88, 166, 255, 0.04); }
     </table>
   </div>
 
-  <!-- IDEAS PANEL -->
+  <!-- IDEAS PANEL (experiments nest under each idea) -->
   <div class="panel" id="panel-ideas">
-    <table>
-      <thead>
-        <tr>
-          <th>Priority</th><th>Title</th><th>Status</th><th>Source</th>
-          <th>Experiments</th><th>Best Screen BPB</th><th>Best Gate BPB</th>
-          <th>Actions</th>
-        </tr>
-      </thead>
-      <tbody id="ideas-table"></tbody>
-    </table>
-  </div>
-
-  <!-- EXPERIMENTS PANEL -->
-  <div class="panel" id="panel-experiments">
-    <div style="margin-bottom:12px">
-      <select id="exp-filter" onchange="refreshExperiments()" class="btn">
-        <option value="">All</option>
-        <option value="queued">Queued</option>
-        <option value="screening">Screening</option>
-        <option value="gating">Gating</option>
-        <option value="promoting">Promoting</option>
-        <option value="done">Done</option>
-        <option value="rejected">Rejected</option>
-        <option value="failed">Failed</option>
-      </select>
+    <div style="margin-bottom:12px;color:var(--text-dim);font-size:12px">
+      Ideas sort: running → queued → proposed → done → parked → rejected → failed.
+      Click a row to expand its experiments.
     </div>
     <table>
       <thead>
         <tr>
-          <th>ID</th><th>Name</th><th>Idea</th><th>Status</th><th>Priority</th>
-          <th>Screen EMA BPB</th><th>Gate Int6 BPB</th><th>Quant Gap</th>
-          <th>Node</th><th>Actions</th>
+          <th></th>
+          <th>Priority</th><th>Title</th><th>Status</th><th>Source</th>
+          <th>Experiments</th><th>Best BPB</th>
+          <th>Created</th><th>Last run</th>
+          <th>Actions</th>
         </tr>
       </thead>
-      <tbody id="experiments-table"></tbody>
+      <tbody id="ideas-table"></tbody>
     </table>
   </div>
 
@@ -313,7 +292,6 @@ function showPanel(name) {
   document.querySelectorAll('.nav button').forEach(b => { if (b.textContent.toLowerCase().includes(name)) b.classList.add('active'); });
   if (name === 'leaderboard') refreshLeaderboard();
   if (name === 'ideas') refreshIdeas();
-  if (name === 'experiments') refreshExperiments();
   if (name === 'cluster') refreshCluster();
   if (name === 'claude') refreshClaude();
   if (name === 'events') refreshEvents();
@@ -417,24 +395,125 @@ async function refreshClaude() {
 }
 
 // ── Ideas ──
+const IDEA_STATUS_WEIGHT = {
+  active: 0, approved: 1, proposed: 2, completed: 3,
+  parked: 4, rejected: 5,
+};
+const EXP_STATUS_WEIGHT = {
+  screening: 0, gating: 0, promoting: 0, deploying: 0,
+  queued: 1, defined: 2,
+  done: 3, rejected: 4, stopped: 5, failed: 6,
+};
+
+const _expandedIdeas = new Set();
+
+function bestIdeaBpb(i) {
+  const cands = [i.best_gate_bpb, i.best_screen_bpb, i.best_promote_bpb].filter(v => v != null);
+  return cands.length ? Math.min(...cands) : null;
+}
+
+function fmtTs(t) {
+  if (!t) return '—';
+  try { return new Date(t).toLocaleString(); } catch (e) { return t; }
+}
+
 async function refreshIdeas() {
   const data = await api('GET', '/api/ideas');
+  const ideas = (data.ideas || []).slice();
+  ideas.sort((a, b) => {
+    const wa = IDEA_STATUS_WEIGHT[a.status] ?? 9;
+    const wb = IDEA_STATUS_WEIGHT[b.status] ?? 9;
+    if (wa !== wb) return wa - wb;
+    if (a.priority !== b.priority) return b.priority - a.priority;
+    return (b.updated_at || '').localeCompare(a.updated_at || '');
+  });
   const tb = document.getElementById('ideas-table');
-  tb.innerHTML = (data.ideas || []).map(i => `
+  tb.innerHTML = ideas.map(i => {
+    const best = bestIdeaBpb(i);
+    const expanded = _expandedIdeas.has(i.id);
+    const caret = expanded ? '▾' : '▸';
+    const expRow = expanded
+      ? `<tr class="exp-row" id="exp-row-${i.id}"><td colspan="10"><div id="exp-inner-${i.id}">Loading...</div></td></tr>`
+      : '';
+    return `
     <tr>
-      <td class="pri-${i.priority}">${['','Low','Normal','High','CRIT'][i.priority]}</td>
+      <td><a href="#" onclick="toggleIdea('${i.id}');return false" style="font-size:14px">${caret}</a></td>
+      <td class="pri-${i.priority}">${['','Low','Normal','High','CRIT'][i.priority] || i.priority}</td>
       <td><a href="#" onclick="showIdeaDetail('${i.id}');return false">${esc(i.title)}</a></td>
       <td><span class="badge badge-${i.status}">${i.status}</span></td>
       <td>${i.source}</td>
-      <td>${i.total_experiments} (${i.running_experiments} running, ${i.completed_experiments} done)</td>
-      <td>${fmt(i.best_screen_bpb)}</td>
-      <td>${fmt(i.best_gate_bpb)}</td>
+      <td>${i.total_experiments} (${i.running_experiments} run, ${i.completed_experiments} done)</td>
+      <td>${fmt(best)}</td>
+      <td style="font-size:11px;color:var(--text-dim)">${fmtTs(i.created_at)}</td>
+      <td style="font-size:11px;color:var(--text-dim)">${fmtTs(i.last_experiment_finished_at)}</td>
       <td>
         ${i.status === 'proposed' ? `<button class="btn btn-sm" onclick="approveIdea('${i.id}')">Approve</button>
         <button class="btn btn-sm btn-danger" onclick="rejectIdea('${i.id}')">Reject</button>` : ''}
-        ${i.status === 'approved' || i.status === 'active' ? `<button class="btn btn-sm" onclick="showNewExpModal('${i.id}')">+ Exp</button>` : ''}
+        ${i.status === 'approved' || i.status === 'active' ? `<button class="btn btn-sm" onclick="showNewExpModal('${i.id}')">+ Exp</button>
+        <button class="btn btn-sm btn-danger" onclick="rejectIdea('${i.id}')">Reject</button>` : ''}
       </td>
-    </tr>`).join('');
+    </tr>${expRow}`;
+  }).join('');
+  // Lazy-load expanded rows
+  for (const id of _expandedIdeas) {
+    const el = document.getElementById('exp-inner-' + id);
+    if (el) loadIdeaExperiments(id, el);
+  }
+}
+
+async function toggleIdea(id) {
+  if (_expandedIdeas.has(id)) _expandedIdeas.delete(id);
+  else _expandedIdeas.add(id);
+  refreshIdeas();
+}
+
+async function loadIdeaExperiments(ideaId, container) {
+  const data = await api('GET', `/api/ideas/${ideaId}`);
+  const exps = (data.experiments || []).slice();
+  exps.sort((a, b) => {
+    const wa = EXP_STATUS_WEIGHT[a.status] ?? 9;
+    const wb = EXP_STATUS_WEIGHT[b.status] ?? 9;
+    if (wa !== wb) return wa - wb;
+    return (b.started_at || b.created_at || '').localeCompare(a.started_at || a.created_at || '');
+  });
+  if (!exps.length) {
+    container.innerHTML = '<div style="color:var(--text-dim);padding:8px">No experiments yet.</div>';
+    return;
+  }
+  container.innerHTML = `
+    <table style="margin:6px 0;width:100%;background:var(--bg-dark)">
+      <thead><tr>
+        <th>ID</th><th>Name</th><th>Status</th>
+        <th>Screen EMA</th><th>Gate Int6</th><th>Quant Gap</th>
+        <th>Created</th><th>Started</th><th>Finished</th>
+        <th>Node</th><th>Actions</th>
+      </tr></thead>
+      <tbody>
+        ${exps.map(e => {
+          const promoted = e.promote_ema_bpb != null || e.status === 'promoting';
+          const showPromote = e.gate_passed && e.status !== 'promoting' &&
+            e.status !== 'done' && !promoted;
+          return `<tr>
+            <td style="font-size:11px">${e.id}</td>
+            <td>${esc(e.name)}</td>
+            <td><span class="badge badge-${e.status}">${e.status}</span></td>
+            <td>${fmt(e.screen_ema_bpb)}</td>
+            <td>${fmt(e.gate_int6_bpb)}</td>
+            <td>${fmt(e.gate_quant_gap)}</td>
+            <td style="font-size:11px;color:var(--text-dim)">${fmtTs(e.created_at)}</td>
+            <td style="font-size:11px;color:var(--text-dim)">${fmtTs(e.started_at)}</td>
+            <td style="font-size:11px;color:var(--text-dim)">${fmtTs(e.completed_at)}</td>
+            <td>${e.node_host || '-'}</td>
+            <td>
+              ${['screening','gating','promoting','deploying'].includes(e.status) ? `<button class="btn btn-sm btn-danger" onclick="stopExp('${e.id}')">Stop</button>` : ''}
+              ${showPromote ? `<button class="btn btn-sm btn-primary" onclick="promoteExp('${e.id}')">Promote</button>` : ''}
+              <button class="btn btn-sm" onclick="showLog('${e.id}')">Log</button>
+            </td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>
+  `;
 }
 
 async function showIdeaDetail(id) {
@@ -470,33 +549,9 @@ async function rejectIdea(id) {
   if (reason) { await api('POST', `/api/ideas/${id}/reject`, { reason }); refreshIdeas(); }
 }
 
-// ── Experiments ──
-async function refreshExperiments() {
-  const filter = document.getElementById('exp-filter').value;
-  const q = filter ? `?status=${filter}` : '';
-  const data = await api('GET', '/api/experiments' + q);
-  const tb = document.getElementById('experiments-table');
-  tb.innerHTML = (data.experiments || []).map(e => `
-    <tr>
-      <td style="font-size:11px">${e.id}</td>
-      <td>${esc(e.name)}</td>
-      <td><a href="#" onclick="showIdeaDetail('${e.idea_id}');return false">${e.idea_id}</a></td>
-      <td><span class="badge badge-${e.status}">${e.status}</span></td>
-      <td class="pri-${e.priority}">${e.priority}</td>
-      <td>${fmt(e.screen_ema_bpb)}</td>
-      <td>${fmt(e.gate_int6_bpb)}</td>
-      <td>${fmt(e.gate_quant_gap)}</td>
-      <td>${e.node_host || '-'}</td>
-      <td>
-        ${['screening','gating','promoting'].includes(e.status) ? `<button class="btn btn-sm btn-danger" onclick="stopExp('${e.id}')">Stop</button>` : ''}
-        ${e.gate_passed && e.status !== 'promoting' ? `<button class="btn btn-sm btn-primary" onclick="promoteExp('${e.id}')">Promote</button>` : ''}
-        <button class="btn btn-sm" onclick="showLog('${e.id}')">Log</button>
-      </td>
-    </tr>`).join('');
-}
-
-async function stopExp(id) { await api('POST', `/api/experiments/${id}/stop`, {}); refreshExperiments(); }
-async function promoteExp(id) { await api('POST', `/api/experiments/${id}/promote`, {}); refreshExperiments(); }
+// ── Experiment actions (called from nested expansion in Ideas) ──
+async function stopExp(id) { await api('POST', `/api/experiments/${id}/stop`, {}); refreshIdeas(); }
+async function promoteExp(id) { await api('POST', `/api/experiments/${id}/promote`, {}); refreshIdeas(); }
 
 // ── Cluster ──
 async function refreshCluster() {
@@ -628,7 +683,6 @@ async function refresh() {
   if (active) {
     const id = active.id.replace('panel-', '');
     if (id === 'ideas') refreshIdeas();
-    else if (id === 'experiments') refreshExperiments();
     else if (id === 'cluster') refreshCluster();
   }
 }

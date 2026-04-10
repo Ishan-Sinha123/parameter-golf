@@ -15,7 +15,7 @@ from __future__ import annotations
 import json
 import logging
 import subprocess
-import time
+import time  # noqa: F401 (used by probe_gpus retries)
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
@@ -32,14 +32,20 @@ class SSHConfig:
     port: int = 22
     key_file: Optional[str] = None
     work_dir: str = "/workspace/parameter-golf"
-    connect_timeout: int = 10
+    connect_timeout: int = 30
     env_setup: str = ""  # e.g. "source /workspace/parameter-golf/.venv/bin/activate"
 
     @property
     def ssh_base(self) -> list[str]:
+        # ServerAliveInterval/Max keeps the TCP connection fresh across
+        # vast.ai's occasional idle drops so `Connection timed out during
+        # banner exchange` stops flapping the node offline.
         cmd = [
             "ssh", "-o", "StrictHostKeyChecking=no",
             "-o", f"ConnectTimeout={self.connect_timeout}",
+            "-o", "ServerAliveInterval=15",
+            "-o", "ServerAliveCountMax=4",
+            "-o", "TCPKeepAlive=yes",
             "-o", "BatchMode=yes",
             "-p", str(self.port),
         ]
@@ -80,33 +86,54 @@ class NodeClient:
             return False
 
     def probe_gpus(self) -> list[GPUInfo]:
-        """Query nvidia-smi on the node and return GPU info."""
+        """Query nvidia-smi on the node and return GPU info.
+
+        Retries on transient SSH failures (banner timeout, connection
+        reset) with exponential backoff. Returns [] only after all
+        attempts fail — callers should treat [] as "probe failed" not
+        "node has zero GPUs".
+        """
         query = "index,name,memory.total,memory.used,utilization.gpu,temperature.gpu"
         cmd = f"nvidia-smi --query-gpu={query} --format=csv,noheader,nounits 2>/dev/null"
-        try:
-            r = self._run_ssh(cmd, timeout=15)
-            if r.returncode != 0:
-                log.warning("nvidia-smi failed on %s: %s", self.ssh.host, r.stderr.strip())
-                return []
-            gpus = []
-            for line in r.stdout.strip().split("\n"):
-                if not line.strip():
+        backoffs = [0, 2, 5]
+        last_err = ""
+        for attempt, delay in enumerate(backoffs):
+            if delay:
+                time.sleep(delay)
+            try:
+                r = self._run_ssh(cmd, timeout=30)
+                if r.returncode != 0:
+                    last_err = r.stderr.strip()[:200]
+                    log.debug("probe_gpus attempt %d on %s failed: %s",
+                              attempt + 1, self.ssh.host, last_err)
                     continue
-                parts = [p.strip() for p in line.split(",")]
-                if len(parts) < 6:
-                    continue
-                gpus.append(GPUInfo(
-                    index=int(parts[0]),
-                    name=parts[1],
-                    memory_total_mb=int(float(parts[2])),
-                    memory_used_mb=int(float(parts[3])),
-                    utilization_pct=int(float(parts[4])),
-                    temperature_c=int(float(parts[5])),
-                ))
-            return gpus
-        except (subprocess.TimeoutExpired, Exception) as e:
-            log.warning("GPU probe failed on %s: %s", self.ssh.host, e)
-            return []
+                gpus = []
+                for line in r.stdout.strip().split("\n"):
+                    if not line.strip():
+                        continue
+                    parts = [p.strip() for p in line.split(",")]
+                    if len(parts) < 6:
+                        continue
+                    gpus.append(GPUInfo(
+                        index=int(parts[0]),
+                        name=parts[1],
+                        memory_total_mb=int(float(parts[2])),
+                        memory_used_mb=int(float(parts[3])),
+                        utilization_pct=int(float(parts[4])),
+                        temperature_c=int(float(parts[5])),
+                    ))
+                return gpus
+            except subprocess.TimeoutExpired as e:
+                last_err = f"timeout: {e}"
+                log.debug("probe_gpus attempt %d on %s timed out",
+                          attempt + 1, self.ssh.host)
+            except Exception as e:
+                last_err = str(e)
+                log.debug("probe_gpus attempt %d on %s exception: %s",
+                          attempt + 1, self.ssh.host, e)
+        log.warning("GPU probe failed on %s after %d attempts: %s",
+                    self.ssh.host, len(backoffs), last_err)
+        return []
 
     def get_node_state(self) -> NodeState:
         """Full node state: reachability + GPU inventory."""

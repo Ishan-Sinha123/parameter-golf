@@ -44,12 +44,18 @@ class IdeaTracker:
                      tags: list[str] | None = None,
                      notes: str = "",
                      parent_idea: str | None = None) -> Idea:
-        """Create a new research idea."""
+        """Create a new research idea.
+
+        Ideas are auto-approved on creation so the scheduler picks them up
+        and queues experiments without a human-in-the-loop approval gate.
+        Rejection is still manual — the user can reject an idea at any
+        time from the dashboard, but the default is "run it".
+        """
         idea_id = self._generate_id(title)
         idea = Idea(
             id=idea_id, title=title, hypothesis=hypothesis,
             source=source, source_ref=source_ref,
-            status=IdeaStatus.PROPOSED, priority=priority,
+            status=IdeaStatus.APPROVED, priority=priority,
             parent_idea=parent_idea,
             tags=tags or [], notes=notes,
         )
@@ -177,6 +183,8 @@ class IdeaTracker:
             experiments = self.registry.list_experiments(idea_id=idea.id)
             best_screen_bpb = None
             best_gate_bpb = None
+            best_promote_bpb = None
+            last_finished = None
             total_exps = len(experiments)
             running = sum(1 for e in experiments if e.status in
                           (ExperimentStatus.SCREENING, ExperimentStatus.GATING,
@@ -187,6 +195,10 @@ class IdeaTracker:
                     best_screen_bpb = e.screen_ema_bpb
                 if e.gate_int6_bpb and (best_gate_bpb is None or e.gate_int6_bpb < best_gate_bpb):
                     best_gate_bpb = e.gate_int6_bpb
+                if e.promote_ema_bpb and (best_promote_bpb is None or e.promote_ema_bpb < best_promote_bpb):
+                    best_promote_bpb = e.promote_ema_bpb
+                if e.completed_at and (last_finished is None or str(e.completed_at) > last_finished):
+                    last_finished = str(e.completed_at)
 
             summaries.append({
                 "id": idea.id,
@@ -200,7 +212,10 @@ class IdeaTracker:
                 "completed_experiments": done,
                 "best_screen_bpb": best_screen_bpb,
                 "best_gate_bpb": best_gate_bpb,
+                "best_promote_bpb": best_promote_bpb,
                 "created_at": str(idea.created_at) if idea.created_at else None,
+                "updated_at": str(idea.updated_at) if idea.updated_at else None,
+                "last_experiment_finished_at": last_finished,
             })
         return summaries
 
