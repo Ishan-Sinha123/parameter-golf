@@ -26,6 +26,14 @@ nodes:
     label: "vast-h100"
     enabled: true
     env_setup: "source /workspace/parameter-golf/.venv/bin/activate"
+  - host: 34.69.145.155
+    user: root
+    ssh_port: 7691
+    ssh_key: ~/.ssh/id_ed25519
+    work_dir: /workspace/parameter-golf
+    label: "vast-h100-2"
+    enabled: true
+    env_setup: "source /workspace/parameter-golf/.venv/bin/activate"
 
 
 # Scheduler
