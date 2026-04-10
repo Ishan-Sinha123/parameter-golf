@@ -124,14 +124,30 @@ _INSTANCE_ENV_KEYS = {
 }
 
 
-def _clean_value(val: str) -> str:
+_NUMERIC_RE = re.compile(r"^-?(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?$")
+
+
+def _clean_value(val: str) -> Optional[str]:
+    """Normalize a default expression from os.environ.get(..., DEFAULT).
+
+    Returns None if the default is a variable reference (e.g. `_D`) or
+    any non-literal expression we can't safely bake into env_overrides.
+    Baking a variable name as a string default causes the recipe to set
+    the env var to the literal symbol at runtime, which then blows up
+    when the script tries to convert it to int/float.
+    """
     v = val.strip()
-    # Strip surrounding quotes
+    # Strip surrounding quotes → string literal
     if (v.startswith("'") and v.endswith("'")) or (
             v.startswith('"') and v.endswith('"')):
-        v = v[1:-1]
-    # Numeric forms like "4." or "6e2" → keep as-is (strings in env)
-    return v
+        return v[1:-1]
+    # Numeric literals (ints, floats with trailing dot, scientific notation)
+    if _NUMERIC_RE.match(v):
+        return v
+    # Everything else (`_D`, `N_LAYERS`, `uuid.uuid4()`, `None`, etc.) is
+    # not a safe literal — let the script fall back to its own default
+    # rather than forcing a string into the env.
+    return None
 
 
 def extract_env_defaults(source: str) -> dict[str, str]:
@@ -143,7 +159,10 @@ def extract_env_defaults(source: str) -> dict[str, str]:
             continue
         if key in env:
             continue  # first occurrence wins
-        env[key] = _clean_value(m.group("val"))
+        cleaned = _clean_value(m.group("val"))
+        if cleaned is None:
+            continue
+        env[key] = cleaned
     return env
 
 
