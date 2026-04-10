@@ -1,0 +1,9 @@
+{
+  "recipe_id": "rec_20260410_2026_03_20_int6_mlp3x_smeargate_bigramha_37a85a75",
+  "source_ref": "/home/azureuser/parameter-golf/records/track_10min_16mb/2026-03-20_Int6_MLP3x_SmearGate_BigramHash_MuonWD_SWA",
+  "val_bpb": 1.14581692,
+  "artifact_mb": null,
+  "features": [
+    "sota_fork"
+  ]
+}
