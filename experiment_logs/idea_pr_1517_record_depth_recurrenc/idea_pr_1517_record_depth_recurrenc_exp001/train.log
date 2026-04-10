@@ -1,0 +1,222 @@
+W0410 17:02:43.561000 212109 torch/distributed/run.py:851] 
+W0410 17:02:43.561000 212109 torch/distributed/run.py:851] *****************************************
+W0410 17:02:43.561000 212109 torch/distributed/run.py:851] Setting OMP_NUM_THREADS environment variable for each process to be 1 in default, to avoid your system being overloaded, please further tune the variable for optimal performance in your application as needed. 
+W0410 17:02:43.561000 212109 torch/distributed/run.py:851] *****************************************
+logs/ad7f6c58-b9dd-4227-a8ea-0de23f9ea663.txt
+[rank2]: Traceback (most recent call last):
+[rank2]:   File "/workspace/parameter-golf/autoresearch/baselines/rec_20260410_2026_03_31_parallelresiduals_minidepthre_4d594ac1/train_gpt.py", line 880, in <module>
+[rank2]:     if __name__=='__main__':main()
+[rank2]:                             ^^^^^^
+[rank2]:   File "/workspace/parameter-golf/autoresearch/baselines/rec_20260410_2026_03_31_parallelresiduals_minidepthre_4d594ac1/train_gpt.py", line 732, in main
+[rank2]:     sp=spm.SentencePieceProcessor(model_file=args.tokenizer_path)
+[rank2]:        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank2]:   File "/workspace/parameter-golf/.venv/lib/python3.12/site-packages/sentencepiece/__init__.py", line 468, in Init
+[rank2]:     self.Load(model_file=model_file, model_proto=model_proto)
+[rank2]:   File "/workspace/parameter-golf/.venv/lib/python3.12/site-packages/sentencepiece/__init__.py", line 961, in Load
+[rank2]:     return self.LoadFromFile(model_file)
+[rank2]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank2]:   File "/workspace/parameter-golf/.venv/lib/python3.12/site-packages/sentencepiece/__init__.py", line 316, in LoadFromFile
+[rank2]:     return _sentencepiece.SentencePieceProcessor_LoadFromFile(self, arg)
+[rank2]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank2]: OSError: Not found: "./data/tokenizers/fineweb_8192_bpe.model": No such file or directory Error #2
+[rank0]: Traceback (most recent call last):
+[rank0]:   File "/workspace/parameter-golf/autoresearch/baselines/rec_20260410_2026_03_31_parallelresiduals_minidepthre_4d594ac1/train_gpt.py", line 880, in <module>
+[rank0]:     if __name__=='__main__':main()
+[rank0]:                             ^^^^^^
+[rank0]:   File "/workspace/parameter-golf/autoresearch/baselines/rec_20260410_2026_03_31_parallelresiduals_minidepthre_4d594ac1/train_gpt.py", line 732, in main
+[rank0]:     sp=spm.SentencePieceProcessor(model_file=args.tokenizer_path)
+[rank0]:        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/workspace/parameter-golf/.venv/lib/python3.12/site-packages/sentencepiece/__init__.py", line 468, in Init
+[rank0]:     self.Load(model_file=model_file, model_proto=model_proto)
+[rank0]:   File "/workspace/parameter-golf/.venv/lib/python3.12/site-packages/sentencepiece/__init__.py", line 961, in Load
+[rank0]:     return self.LoadFromFile(model_file)
+[rank0]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/workspace/parameter-golf/.venv/lib/python3.12/site-packages/sentencepiece/__init__.py", line 316, in LoadFromFile
+[rank0]:     return _sentencepiece.SentencePieceProcessor_LoadFromFile(self, arg)
+[rank0]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]: OSError: Not found: "./data/tokenizers/fineweb_8192_bpe.model": No such file or directory Error #2
+[rank4]: Traceback (most recent call last):
+[rank4]:   File "/workspace/parameter-golf/autoresearch/baselines/rec_20260410_2026_03_31_parallelresiduals_minidepthre_4d594ac1/train_gpt.py", line 880, in <module>
+[rank4]:     if __name__=='__main__':main()
+[rank4]:                             ^^^^^^
+[rank4]:   File "/workspace/parameter-golf/autoresearch/baselines/rec_20260410_2026_03_31_parallelresiduals_minidepthre_4d594ac1/train_gpt.py", line 732, in main
+[rank4]:     sp=spm.SentencePieceProcessor(model_file=args.tokenizer_path)
+[rank4]:        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank4]:   File "/workspace/parameter-golf/.venv/lib/python3.12/site-packages/sentencepiece/__init__.py", line 468, in Init
+[rank4]:     self.Load(model_file=model_file, model_proto=model_proto)
+[rank4]:   File "/workspace/parameter-golf/.venv/lib/python3.12/site-packages/sentencepiece/__init__.py", line 961, in Load
+[rank4]:     return self.LoadFromFile(model_file)
+[rank4]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank4]:   File "/workspace/parameter-golf/.venv/lib/python3.12/site-packages/sentencepiece/__init__.py", line 316, in LoadFromFile
+[rank4]:     return _sentencepiece.SentencePieceProcessor_LoadFromFile(self, arg)
+[rank4]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank4]: OSError: Not found: "./data/tokenizers/fineweb_8192_bpe.model": No such file or directory Error #2
+[rank0]:[W410 17:02:57.191669975 ProcessGroupNCCL.cpp:1575] Warning: WARNING: destroy_process_group() was not called before program exit, which can leak resources. For more info, please see https://pytorch.org/docs/stable/distributed.html#shutdown (function operator())
+[rank5]: Traceback (most recent call last):
+[rank5]:   File "/workspace/parameter-golf/autoresearch/baselines/rec_20260410_2026_03_31_parallelresiduals_minidepthre_4d594ac1/train_gpt.py", line 880, in <module>
+[rank5]:     if __name__=='__main__':main()
+[rank5]:                             ^^^^^^
+[rank5]:   File "/workspace/parameter-golf/autoresearch/baselines/rec_20260410_2026_03_31_parallelresiduals_minidepthre_4d594ac1/train_gpt.py", line 732, in main
+[rank5]:     sp=spm.SentencePieceProcessor(model_file=args.tokenizer_path)
+[rank5]:        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank5]:   File "/workspace/parameter-golf/.venv/lib/python3.12/site-packages/sentencepiece/__init__.py", line 468, in Init
+[rank5]:     self.Load(model_file=model_file, model_proto=model_proto)
+[rank5]:   File "/workspace/parameter-golf/.venv/lib/python3.12/site-packages/sentencepiece/__init__.py", line 961, in Load
+[rank5]:     return self.LoadFromFile(model_file)
+[rank5]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank5]:   File "/workspace/parameter-golf/.venv/lib/python3.12/site-packages/sentencepiece/__init__.py", line 316, in LoadFromFile
+[rank5]:     return _sentencepiece.SentencePieceProcessor_LoadFromFile(self, arg)
+[rank5]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank5]: OSError: Not found: "./data/tokenizers/fineweb_8192_bpe.model": No such file or directory Error #2
+[rank1]: Traceback (most recent call last):
+[rank1]:   File "/workspace/parameter-golf/autoresearch/baselines/rec_20260410_2026_03_31_parallelresiduals_minidepthre_4d594ac1/train_gpt.py", line 880, in <module>
+[rank1]:     if __name__=='__main__':main()
+[rank1]:                             ^^^^^^
+[rank1]:   File "/workspace/parameter-golf/autoresearch/baselines/rec_20260410_2026_03_31_parallelresiduals_minidepthre_4d594ac1/train_gpt.py", line 732, in main
+[rank1]:     sp=spm.SentencePieceProcessor(model_file=args.tokenizer_path)
+[rank1]:        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank1]:   File "/workspace/parameter-golf/.venv/lib/python3.12/site-packages/sentencepiece/__init__.py", line 468, in Init
+[rank1]:     self.Load(model_file=model_file, model_proto=model_proto)
+[rank1]:   File "/workspace/parameter-golf/.venv/lib/python3.12/site-packages/sentencepiece/__init__.py", line 961, in Load
+[rank1]:     return self.LoadFromFile(model_file)
+[rank1]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank1]:   File "/workspace/parameter-golf/.venv/lib/python3.12/site-packages/sentencepiece/__init__.py", line 316, in LoadFromFile
+[rank1]:     return _sentencepiece.SentencePieceProcessor_LoadFromFile(self, arg)
+[rank1]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank1]: OSError: Not found: "./data/tokenizers/fineweb_8192_bpe.model": No such file or directory Error #2
+[rank3]: Traceback (most recent call last):
+[rank3]:   File "/workspace/parameter-golf/autoresearch/baselines/rec_20260410_2026_03_31_parallelresiduals_minidepthre_4d594ac1/train_gpt.py", line 880, in <module>
+[rank3]:     if __name__=='__main__':main()
+[rank3]:                             ^^^^^^
+[rank3]:   File "/workspace/parameter-golf/autoresearch/baselines/rec_20260410_2026_03_31_parallelresiduals_minidepthre_4d594ac1/train_gpt.py", line 732, in main
+[rank3]:     sp=spm.SentencePieceProcessor(model_file=args.tokenizer_path)
+[rank3]:        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank3]:   File "/workspace/parameter-golf/.venv/lib/python3.12/site-packages/sentencepiece/__init__.py", line 468, in Init
+[rank3]:     self.Load(model_file=model_file, model_proto=model_proto)
+[rank3]:   File "/workspace/parameter-golf/.venv/lib/python3.12/site-packages/sentencepiece/__init__.py", line 961, in Load
+[rank3]:     return self.LoadFromFile(model_file)
+[rank3]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank3]:   File "/workspace/parameter-golf/.venv/lib/python3.12/site-packages/sentencepiece/__init__.py", line 316, in LoadFromFile
+[rank3]:     return _sentencepiece.SentencePieceProcessor_LoadFromFile(self, arg)
+[rank3]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank3]: OSError: Not found: "./data/tokenizers/fineweb_8192_bpe.model": No such file or directory Error #2
+[rank7]: Traceback (most recent call last):
+[rank7]:   File "/workspace/parameter-golf/autoresearch/baselines/rec_20260410_2026_03_31_parallelresiduals_minidepthre_4d594ac1/train_gpt.py", line 880, in <module>
+[rank7]:     if __name__=='__main__':main()
+[rank7]:                             ^^^^^^
+[rank7]:   File "/workspace/parameter-golf/autoresearch/baselines/rec_20260410_2026_03_31_parallelresiduals_minidepthre_4d594ac1/train_gpt.py", line 732, in main
+[rank7]:     sp=spm.SentencePieceProcessor(model_file=args.tokenizer_path)
+[rank7]:        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank7]:   File "/workspace/parameter-golf/.venv/lib/python3.12/site-packages/sentencepiece/__init__.py", line 468, in Init
+[rank7]:     self.Load(model_file=model_file, model_proto=model_proto)
+[rank7]:   File "/workspace/parameter-golf/.venv/lib/python3.12/site-packages/sentencepiece/__init__.py", line 961, in Load
+[rank7]:     return self.LoadFromFile(model_file)
+[rank7]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank7]:   File "/workspace/parameter-golf/.venv/lib/python3.12/site-packages/sentencepiece/__init__.py", line 316, in LoadFromFile
+[rank7]:     return _sentencepiece.SentencePieceProcessor_LoadFromFile(self, arg)
+[rank7]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank7]: OSError: Not found: "./data/tokenizers/fineweb_8192_bpe.model": No such file or directory Error #2
+[rank6]: Traceback (most recent call last):
+[rank6]:   File "/workspace/parameter-golf/autoresearch/baselines/rec_20260410_2026_03_31_parallelresiduals_minidepthre_4d594ac1/train_gpt.py", line 880, in <module>
+[rank6]:     if __name__=='__main__':main()
+[rank6]:                             ^^^^^^
+[rank6]:   File "/workspace/parameter-golf/autoresearch/baselines/rec_20260410_2026_03_31_parallelresiduals_minidepthre_4d594ac1/train_gpt.py", line 732, in main
+[rank6]:     sp=spm.SentencePieceProcessor(model_file=args.tokenizer_path)
+[rank6]:        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank6]:   File "/workspace/parameter-golf/.venv/lib/python3.12/site-packages/sentencepiece/__init__.py", line 468, in Init
+[rank6]:     self.Load(model_file=model_file, model_proto=model_proto)
+[rank6]:   File "/workspace/parameter-golf/.venv/lib/python3.12/site-packages/sentencepiece/__init__.py", line 961, in Load
+[rank6]:     return self.LoadFromFile(model_file)
+[rank6]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank6]:   File "/workspace/parameter-golf/.venv/lib/python3.12/site-packages/sentencepiece/__init__.py", line 316, in LoadFromFile
+[rank6]:     return _sentencepiece.SentencePieceProcessor_LoadFromFile(self, arg)
+[rank6]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank6]: OSError: Not found: "./data/tokenizers/fineweb_8192_bpe.model": No such file or directory Error #2
+W0410 17:02:58.517000 212109 torch/distributed/elastic/multiprocessing/api.py:1012] Sending process 212206 closing signal SIGTERM
+W0410 17:02:58.520000 212109 torch/distributed/elastic/multiprocessing/api.py:1012] Sending process 212207 closing signal SIGTERM
+W0410 17:02:58.520000 212109 torch/distributed/elastic/multiprocessing/api.py:1012] Sending process 212208 closing signal SIGTERM
+W0410 17:02:58.520000 212109 torch/distributed/elastic/multiprocessing/api.py:1012] Sending process 212209 closing signal SIGTERM
+W0410 17:02:58.520000 212109 torch/distributed/elastic/multiprocessing/api.py:1012] Sending process 212211 closing signal SIGTERM
+W0410 17:02:58.521000 212109 torch/distributed/elastic/multiprocessing/api.py:1012] Sending process 212212 closing signal SIGTERM
+W0410 17:02:58.521000 212109 torch/distributed/elastic/multiprocessing/api.py:1012] Sending process 212213 closing signal SIGTERM
+E0410 17:02:59.327000 212109 torch/distributed/elastic/multiprocessing/api.py:986] failed (exitcode: 1) local_rank: 4 (pid: 212210) of binary: /workspace/parameter-golf/.venv/bin/python
+Traceback (most recent call last):
+  File "/workspace/parameter-golf/.venv/bin/torchrun", line 6, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "/workspace/parameter-golf/.venv/lib/python3.12/site-packages/torch/distributed/elastic/multiprocessing/errors/__init__.py", line 362, in wrapper
+    return f(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^
+  File "/workspace/parameter-golf/.venv/lib/python3.12/site-packages/torch/distributed/run.py", line 990, in main
+    run(args)
+  File "/workspace/parameter-golf/.venv/lib/python3.12/site-packages/torch/distributed/run.py", line 981, in run
+    elastic_launch(
+  File "/workspace/parameter-golf/.venv/lib/python3.12/site-packages/torch/distributed/launcher/api.py", line 170, in __call__
+    return launch_agent(self._config, self._entrypoint, list(args))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/parameter-golf/.venv/lib/python3.12/site-packages/torch/distributed/launcher/api.py", line 317, in launch_agent
+    raise ChildFailedError(
+torch.distributed.elastic.multiprocessing.errors.ChildFailedError: 
+============================================================
+autoresearch/baselines/rec_20260410_2026_03_31_parallelresiduals_minidepthre_4d594ac1/train_gpt.py FAILED
+------------------------------------------------------------
+Failures:
+[1]:
+  time      : 2026-04-10_17:02:59
+  host      : 07537c0cc9a4
+  rank      : 0 (local_rank: 0)
+  exitcode  : 1 (pid: 212206)
+  error_file: <N/A>
+  traceback : To enable traceback see: https://pytorch.org/docs/stable/elastic/errors.html
+[2]:
+  time      : 2026-04-10_17:02:59
+  host      : 07537c0cc9a4
+  rank      : 1 (local_rank: 1)
+  exitcode  : -15 (pid: 212207)
+  error_file: <N/A>
+  traceback : Signal 15 (SIGTERM) received by PID 212207
+[3]:
+  time      : 2026-04-10_17:02:59
+  host      : 07537c0cc9a4
+  rank      : 2 (local_rank: 2)
+  exitcode  : 1 (pid: 212208)
+  error_file: <N/A>
+  traceback : To enable traceback see: https://pytorch.org/docs/stable/elastic/errors.html
+[4]:
+  time      : 2026-04-10_17:02:59
+  host      : 07537c0cc9a4
+  rank      : 3 (local_rank: 3)
+  exitcode  : -15 (pid: 212209)
+  error_file: <N/A>
+  traceback : Signal 15 (SIGTERM) received by PID 212209
+[5]:
+  time      : 2026-04-10_17:02:59
+  host      : 07537c0cc9a4
+  rank      : 5 (local_rank: 5)
+  exitcode  : 1 (pid: 212211)
+  error_file: <N/A>
+  traceback : To enable traceback see: https://pytorch.org/docs/stable/elastic/errors.html
+[6]:
+  time      : 2026-04-10_17:02:59
+  host      : 07537c0cc9a4
+  rank      : 6 (local_rank: 6)
+  exitcode  : -15 (pid: 212212)
+  error_file: <N/A>
+  traceback : Signal 15 (SIGTERM) received by PID 212212
+[7]:
+  time      : 2026-04-10_17:02:59
+  host      : 07537c0cc9a4
+  rank      : 7 (local_rank: 7)
+  exitcode  : -15 (pid: 212213)
+  error_file: <N/A>
+  traceback : Signal 15 (SIGTERM) received by PID 212213
+------------------------------------------------------------
+Root Cause (first observed failure):
+[0]:
+  time      : 2026-04-10_17:02:58
+  host      : 07537c0cc9a4
+  rank      : 4 (local_rank: 4)
+  exitcode  : 1 (pid: 212210)
+  error_file: <N/A>
+  traceback : To enable traceback see: https://pytorch.org/docs/stable/elastic/errors.html
+============================================================
