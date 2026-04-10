@@ -56,3 +56,38 @@ Serialized model int8+zlib: 15496921 bytes (payload:17178912 raw_torch:17224025 
 Total submission size int8+zlib: 15544614 bytes
 final_int8_zlib_roundtrip val_loss:2.1770 val_bpb:1.2894 eval_time:5425ms
 final_int8_zlib_roundtrip_exact val_loss:2.17701353 val_bpb:1.28935004
+logs/b982c4d4-a83f-4466-9082-a4fe7c4fec89.txt
+val_bpb:enabled tokenizer_kind=sentencepiece tokenizer_path=./data/tokenizers/fineweb_1024_bpe.model
+train_loader:dataset:fineweb10B_sp1024 train_shards:10
+val_loader:shards pattern=./data/datasets/fineweb10B_sp1024/fineweb_val_*.bin tokens:62021632
+model_params:17059912
+world_size:1 grad_accum_steps:8
+sdp_backends:cudnn=False flash=True mem_efficient=False math=False
+attention_mode:gqa num_heads:8 num_kv_heads:4
+tie_embeddings:True embed_lr:0.05 head_lr:0.0 matrix_lr:0.04 scalar_lr:0.04
+train_batch_tokens:524288 train_seq_len:1024 iterations:20000 warmup_steps:10 max_wallclock_seconds:480.000
+seed:1337
+warmup_step:1/10
+warmup_step:2/10
+warmup_step:3/10
+warmup_step:4/10
+warmup_step:5/10
+warmup_step:6/10
+warmup_step:7/10
+warmup_step:8/10
+warmup_step:9/10
+warmup_step:10/10
+step:0/20000 val_loss:6.9357 val_bpb:4.1077 train_time:0ms step_avg:0.02ms
+step:1/20000 train_loss:6.9357 train_time:327ms step_avg:326.62ms
+step:2/20000 train_loss:16.7413 train_time:658ms step_avg:328.99ms
+step:3/20000 train_loss:8.7525 train_time:996ms step_avg:331.93ms
+step:4/20000 train_loss:6.5885 train_time:1331ms step_avg:332.69ms
+step:5/20000 train_loss:6.6520 train_time:1663ms step_avg:332.53ms
+step:6/20000 train_loss:6.7000 train_time:1991ms step_avg:331.85ms
+step:7/20000 train_loss:6.3337 train_time:2321ms step_avg:331.52ms
+step:8/20000 train_loss:6.1813 train_time:2652ms step_avg:331.51ms
+step:9/20000 train_loss:6.0840 train_time:2980ms step_avg:331.10ms
+step:10/20000 train_loss:5.9958 train_time:3307ms step_avg:330.70ms
+step:200/20000 train_loss:2.7948 train_time:66753ms step_avg:333.77ms
+step:400/20000 train_loss:2.4021 train_time:133541ms step_avg:333.85ms
+step:600/20000 train_loss:2.5021 train_time:200308ms step_avg:333.85ms
