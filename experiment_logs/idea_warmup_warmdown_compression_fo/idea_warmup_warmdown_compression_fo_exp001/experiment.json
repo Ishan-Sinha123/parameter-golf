@@ -1,0 +1,18 @@
+{
+  "experiment_id": "idea_warmup_warmdown_compression_fo_exp001",
+  "idea_id": "idea_warmup_warmdown_compression_fo",
+  "stage": "screen",
+  "host": "206.125.32.60",
+  "gpus": [
+    6,
+    7
+  ],
+  "commit_sha": "57723b5be4ebe5ee64faae7143c01ca7c18188ab",
+  "branch": "autoresearch-deploy",
+  "env_overrides": {
+    "WARMUP_STEPS": "10",
+    "WARMDOWN_ITERS": "600"
+  },
+  "wallclock_s": 180,
+  "started_at": "2026-04-10T09:59:03.024227"
+}
