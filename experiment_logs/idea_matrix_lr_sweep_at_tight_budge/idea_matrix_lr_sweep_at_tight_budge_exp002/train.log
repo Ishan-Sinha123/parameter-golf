@@ -68,3 +68,48 @@ Serialized model int8+zlib: 15724795 bytes (payload:17178912 raw_torch:17224025 
 Total submission size int8+zlib: 15772488 bytes
 final_int8_zlib_roundtrip val_loss:2.1643 val_bpb:1.2818 eval_time:5433ms
 final_int8_zlib_roundtrip_exact val_loss:2.16432345 val_bpb:1.28183426
+logs/119289d4-3eae-4f4b-a6bb-1a0d0928c343.txt
+val_bpb:enabled tokenizer_kind=sentencepiece tokenizer_path=./data/tokenizers/fineweb_1024_bpe.model
+train_loader:dataset:fineweb10B_sp1024 train_shards:10
+val_loader:shards pattern=./data/datasets/fineweb10B_sp1024/fineweb_val_*.bin tokens:62021632
+model_params:17059912
+world_size:1 grad_accum_steps:8
+sdp_backends:cudnn=False flash=True mem_efficient=False math=False
+attention_mode:gqa num_heads:8 num_kv_heads:4
+tie_embeddings:True embed_lr:0.05 head_lr:0.0 matrix_lr:0.05 scalar_lr:0.04
+train_batch_tokens:524288 train_seq_len:1024 iterations:20000 warmup_steps:20 max_wallclock_seconds:540.000
+seed:1337
+warmup_step:1/20
+warmup_step:2/20
+warmup_step:3/20
+warmup_step:4/20
+warmup_step:5/20
+warmup_step:6/20
+warmup_step:7/20
+warmup_step:8/20
+warmup_step:9/20
+warmup_step:10/20
+warmup_step:11/20
+warmup_step:12/20
+warmup_step:13/20
+warmup_step:14/20
+warmup_step:15/20
+warmup_step:16/20
+warmup_step:17/20
+warmup_step:18/20
+warmup_step:19/20
+warmup_step:20/20
+step:0/20000 val_loss:6.9357 val_bpb:4.1077 train_time:0ms step_avg:0.02ms
+step:1/20000 train_loss:6.9357 train_time:329ms step_avg:329.25ms
+step:2/20000 train_loss:16.6531 train_time:661ms step_avg:330.55ms
+step:3/20000 train_loss:8.5273 train_time:993ms step_avg:330.97ms
+step:4/20000 train_loss:6.6179 train_time:1325ms step_avg:331.19ms
+step:5/20000 train_loss:6.7559 train_time:1657ms step_avg:331.44ms
+step:6/20000 train_loss:6.7633 train_time:1986ms step_avg:331.01ms
+step:7/20000 train_loss:6.3543 train_time:2320ms step_avg:331.38ms
+step:8/20000 train_loss:6.1736 train_time:2649ms step_avg:331.18ms
+step:9/20000 train_loss:6.0655 train_time:2987ms step_avg:331.90ms
+step:10/20000 train_loss:5.9668 train_time:3322ms step_avg:332.23ms
+step:200/20000 train_loss:2.8052 train_time:66974ms step_avg:334.87ms
+step:400/20000 train_loss:2.4114 train_time:134421ms step_avg:336.05ms
+step:600/20000 train_loss:2.4890 train_time:201756ms step_avg:336.26ms
