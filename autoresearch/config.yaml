@@ -30,8 +30,8 @@ nodes:
 
 # Scheduler
 tick_interval_s: 10.0
-screen_wallclock_s: 260   # train_gpt.py caps itself at 180s; need headroom for its final metric write + SSH poll lag
-gate_wallclock_s: 380
+screen_wallclock_s: 360   # deep/slow models: 260s train + compile + final eval + SSH poll lag ~ 310s, pad to 360
+gate_wallclock_s: 480
 promote_wallclock_s: 600
 screen_gpus_per_job: 2
 max_retries: 2
