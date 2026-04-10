@@ -7,11 +7,11 @@
     1,
     2
   ],
-  "commit_sha": "af780eaa4ea4302f7fdb1294cbd9dc595038886f",
+  "commit_sha": "caa553fcbbe3d959d6eb071fa34c749a149306ec",
   "branch": "autoresearch-deploy",
   "env_overrides": {
     "MLP_MULT": "3"
   },
-  "wallclock_s": 180,
-  "started_at": "2026-04-10T10:07:54.703341"
+  "wallclock_s": 260,
+  "started_at": "2026-04-10T10:17:21.475539"
 }

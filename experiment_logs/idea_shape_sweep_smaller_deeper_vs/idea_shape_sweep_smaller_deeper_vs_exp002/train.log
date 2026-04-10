@@ -1,65 +1,3 @@
-W0410 10:03:45.197000 71957 torch/distributed/run.py:851] 
-W0410 10:03:45.197000 71957 torch/distributed/run.py:851] *****************************************
-W0410 10:03:45.197000 71957 torch/distributed/run.py:851] Setting OMP_NUM_THREADS environment variable for each process to be 1 in default, to avoid your system being overloaded, please further tune the variable for optimal performance in your application as needed. 
-W0410 10:03:45.197000 71957 torch/distributed/run.py:851] *****************************************
-logs/03edfbb0-a83c-47d2-8f5c-d095ad03731a.txt
-val_bpb:enabled tokenizer_kind=sentencepiece tokenizer_path=./data/tokenizers/fineweb_1024_bpe.model
-train_loader:dataset:fineweb10B_sp1024 train_shards:10
-val_loader:shards pattern=./data/datasets/fineweb10B_sp1024/fineweb_val_*.bin tokens:62021632
-model_params:19025350
-world_size:2 grad_accum_steps:4
-sdp_backends:cudnn=False flash=True mem_efficient=False math=False
-attention_mode:gqa num_heads:10 num_kv_heads:2
-tie_embeddings:True embed_lr:0.05 head_lr:0.0 matrix_lr:0.04 scalar_lr:0.04
-train_batch_tokens:524288 train_seq_len:1024 iterations:20000 warmup_steps:20 max_wallclock_seconds:180.000
-seed:1337
-warmup_step:1/20
-warmup_step:2/20
-warmup_step:3/20
-warmup_step:4/20
-warmup_step:5/20
-warmup_step:6/20
-warmup_step:7/20
-warmup_step:8/20
-warmup_step:9/20
-warmup_step:10/20
-warmup_step:11/20
-warmup_step:12/20
-warmup_step:13/20
-warmup_step:14/20
-warmup_step:15/20
-warmup_step:16/20
-warmup_step:17/20
-warmup_step:18/20
-warmup_step:19/20
-warmup_step:20/20
-step:0/20000 val_loss:6.9469 val_bpb:4.1143 train_time:0ms step_avg:0.01ms
-step:1/20000 train_loss:6.9466 train_time:159ms step_avg:159.33ms
-step:2/20000 train_loss:19.6003 train_time:318ms step_avg:158.83ms
-step:3/20000 train_loss:10.0580 train_time:477ms step_avg:159.04ms
-step:4/20000 train_loss:6.5223 train_time:637ms step_avg:159.13ms
-step:5/20000 train_loss:6.1088 train_time:796ms step_avg:159.10ms
-step:6/20000 train_loss:6.3955 train_time:955ms step_avg:159.12ms
-step:7/20000 train_loss:6.1367 train_time:1114ms step_avg:159.11ms
-step:8/20000 train_loss:6.1195 train_time:1273ms step_avg:159.14ms
-step:9/20000 train_loss:6.0773 train_time:1432ms step_avg:159.13ms
-step:10/20000 train_loss:5.9990 train_time:1592ms step_avg:159.16ms
-step:200/20000 train_loss:2.8043 train_time:32144ms step_avg:160.72ms
-step:400/20000 train_loss:2.3800 train_time:64410ms step_avg:161.02ms
-step:600/20000 train_loss:2.5213 train_time:96706ms step_avg:161.18ms
-step:800/20000 train_loss:2.2980 train_time:128989ms step_avg:161.24ms
-step:1000/20000 train_loss:2.3164 train_time:161284ms step_avg:161.28ms
-step:1000/20000 val_loss:2.3063 val_bpb:1.3659 train_time:161288ms step_avg:161.29ms
-step:1117/20000 val_loss:2.2891 val_bpb:1.3558 train_time:180146ms step_avg:161.28ms
-stopping_early: wallclock_cap train_time:180146ms step:1117/20000
-peak memory allocated: 9500 MiB reserved: 9626 MiB
-Serialized model: 74817347 bytes
-Code size: 47693 bytes
-Total submission size: 74865040 bytes
-Serialized model int8+zlib: 13889986 bytes (payload:19135512 raw_torch:19170649 payload_ratio:3.91x)
-Total submission size int8+zlib: 13937679 bytes
-final_int8_zlib_roundtrip val_loss:2.2926 val_bpb:1.3578 eval_time:5434ms
-final_int8_zlib_roundtrip_exact val_loss:2.29258457 val_bpb:1.35779772
 W0410 10:11:59.769000 78761 torch/distributed/run.py:851] 
 W0410 10:11:59.769000 78761 torch/distributed/run.py:851] *****************************************
 W0410 10:11:59.769000 78761 torch/distributed/run.py:851] Setting OMP_NUM_THREADS environment variable for each process to be 1 in default, to avoid your system being overloaded, please further tune the variable for optimal performance in your application as needed. 
@@ -123,3 +61,5 @@ Code size: 47693 bytes
 Total submission size: 74865040 bytes
 Serialized model int8+zlib: 15442784 bytes (payload:19135512 raw_torch:19170649 payload_ratio:3.91x)
 Total submission size int8+zlib: 15490477 bytes
+final_int8_zlib_roundtrip val_loss:2.2358 val_bpb:1.3242 eval_time:5448ms
+final_int8_zlib_roundtrip_exact val_loss:2.23577310 val_bpb:1.32415077
