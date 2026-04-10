@@ -1,0 +1,9 @@
+{
+  "recipe_id": "rec_20260410_2026_03_19_slidingwindoweval_96891d7c",
+  "source_ref": "/home/azureuser/parameter-golf/records/track_10min_16mb/2026-03-19_SlidingWindowEval",
+  "val_bpb": 1.19250007,
+  "artifact_mb": null,
+  "features": [
+    "sota_fork"
+  ]
+}
