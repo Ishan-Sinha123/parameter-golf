@@ -1,18 +1,17 @@
 {
   "experiment_id": "idea_shape_sweep_smaller_deeper_vs_exp001",
   "idea_id": "idea_shape_sweep_smaller_deeper_vs",
-  "stage": "screen",
+  "stage": "gate",
   "host": "206.125.32.60",
   "gpus": [
-    0,
-    1
+    0
   ],
-  "commit_sha": "0984f963eb03b5241a4b9019994bdf23294c1763",
+  "commit_sha": "9db690a87b55d5b3b1937f79988ea5f26f0c66b1",
   "branch": "autoresearch-deploy",
   "env_overrides": {
     "NUM_LAYERS": "11",
     "MODEL_DIM": "384"
   },
-  "wallclock_s": 360,
-  "started_at": "2026-04-10T10:28:14.607891"
+  "wallclock_s": 480,
+  "started_at": "2026-04-10T10:35:51.279131"
 }
