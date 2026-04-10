@@ -228,18 +228,22 @@ class NodeClient:
             env_parts.append(f"{k}='{v}'")
         env_str = " ".join(env_parts)
 
-        # 5. Launch via nohup + torchrun
-        # `setsid` + `< /dev/null` + fd redirection is required to fully
-        # detach the process tree from the SSH channel. Without </dev/null
-        # the backgrounded torchrun inherits stdin from the SSH session and
-        # SSH won't return until stdin closes, causing the deploy call to
-        # time out even though the job successfully launched.
+        # 5. Launch via nohup + torchrun.
+        # We use a subshell double-fork: `( setsid nohup cmd & )` so the
+        # outer bash never tracks the backgrounded job at all. Without the
+        # subshell, bash -c holds the SSH channel open waiting on torchrun's
+        # descendants even with setsid/disown (observed on vast.ai: bash
+        # stayed in S state after `& disown` because torchrun's multiproc
+        # workers confused the session leader check).
+        # Write PID to a file then cat it so we can still return the PID.
+        pid_file = f"{remote_exp_dir}/launch.pid"
         launch_cmd = (
             f"cd {self.ssh.work_dir} && "
-            f"setsid nohup env {env_str} "
+            f"( setsid nohup env {env_str} "
             f"torchrun --standalone --nproc_per_node={nproc} {script} "
             f"< /dev/null > {remote_exp_dir}/train.log 2>&1 & "
-            f"PID=$!; disown $PID 2>/dev/null; echo $PID"
+            f"echo $! > {pid_file} ) && "
+            f"sleep 0.5 && cat {pid_file}"
         )
         try:
             r = self._run_ssh(launch_cmd, timeout=30)
