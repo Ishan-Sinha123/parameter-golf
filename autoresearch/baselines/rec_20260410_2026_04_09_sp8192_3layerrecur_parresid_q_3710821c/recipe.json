@@ -1,0 +1,18 @@
+{
+  "recipe_id": "rec_20260410_2026_04_09_sp8192_3layerrecur_parresid_q_3710821c",
+  "source_ref": "/home/azureuser/parameter-golf/records/track_10min_16mb/2026-04-09_SP8192_3LayerRecur_ParResid_QK525_LegalTTT",
+  "val_bpb": 1.081,
+  "artifact_mb": 15.251092910766602,
+  "features": [
+    "sp8192",
+    "depth_recurrence",
+    "parallel_residuals",
+    "qk_gain",
+    "legal_ttt",
+    "gptq",
+    "sdclip",
+    "brotli",
+    "ema",
+    "sota_fork"
+  ]
+}
