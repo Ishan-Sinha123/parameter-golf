@@ -1,0 +1,18 @@
+{
+  "experiment_id": "idea_shorter_sequences_more_updates_exp001",
+  "idea_id": "idea_shorter_sequences_more_updates",
+  "stage": "screen",
+  "host": "206.125.32.60",
+  "gpus": [
+    4,
+    5
+  ],
+  "commit_sha": "302c794db3c9629a6a5da3e8f91a5c6a5dadbab1",
+  "branch": "autoresearch-deploy",
+  "env_overrides": {
+    "TRAIN_SEQ_LEN": "512",
+    "TRAIN_BATCH_TOKENS": "262144"
+  },
+  "wallclock_s": 180,
+  "started_at": "2026-04-10T09:54:37.758722"
+}
