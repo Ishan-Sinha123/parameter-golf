@@ -1,0 +1,9 @@
+{
+  "recipe_id": "rec_20260410_2026_03_23_leakyrelu_legalttt_parallelmu_ff85c988",
+  "source_ref": "/home/azureuser/parameter-golf/records/track_10min_16mb/2026-03-23_LeakyReLU_LegalTTT_ParallelMuon",
+  "val_bpb": 1.1194,
+  "artifact_mb": null,
+  "features": [
+    "sota_fork"
+  ]
+}
