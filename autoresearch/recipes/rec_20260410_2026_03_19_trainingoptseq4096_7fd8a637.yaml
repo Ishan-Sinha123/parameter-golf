@@ -1,0 +1,55 @@
+id: rec_20260410_2026_03_19_trainingoptseq4096_7fd8a637
+name: 2026-03-19_TrainingOptSeq4096
+description: 'Forked from 2026-03-19_TrainingOptSeq4096. '
+parent_recipe: null
+features:
+- sota_fork
+feature_set_hash: 7fd8a63710cd5343
+env_overrides:
+  DATA_PATH: ./data/datasets/fineweb10B_sp1024
+  TOKENIZER_PATH: ./data/tokenizers/fineweb_1024_bpe.model
+  VAL_BATCH_SIZE: '524_288'
+  VAL_LOSS_EVERY: '1000'
+  TRAIN_LOG_EVERY: '200'
+  ITERATIONS: '20000'
+  WARMDOWN_ITERS: '3000'
+  WARMUP_STEPS: '20'
+  TRAIN_BATCH_TOKENS: '393_216'
+  TRAIN_SEQ_LEN: '4096'
+  QK_GAIN_INIT: '1.5'
+  VOCAB_SIZE: '1024'
+  NUM_LAYERS: '9'
+  NUM_KV_HEADS: '4'
+  MODEL_DIM: '512'
+  NUM_HEADS: '8'
+  MLP_MULT: '2'
+  TIE_EMBEDDINGS: '1'
+  ROPE_BASE: '10000.0'
+  LOGIT_SOFTCAP: '30.0'
+  EMBED_LR: '0.6'
+  HEAD_LR: '0.008'
+  TIED_EMBED_LR: '0.030'
+  TIED_EMBED_INIT_STD: '0.005'
+  MATRIX_LR: '0.020'
+  SCALAR_LR: '0.020'
+  MUON_MOMENTUM: '0.99'
+  MUON_BACKEND_STEPS: '5'
+  MUON_MOMENTUM_WARMUP_START: '0.92'
+  MUON_MOMENTUM_WARMUP_STEPS: '1500'
+  BETA1: '0.9'
+  BETA2: '0.95'
+  ADAM_EPS: 1e-8
+  GRAD_CLIP_NORM: '0.0'
+  CONTROL_TENSOR_NAME_PATTERNS: '"attn_scale,attn_scales,mlp_scale,mlp_scales,resid_mix,resid_mixes,q_gain,skip_weight,skip_weights",'
+  INT8_KEEP_FLOAT_FP32_NAME_PATTERNS: '",".join(CONTROL_TENSOR_NAME_PATTERNS'
+  RANK: '0'
+  WORLD_SIZE: '1'
+  LOCAL_RANK: '0'
+script_path: train_gpt.py
+base_commit: ''
+base_branch: ''
+source_experiment: null
+best_val_bpb: null
+best_int6_bpb: null
+best_artifact_mb: null
+best_experiment_id: null

@@ -1,0 +1,9 @@
+{
+  "recipe_id": "rec_20260410_2026_03_19_trainingoptseq4096_7fd8a637",
+  "source_ref": "/home/azureuser/parameter-golf/records/track_10min_16mb/2026-03-19_TrainingOptSeq4096",
+  "val_bpb": 1.20143417,
+  "artifact_mb": null,
+  "features": [
+    "sota_fork"
+  ]
+}
