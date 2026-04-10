@@ -1,0 +1,17 @@
+{
+  "experiment_id": "idea_matrix_lr_sweep_at_tight_budge_exp002",
+  "idea_id": "idea_matrix_lr_sweep_at_tight_budge",
+  "stage": "screen",
+  "host": "206.125.32.60",
+  "gpus": [
+    2,
+    7
+  ],
+  "commit_sha": "5e2f69413c0ca6fa8e6f53951bd3dbcd80c8d3d5",
+  "branch": "autoresearch-deploy",
+  "env_overrides": {
+    "MATRIX_LR": "0.05"
+  },
+  "wallclock_s": 360,
+  "started_at": "2026-04-10T11:01:41.902728"
+}

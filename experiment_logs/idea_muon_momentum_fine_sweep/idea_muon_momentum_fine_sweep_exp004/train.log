@@ -109,3 +109,4 @@ step:8/20000 train_loss:6.1813 train_time:2642ms step_avg:330.19ms
 step:9/20000 train_loss:6.0839 train_time:2974ms step_avg:330.46ms
 step:10/20000 train_loss:5.9958 train_time:3306ms step_avg:330.63ms
 step:200/20000 train_loss:2.7988 train_time:66717ms step_avg:333.58ms
+step:400/20000 train_loss:2.3970 train_time:133468ms step_avg:333.67ms
