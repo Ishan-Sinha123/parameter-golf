@@ -1,0 +1,9 @@
+{
+  "recipe_id": "rec_20260410_2026_03_22_11l_ema_gptq_lite_warmdown350_3c78f25a",
+  "source_ref": "/home/azureuser/parameter-golf/records/track_10min_16mb/2026-03-22_11L_EMA_GPTQ-lite_warmdown3500_QAT015_1.1233",
+  "val_bpb": 1.12278022,
+  "artifact_mb": null,
+  "features": [
+    "sota_fork"
+  ]
+}
