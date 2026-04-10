@@ -1,58 +1,60 @@
-W0410 09:32:36.619000 53470 torch/distributed/run.py:851] 
-W0410 09:32:36.619000 53470 torch/distributed/run.py:851] *****************************************
-W0410 09:32:36.619000 53470 torch/distributed/run.py:851] Setting OMP_NUM_THREADS environment variable for each process to be 1 in default, to avoid your system being overloaded, please further tune the variable for optimal performance in your application as needed. 
-W0410 09:32:36.619000 53470 torch/distributed/run.py:851] *****************************************
-Traceback (most recent call last):
-  File "/workspace/parameter-golf/train_gpt.py", line 39, in <module>
-    class Hyperparameters:
-  File "/workspace/parameter-golf/train_gpt.py", line 68, in Hyperparameters
-    mlp_mult = int(os.environ.get("MLP_MULT", 2))
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-ValueError: invalid literal for int() with base 10: '3.0'
-Traceback (most recent call last):
-  File "/workspace/parameter-golf/train_gpt.py", line 39, in <module>
-    class Hyperparameters:
-  File "/workspace/parameter-golf/train_gpt.py", line 68, in Hyperparameters
-    mlp_mult = int(os.environ.get("MLP_MULT", 2))
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-ValueError: invalid literal for int() with base 10: '3.0'
-W0410 09:32:38.696000 53470 torch/distributed/elastic/multiprocessing/api.py:1012] Sending process 53538 closing signal SIGTERM
-E0410 09:32:38.729000 53470 torch/distributed/elastic/multiprocessing/api.py:986] failed (exitcode: 1) local_rank: 1 (pid: 53539) of binary: /workspace/parameter-golf/.venv/bin/python
-Traceback (most recent call last):
-  File "/workspace/parameter-golf/.venv/bin/torchrun", line 6, in <module>
-    sys.exit(main())
-             ^^^^^^
-  File "/workspace/parameter-golf/.venv/lib/python3.12/site-packages/torch/distributed/elastic/multiprocessing/errors/__init__.py", line 362, in wrapper
-    return f(*args, **kwargs)
-           ^^^^^^^^^^^^^^^^^^
-  File "/workspace/parameter-golf/.venv/lib/python3.12/site-packages/torch/distributed/run.py", line 990, in main
-    run(args)
-  File "/workspace/parameter-golf/.venv/lib/python3.12/site-packages/torch/distributed/run.py", line 981, in run
-    elastic_launch(
-  File "/workspace/parameter-golf/.venv/lib/python3.12/site-packages/torch/distributed/launcher/api.py", line 170, in __call__
-    return launch_agent(self._config, self._entrypoint, list(args))
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/workspace/parameter-golf/.venv/lib/python3.12/site-packages/torch/distributed/launcher/api.py", line 317, in launch_agent
-    raise ChildFailedError(
-torch.distributed.elastic.multiprocessing.errors.ChildFailedError: 
-============================================================
-train_gpt.py FAILED
-------------------------------------------------------------
-Failures:
-[1]:
-  time      : 2026-04-10_09:32:38
-  host      : 07537c0cc9a4
-  rank      : 0 (local_rank: 0)
-  exitcode  : -15 (pid: 53538)
-  error_file: <N/A>
-  traceback : Signal 15 (SIGTERM) received by PID 53538
-------------------------------------------------------------
-Root Cause (first observed failure):
-[0]:
-  time      : 2026-04-10_09:32:38
-  host      : 07537c0cc9a4
-  rank      : 1 (local_rank: 1)
-  exitcode  : 1 (pid: 53539)
-  error_file: <N/A>
-  traceback : To enable traceback see: https://pytorch.org/docs/stable/elastic/errors.html
-============================================================
+W0410 10:03:30.553000 71468 torch/distributed/run.py:851] 
+W0410 10:03:30.553000 71468 torch/distributed/run.py:851] *****************************************
+W0410 10:03:30.553000 71468 torch/distributed/run.py:851] Setting OMP_NUM_THREADS environment variable for each process to be 1 in default, to avoid your system being overloaded, please further tune the variable for optimal performance in your application as needed. 
+W0410 10:03:30.553000 71468 torch/distributed/run.py:851] *****************************************
+logs/332492e0-3ea5-4116-a189-d81164ff4c3a.txt
+val_bpb:enabled tokenizer_kind=sentencepiece tokenizer_path=./data/tokenizers/fineweb_1024_bpe.model
+train_loader:dataset:fineweb10B_sp1024 train_shards:10
+val_loader:shards pattern=./data/datasets/fineweb10B_sp1024/fineweb_val_*.bin tokens:62021632
+model_params:21778504
+world_size:2 grad_accum_steps:4
+sdp_backends:cudnn=False flash=True mem_efficient=False math=False
+attention_mode:gqa num_heads:8 num_kv_heads:4
+tie_embeddings:True embed_lr:0.05 head_lr:0.0 matrix_lr:0.04 scalar_lr:0.04
+train_batch_tokens:524288 train_seq_len:1024 iterations:20000 warmup_steps:20 max_wallclock_seconds:180.000
+seed:1337
+warmup_step:1/20
+warmup_step:2/20
+warmup_step:3/20
+warmup_step:4/20
+warmup_step:5/20
+warmup_step:6/20
+warmup_step:7/20
+warmup_step:8/20
+warmup_step:9/20
+warmup_step:10/20
+warmup_step:11/20
+warmup_step:12/20
+warmup_step:13/20
+warmup_step:14/20
+warmup_step:15/20
+warmup_step:16/20
+warmup_step:17/20
+warmup_step:18/20
+warmup_step:19/20
+warmup_step:20/20
+step:0/20000 val_loss:6.9378 val_bpb:4.1090 train_time:0ms step_avg:0.01ms
+step:1/20000 train_loss:6.9368 train_time:191ms step_avg:190.61ms
+step:2/20000 train_loss:17.0244 train_time:379ms step_avg:189.36ms
+step:3/20000 train_loss:9.9660 train_time:567ms step_avg:188.99ms
+step:4/20000 train_loss:6.6862 train_time:756ms step_avg:189.04ms
+step:5/20000 train_loss:6.4449 train_time:945ms step_avg:189.01ms
+step:6/20000 train_loss:6.7026 train_time:1133ms step_avg:188.89ms
+step:7/20000 train_loss:6.2672 train_time:1322ms step_avg:188.80ms
+step:8/20000 train_loss:6.0760 train_time:1510ms step_avg:188.76ms
+step:9/20000 train_loss:5.9985 train_time:1698ms step_avg:188.72ms
+step:10/20000 train_loss:5.9458 train_time:1887ms step_avg:188.72ms
+step:200/20000 train_loss:2.7202 train_time:38024ms step_avg:190.12ms
+step:400/20000 train_loss:2.3253 train_time:76156ms step_avg:190.39ms
+step:600/20000 train_loss:2.4750 train_time:114261ms step_avg:190.43ms
+step:800/20000 train_loss:2.2493 train_time:152277ms step_avg:190.35ms
+step:946/20000 val_loss:2.2752 val_bpb:1.3475 train_time:180027ms step_avg:190.30ms
+stopping_early: wallclock_cap train_time:180027ms step:946/20000
+peak memory allocated: 11375 MiB reserved: 11462 MiB
+Serialized model: 86099351 bytes
+Code size: 47693 bytes
+Total submission size: 86147044 bytes
+Serialized model int8+zlib: 15622821 bytes (payload:21906720 raw_torch:21951833 payload_ratio:3.93x)
+Total submission size int8+zlib: 15670514 bytes
+final_int8_zlib_roundtrip val_loss:2.2780 val_bpb:1.3491 eval_time:5975ms
+final_int8_zlib_roundtrip_exact val_loss:2.27795084 val_bpb:1.34913080
