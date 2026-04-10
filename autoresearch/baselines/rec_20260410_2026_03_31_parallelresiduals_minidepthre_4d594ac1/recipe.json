@@ -1,0 +1,13 @@
+{
+  "recipe_id": "rec_20260410_2026_03_31_parallelresiduals_minidepthre_4d594ac1",
+  "source_ref": "/home/azureuser/parameter-golf/records/track_10min_16mb/2026-03-31_ParallelResiduals_MiniDepthRecurrence",
+  "val_bpb": 1.10625353,
+  "artifact_mb": 15.182129859924316,
+  "features": [
+    "depth_recurrence",
+    "parallel_residuals",
+    "gptq",
+    "brotli",
+    "sota_fork"
+  ]
+}
