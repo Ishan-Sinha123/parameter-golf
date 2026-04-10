@@ -1,0 +1,47 @@
+W0410 10:53:33.348000 112738 torch/distributed/run.py:851] 
+W0410 10:53:33.348000 112738 torch/distributed/run.py:851] *****************************************
+W0410 10:53:33.348000 112738 torch/distributed/run.py:851] Setting OMP_NUM_THREADS environment variable for each process to be 1 in default, to avoid your system being overloaded, please further tune the variable for optimal performance in your application as needed. 
+W0410 10:53:33.348000 112738 torch/distributed/run.py:851] *****************************************
+logs/450e1219-d1bd-4f77-ac97-6613caf7faf8.txt
+val_bpb:enabled tokenizer_kind=sentencepiece tokenizer_path=./data/tokenizers/fineweb_1024_bpe.model
+train_loader:dataset:fineweb10B_sp1024 train_shards:10
+val_loader:shards pattern=./data/datasets/fineweb10B_sp1024/fineweb_val_*.bin tokens:62021632
+model_params:15880264
+world_size:2 grad_accum_steps:4
+sdp_backends:cudnn=False flash=True mem_efficient=False math=False
+attention_mode:gqa num_heads:8 num_kv_heads:2
+tie_embeddings:True embed_lr:0.05 head_lr:0.0 matrix_lr:0.04 scalar_lr:0.04
+train_batch_tokens:524288 train_seq_len:1024 iterations:20000 warmup_steps:20 max_wallclock_seconds:360.000
+seed:1337
+warmup_step:1/20
+warmup_step:2/20
+warmup_step:3/20
+warmup_step:4/20
+warmup_step:5/20
+warmup_step:6/20
+warmup_step:7/20
+warmup_step:8/20
+warmup_step:9/20
+warmup_step:10/20
+warmup_step:11/20
+warmup_step:12/20
+warmup_step:13/20
+warmup_step:14/20
+warmup_step:15/20
+warmup_step:16/20
+warmup_step:17/20
+warmup_step:18/20
+warmup_step:19/20
+warmup_step:20/20
+step:0/20000 val_loss:6.9378 val_bpb:4.1090 train_time:0ms step_avg:0.02ms
+step:1/20000 train_loss:6.9376 train_time:158ms step_avg:158.50ms
+step:2/20000 train_loss:16.6602 train_time:314ms step_avg:157.14ms
+step:3/20000 train_loss:8.7038 train_time:470ms step_avg:156.68ms
+step:4/20000 train_loss:6.5252 train_time:627ms step_avg:156.68ms
+step:5/20000 train_loss:6.6477 train_time:783ms step_avg:156.50ms
+step:6/20000 train_loss:6.7909 train_time:939ms step_avg:156.51ms
+step:7/20000 train_loss:6.3172 train_time:1096ms step_avg:156.56ms
+step:8/20000 train_loss:6.1579 train_time:1251ms step_avg:156.44ms
+step:9/20000 train_loss:6.0469 train_time:1408ms step_avg:156.48ms
+step:10/20000 train_loss:5.9584 train_time:1563ms step_avg:156.34ms
+step:200/20000 train_loss:2.7917 train_time:31493ms step_avg:157.46ms
