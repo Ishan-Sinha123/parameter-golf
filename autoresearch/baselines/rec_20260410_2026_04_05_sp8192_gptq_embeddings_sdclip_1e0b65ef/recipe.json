@@ -1,0 +1,9 @@
+{
+  "recipe_id": "rec_20260410_2026_04_05_sp8192_gptq_embeddings_sdclip_1e0b65ef",
+  "source_ref": "/home/azureuser/parameter-golf/records/track_10min_16mb/2026-04-05_SP8192_GPTQ-Embeddings_SDClip_Loop45x2",
+  "val_bpb": 1.08563,
+  "artifact_mb": 15.242879867553711,
+  "features": [
+    "sota_fork"
+  ]
+}
