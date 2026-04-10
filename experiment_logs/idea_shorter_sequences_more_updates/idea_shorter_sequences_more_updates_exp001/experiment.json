@@ -4,15 +4,15 @@
   "stage": "screen",
   "host": "206.125.32.60",
   "gpus": [
-    6,
-    7
+    5,
+    6
   ],
-  "commit_sha": "77b3b06a45fc70329edbb45943d90bb1db0ecd94",
+  "commit_sha": "8eea1adf15e47d3ed3c771fcc77ff618183851fb",
   "branch": "autoresearch-deploy",
   "env_overrides": {
     "TRAIN_SEQ_LEN": "512",
     "TRAIN_BATCH_TOKENS": "262144"
   },
-  "wallclock_s": 180,
-  "started_at": "2026-04-10T10:03:52.140361"
+  "wallclock_s": 260,
+  "started_at": "2026-04-10T10:12:06.627012"
 }
