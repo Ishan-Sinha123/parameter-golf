@@ -1,7 +1,7 @@
 {
   "experiment_id": "idea_pr_1495_add_non_record_submiss_exp001",
   "idea_id": "idea_pr_1495_add_non_record_submiss",
-  "stage": "screen",
+  "stage": "gate",
   "host": "206.125.32.60",
   "gpus": [
     0,
@@ -13,7 +13,7 @@
     6,
     7
   ],
-  "commit_sha": "519e4fe8af5c9911a3998f55b2a9f08d159b6cdf",
+  "commit_sha": "fdd6afac7c48d74a882e1842060b96a24ebe69f6",
   "branch": "autoresearch-deploy",
   "script_path": "autoresearch/baselines/rec_20260410_2026_03_31_parallelresiduals_minidepthre_4d594ac1/train_gpt.py",
   "recipe_id": "rec_20260410_pr1495_mixed_bit_awq_int6_int8_066396e7",
@@ -110,6 +110,6 @@
     "QUANT_COL_SCALE_MAX_RATIO": "4.0",
     "QUANT_CALIB_SEQS": "32"
   },
-  "wallclock_s": 420,
-  "started_at": "2026-04-10T17:20:47.594876"
+  "wallclock_s": 540,
+  "started_at": "2026-04-10T17:23:40.442218"
 }
