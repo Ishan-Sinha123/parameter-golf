@@ -9,9 +9,18 @@ from datetime import datetime
 from typing import Optional
 
 from ..config import GPUNodeConfig, AutoResearchConfig
-from ..db.models import GPUInfo, NodeState, NodeStatus
+from ..db.models import GPUInfo, NodeState, NodeStatus, ExperimentStatus
 from ..db.registry import Registry
 from .node_client import NodeClient, SSHConfig
+
+# Statuses that mean "this experiment owns GPUs on a node right now".
+_ACTIVE_RUN_STATUSES = (
+    ExperimentStatus.DEPLOYING,
+    ExperimentStatus.SCREENING,
+    ExperimentStatus.GATING,
+    ExperimentStatus.INSPECTING,
+    ExperimentStatus.PROMOTING,
+)
 
 log = logging.getLogger(__name__)
 
@@ -115,45 +124,131 @@ class ClusterManager:
 
         state.last_heartbeat = datetime.utcnow()
 
-        # Restore GPU assignments from running jobs
+        # Restore GPU assignments from running jobs.
+        #
+        # Two sources: (1) the in-process `_running_jobs` dict owned by the
+        # scheduler that allocated them, and (2) the experiments table, which
+        # is the cross-process source of truth (the dashboard runs in a
+        # separate process from the worker and only sees the DB). We union
+        # both so the dashboard reports live GPU assignments even though it
+        # never called `allocate_gpus` itself.
+        assignments: dict[int, str] = {}
         with self._lock:
             for exp_id, job in self._running_jobs.items():
                 if job.host == host:
-                    for gpu in state.gpus:
-                        if gpu.index in job.gpu_indices:
-                            gpu.assigned_experiment = exp_id
+                    for idx in job.gpu_indices:
+                        assignments[idx] = exp_id
+        for exp_id, idx in self._db_running_jobs_for_host(host):
+            assignments.setdefault(idx, exp_id)
+        for gpu in state.gpus:
+            if gpu.index in assignments:
+                gpu.assigned_experiment = assignments[gpu.index]
         return state
+
+    def _db_running_jobs_for_host(self, host: str) -> list[tuple[str, int]]:
+        """Return (exp_id, gpu_index) pairs for experiments live on `host`.
+
+        Reads the experiments table — which the scheduler populates via
+        `assign_experiment_node()` at launch time — so any process holding
+        a `ClusterManager` (dashboard included) can reconstruct the live
+        allocation map without sharing in-memory state with the worker.
+        """
+        out: list[tuple[str, int]] = []
+        try:
+            for status in _ACTIVE_RUN_STATUSES:
+                for exp in self.registry.list_experiments(status=status):
+                    if exp.node_host != host:
+                        continue
+                    for idx in (exp.gpu_indices or []):
+                        out.append((exp.id, idx))
+        except Exception as e:
+            log.debug("DB running-job lookup failed for %s: %s", host, e)
+        return out
+
+    def _db_running_experiment_ids(self) -> set[str]:
+        ids: set[str] = set()
+        try:
+            for status in _ACTIVE_RUN_STATUSES:
+                for exp in self.registry.list_experiments(status=status):
+                    if exp.node_host:
+                        ids.add(exp.id)
+        except Exception as e:
+            log.debug("DB running-exp lookup failed: %s", e)
+        return ids
 
     # ── Allocation ─────────────────────────────────────────────────────
 
     def get_cluster_summary(self) -> dict:
-        """Return a summary of the cluster state."""
+        """Return a summary of the cluster state.
+
+        GPU→experiment assignments and the running-jobs count are unioned
+        across the in-process `_running_jobs` dict (populated by the
+        scheduler that owns this manager) and the experiments DB table
+        (the cross-process source of truth). This matters because the
+        dashboard and the scheduler run as separate processes with
+        separate `ClusterManager` instances — without the DB fallback the
+        dashboard would always report 0 running jobs and idle GPUs.
+        """
+        # Build per-host DB assignment map once so we don't re-query inside
+        # the node loop.
+        db_assign: dict[str, dict[int, str]] = {}
+        db_running_ids: set[str] = set()
+        try:
+            for status in _ACTIVE_RUN_STATUSES:
+                for exp in self.registry.list_experiments(status=status):
+                    if not exp.node_host:
+                        continue
+                    db_running_ids.add(exp.id)
+                    host_map = db_assign.setdefault(exp.node_host, {})
+                    for idx in (exp.gpu_indices or []):
+                        host_map.setdefault(idx, exp.id)
+        except Exception as e:
+            log.debug("DB cluster summary lookup failed: %s", e)
+
         with self._lock:
+            # Union of in-process running ids with DB-derived ids
+            running_ids = set(self._running_jobs.keys()) | db_running_ids
+
             total_gpus = sum(n.total_gpus for n in self._nodes.values()
                              if n.status == NodeStatus.ONLINE)
-            free_gpus = sum(n.free_gpu_count for n in self._nodes.values()
-                            if n.status == NodeStatus.ONLINE)
             online_nodes = sum(1 for n in self._nodes.values()
                                if n.status == NodeStatus.ONLINE)
+
+            def _gpu_exp(host: str, g) -> Optional[str]:
+                # In-process state first (freshest), fall back to DB.
+                if g.assigned_experiment:
+                    return g.assigned_experiment
+                return db_assign.get(host, {}).get(g.index)
+
+            def _free_count(host: str, n: NodeState) -> int:
+                return sum(
+                    1 for g in n.gpus if _gpu_exp(host, g) is None
+                )
+
+            free_gpus = sum(
+                _free_count(host, n) for host, n in self._nodes.items()
+                if n.status == NodeStatus.ONLINE
+            )
+
             return {
                 "online_nodes": online_nodes,
                 "total_nodes": len(self._nodes),
                 "total_gpus": total_gpus,
                 "free_gpus": free_gpus,
-                "running_jobs": len(self._running_jobs),
+                "running_jobs": len(running_ids),
                 "nodes": {
                     host: {
                         "label": n.label,
                         "status": n.status.value,
                         "total_gpus": n.total_gpus,
-                        "free_gpus": n.free_gpu_count,
+                        "free_gpus": _free_count(host, n),
                         "gpus": [
                             {"index": g.index, "name": g.name,
                              "mem_used_mb": g.memory_used_mb,
                              "mem_total_mb": g.memory_total_mb,
                              "util_pct": g.utilization_pct,
                              "temp_c": g.temperature_c,
-                             "experiment": g.assigned_experiment}
+                             "experiment": _gpu_exp(host, g)}
                             for g in n.gpus
                         ],
                     }

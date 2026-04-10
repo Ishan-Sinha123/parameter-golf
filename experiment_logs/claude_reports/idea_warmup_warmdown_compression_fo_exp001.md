@@ -2,10 +2,11 @@
 
 ## Hypothesis
 
-Spend more of the 10-minute budget at peak learning rate by compressing the
-warmup and warmdown phases. The theory: a near-instant warmup (10 steps)
-plus a late warmdown (600 iters) should leave more wallclock at effective
-peak LR and therefore accelerate loss descent within the cap.
+Spend more of the 10-minute budget at peak learning rate by compressing
+the warmup and warmdown phases. The theory: a near-instant warmup
+(10 steps) plus a late warmdown (600 iters) should leave more wallclock
+at effective peak LR and therefore accelerate loss descent within the
+cap.
 
 ## Configuration
 
@@ -14,8 +15,8 @@ peak LR and therefore accelerate loss descent within the cap.
 | `WARMUP_STEPS` | `10` |
 | `WARMDOWN_ITERS` | `600` |
 
-Recipe: **none** (ran against current default `train_gpt.py`, no forked recipe).
-Reproduction: no. Source branch: (not recorded).
+Recipe: **none** (ran against current default `train_gpt.py`, no forked
+recipe). Reproduction: no. Source branch: (not recorded).
 
 Run context from `train.log`:
 
@@ -28,17 +29,17 @@ Run context from `train.log`:
 
 ## Results
 
-| Metric | Value | Δ vs baseline (1.081) |
-| --- | --- | --- |
-| Screen EMA val_bpb | **1.28935** | **+0.20835** |
-| Gate int6 / int8+zlib val_bpb | 1.31900 | +0.23800 |
-| Quant gap (int6 − ema) | ~6e-7 | — |
-| Artifact size (int8+zlib) | 14,748,471 B | under 16 MB cap |
-| Steps completed | 1,439 / 20,000 | — |
-| Total train time | 480.2 s (wallclock cap hit) | — |
-| Step avg | ~333.7 ms | — |
-| Gate passed | ✅ true | — |
-| Promoted | ❌ no | — |
+| Metric | Value | Baseline | Δ vs baseline |
+| --- | --- | --- | --- |
+| Screen EMA val_bpb | **1.28935** | 1.10625 | **+0.18310** |
+| Gate int6 / int8+zlib val_bpb | 1.31900 | 1.10625 | +0.21275 |
+| Quant gap (int6 − ema) | ~6e-7 | — | ≈0 |
+| Artifact size (int8+zlib) | 14,748,471 B | 16 MB cap | under cap |
+| Steps completed | 1,439 / 20,000 | — | — |
+| Total train time | 480.2 s (wallclock cap hit) | — | — |
+| Step avg | ~333.7 ms | — | — |
+| Gate passed | ✅ true | — | — |
+| Promoted | ❌ no (`promote_*` null) | — | — |
 
 ### Key lines from `train.log`
 
@@ -66,21 +67,24 @@ final_int8_zlib_roundtrip val_loss:2.22707524 val_bpb:1.31899940
    the run never came close to completing, so the "warmdown" phase was
    never truly exercised at the intended relative position.
 3. **Quant gap negligible (~6e-7)** — int8+zlib roundtrip added
-   essentially zero BPB, weights quantize cleanly.
+   essentially zero BPB; weights quantize cleanly.
 4. **Loss still descending at stop** — val_bpb 1.3726 → 1.3179 between
    steps 1000 and 1439, i.e., nowhere near converged.
-5. **Confound vs baseline.** Baseline 1.081 was produced on 8×H100; this
-   run was single-GPU. The +0.208 gap conflates the schedule change with
-   a ~8× step-count deficit, so the experiment cannot cleanly falsify
-   the hypothesis on its own.
+5. **Confound vs baseline.** Baseline 1.10625 was produced on the full
+   8×H100 frontier recipe; this run was single-GPU default `train_gpt.py`.
+   The +0.183 gap conflates the schedule change with both a step-count
+   deficit and the absence of the SOTA feature stack, so the experiment
+   cannot cleanly falsify the hypothesis on its own.
 
 ## Verdict
 
-**regression** — screen EMA 1.28935 is +0.208 BPB worse than the current
-SOTA baseline (1.081). The compressed warmup triggered an early loss
-spike, the single-GPU run hit the wallclock cap at step 1439, and the
-gate result (1.319) is far above any promote threshold. The gate only
-"passes" because int6 ≈ EMA, not because the score is competitive.
+**regression** — screen EMA 1.28935 is +0.18310 BPB worse than the
+current SOTA baseline (1.10625). The compressed warmup triggered an
+early loss spike, the single-GPU run hit the wallclock cap at step 1439,
+and the gate result (1.31900) is far above any promote threshold. The
+gate only "passes" mechanically because int6 ≈ EMA, not because the
+score is competitive, and `promote_ema_bpb` / `promote_int6_bpb` are
+both null — the system did not advance this config.
 
 ## Suggested follow-ups
 
@@ -92,10 +96,13 @@ gate result (1.319) is far above any promote threshold. The gate only
   fraction-of-wallclock (or by reached-step estimate) rather than a
   fixed `WARMDOWN_ITERS` that is interpreted against an unreachable
   20 k schedule.
-- **Re-anchor against the 1.081 recipe.** Fork from the current leader
+- **Re-anchor against the 1.1063 recipe.** Fork from the current leader
   recipe (`rec_20260410_2026_04_09_sp8192_3layerrecur_parresid_q_...`)
   instead of default `train_gpt.py`, so schedule sweeps are measured on
   the composable frontier.
 - **Sweep paired with Muon.** Schedule compression likely interacts with
   Parallel Muon / Muon WD momentum — joint test before declaring the
   idea dead.
+- **Gradient-clip guard.** If tight warmup is retained, add a temporary
+  grad clip for the first ~20 steps to absorb the spike without a
+  longer LR ramp.

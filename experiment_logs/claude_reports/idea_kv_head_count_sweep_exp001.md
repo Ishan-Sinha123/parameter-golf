@@ -2,10 +2,12 @@
 
 ## Hypothesis
 
-Reducing KV heads to 2 (GQA 8→2) should cut KV cache memory and the
+Reducing KV heads to 2 (GQA 8→2) should cut KV-cache memory and the
 parameters allocated to key/value projections while leaving
 language-modeling quality roughly intact, striking a better memory/BPB
-tradeoff than the default head configuration.
+tradeoff than the default KV-head configuration at this ~15.9 M parameter
+scale. The freed parameter budget could then be redeployed elsewhere in
+follow-up experiments.
 
 ## Configuration
 
@@ -36,49 +38,55 @@ final_int8_zlib_roundtrip_exact val_loss:2.22205572 val_bpb:1.31602656
 
 ## Results
 
-| Metric | Value | Δ vs baseline (1.0810) |
+Baseline val_bpb for delta calc: **1.10625353**
+
+| Metric | Value | Δ vs baseline |
 |---|---|---|
-| screen EMA val_bpb        | 1.30302   | **+0.22202** |
-| gate int6 val_bpb         | 1.31600   | **+0.23500** |
-| fp → quant gap            | −2.66e-05 | ~0 (essentially lossless) |
-| artifact size (int8+zlib) | ~14.61 MB | under 16 MB cap |
-| quant/gate passed         | true      | (gate is a quant-gap check, not a BPB win) |
-| peak GPU memory           | 9,814 MiB | — |
+| screen EMA val_bpb        | 1.30301978 | **+0.19677** |
+| gate int6 val_bpb         | 1.31600    | **+0.20975** |
+| fp → quant gap            | −2.656e-05 | ≈ 0 (essentially lossless) |
+| artifact size (int8+zlib) | ~14.61 MB  | under 16 MB cap |
+| quant/gate passed         | true       | (gate = quant-gap + artifact check, not a BPB win) |
+| peak GPU memory           | 9,814 MiB  | — |
 | training halted at        | step 1680 / 20000 | `wallclock_cap` (540 s) |
 
-Run was terminated at the 540 s wallclock cap having completed only
-1680 / 20000 iterations (step_avg ≈ 321 ms ⇒ ~8.4% of the planned
+The run was terminated at the 540 s wallclock cap having completed only
+1680 / 20000 iterations (step_avg ≈ 321 ms ⇒ ~8.4 % of the planned
 schedule). The val_bpb curve was still descending steeply at cutoff
-(1.3706 at step 1000 → 1.3149 at step 1680).
+(1.3706 at step 1000 → 1.3149 at step 1680), so the final BPB is
+dominated by undertraining, not by the KV-head change.
 
 ## Verdict
 
 **regression**
 
-Both the screen EMA BPB (1.3030) and the gated int6 BPB (1.3160) are
-≈0.22–0.23 nats above the 1.0810 SOTA baseline, so this configuration
-does not threaten SOTA. The quant gate does pass, but that only reflects
-a near-zero fp→int8+zlib round-trip gap, not an ML win. The dominant
-signal is that the run wallclock-capped at 1680 / 20000 steps, so the
-BPB measured is heavily confounded by undertraining rather than cleanly
-attributable to the KV-head reduction. The hypothesis cannot be
-confirmed or falsified from this run in isolation.
+Both the screen EMA BPB (1.30302) and the gated int6 BPB (1.31600) are
+≈0.197–0.210 nats above the 1.10625 baseline, so this configuration does
+not threaten SOTA. The quant gate does pass, but that only reflects a
+near-zero fp→int8+zlib round-trip gap, not an ML win. The dominant signal
+is that the run wallclock-capped at 1680 / 20000 steps, so the BPB
+measured is heavily confounded by a truncated LR schedule rather than
+cleanly attributable to the KV-head reduction. The hypothesis can be
+neither confirmed nor falsified from this run in isolation.
 
 ## Suggested follow-ups
 
 - Re-run the sweep with matched training budgets: pair `NUM_KV_HEADS=2`
-  against `NUM_KV_HEADS ∈ {1, 4, 8}` on the same recipe, same seed,
-  same wallclock, so the comparison isolates the KV-head dimension
-  instead of confounding it with schedule length.
-- Lower `iterations` (e.g. 2000–3000) so warmdown actually fires inside
-  the 540 s budget; `iterations=20000` leaves the LR schedule in the
-  flat-warmup plateau for essentially the whole run.
-- Shrink per-step cost (smaller batch or shorter seq_len) so more steps
-  fit into the wallclock cap and the KV-head variable can be measured
-  on a trained, not undertrained, model.
-- Compose `NUM_KV_HEADS=2` on top of the current 1.0810 SOTA recipe
-  rather than the default baseline — 3× seeds — to check composability.
-  Tight KV cache could free headroom for TTT or longer context at eval.
+  against `NUM_KV_HEADS ∈ {1, 4, 8}` on the same recipe, same seed, same
+  wallclock, so the comparison isolates the KV-head dimension instead of
+  confounding it with schedule length.
+- Lower `iterations` (e.g. 2000–3000) so the cosine / warmdown actually
+  fires inside the 540 s budget; `iterations=20000` leaves the LR at the
+  warmup plateau for essentially the whole run.
+- Check exp002 in the same sweep folder for the paired KV-head value
+  before drawing sweep-level conclusions — a single point is not a curve.
+- Compose `NUM_KV_HEADS=2` on top of the current SOTA recipe rather than
+  the default baseline — 3 seeds — to check composability at the
+  frontier, where tight KV cache could free headroom for TTT or longer
+  eval context.
 - Try `NUM_KV_HEADS=1` (MQA) as the extreme of this sweep under the
   matched-budget protocol; if 2 regresses cleanly at matched compute,
   MQA sets an informative lower bound on KV-count sensitivity.
+- Audit the experiment harness: `iterations=20000` under a 540 s cap
+  guarantees ~8 % completion, which looks like a harness/config mismatch
+  rather than an intentional setting.

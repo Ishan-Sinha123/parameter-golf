@@ -549,22 +549,28 @@ class ResearchAgent:
                      pr.number, exp.id)
 
     def backfill_orphan_pr_ideas(self, limit: int = 100) -> int:
-        """Re-dispatch Claude assess_pr for PROPOSED github_pr ideas with
-        no experiments. Returns the count dispatched.
+        """Re-dispatch Claude assess_pr for github_pr ideas with no experiments.
 
         Used to recover from a prior run where assess_pr tasks crashed or
         were interrupted before they could compose + queue experiments,
         leaving orphan ideas behind in the dashboard.
+
+        Covers both PROPOSED (pre-approval) and APPROVED (idea was
+        auto-approved on creation but the Claude callback never fired
+        because the worker restarted mid-flight) — both states end up
+        with zero experiments and a non-running pipeline.
         """
         from ..db.models import IdeaStatus, IdeaSource
         if self.claude is None:
             log.warning("backfill: no claude runner available")
             return 0
 
-        orphans = [
-            i for i in self.registry.list_ideas(IdeaStatus.PROPOSED)
-            if i.source == IdeaSource.GITHUB_PR
-        ]
+        orphans: list = []
+        for status in (IdeaStatus.PROPOSED, IdeaStatus.APPROVED):
+            orphans.extend(
+                i for i in self.registry.list_ideas(status)
+                if i.source == IdeaSource.GITHUB_PR
+            )
         # Filter to those with zero experiments
         orphans = [
             i for i in orphans
