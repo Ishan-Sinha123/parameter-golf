@@ -1,0 +1,9 @@
+{
+  "recipe_id": "rec_20260410_2026_03_18_longcontextseq2048_ff285e38",
+  "source_ref": "/home/azureuser/parameter-golf/records/track_10min_16mb/2026-03-18_LongContextSeq2048",
+  "val_bpb": 1.20576485,
+  "artifact_mb": null,
+  "features": [
+    "sota_fork"
+  ]
+}
