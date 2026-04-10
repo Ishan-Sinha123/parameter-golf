@@ -4,14 +4,14 @@
   "stage": "screen",
   "host": "206.125.32.60",
   "gpus": [
-    0,
-    1
+    6,
+    7
   ],
-  "commit_sha": "ea2392b34f75983a290d742a60916b292f5245f1",
+  "commit_sha": "f6abc552f4f2cf0edf561fade5c3d23c109b26cc",
   "branch": "autoresearch-deploy",
   "env_overrides": {
     "MUON_MOMENTUM": "0.96"
   },
-  "wallclock_s": 180,
-  "started_at": "2026-04-10T10:02:19.784878"
+  "wallclock_s": 360,
+  "started_at": "2026-04-10T10:44:15.845113"
 }
