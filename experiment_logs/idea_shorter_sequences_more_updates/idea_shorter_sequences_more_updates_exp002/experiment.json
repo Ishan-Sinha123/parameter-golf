@@ -1,18 +1,17 @@
 {
   "experiment_id": "idea_shorter_sequences_more_updates_exp002",
   "idea_id": "idea_shorter_sequences_more_updates",
-  "stage": "screen",
+  "stage": "gate",
   "host": "206.125.32.60",
   "gpus": [
-    0,
-    7
+    0
   ],
-  "commit_sha": "b62ffb94204ae2bdc3f52a76a802ca2b9644bbf3",
+  "commit_sha": "aefff9587699112203dde5291b1b433984a11ff2",
   "branch": "autoresearch-deploy",
   "env_overrides": {
     "TRAIN_SEQ_LEN": "2048",
     "TRAIN_BATCH_TOKENS": "1048576"
   },
-  "wallclock_s": 260,
-  "started_at": "2026-04-10T10:19:40.211209"
+  "wallclock_s": 380,
+  "started_at": "2026-04-10T10:25:38.571333"
 }
