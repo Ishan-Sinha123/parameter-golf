@@ -62,3 +62,14 @@ Serialized model int8+zlib: 10085529 bytes (payload:11875680 raw_torch:11930585 
 Total submission size int8+zlib: 10133222 bytes
 final_int8_zlib_roundtrip val_loss:2.2637 val_bpb:1.3407 eval_time:6204ms
 final_int8_zlib_roundtrip_exact val_loss:2.26372767 val_bpb:1.34070704
+logs/690c0dae-523d-4cd0-8847-35494e69d8da.txt
+val_bpb:enabled tokenizer_kind=sentencepiece tokenizer_path=./data/tokenizers/fineweb_1024_bpe.model
+train_loader:dataset:fineweb10B_sp1024 train_shards:10
+val_loader:shards pattern=./data/datasets/fineweb10B_sp1024/fineweb_val_*.bin tokens:62021632
+model_params:11766232
+world_size:1 grad_accum_steps:8
+sdp_backends:cudnn=False flash=True mem_efficient=False math=False
+attention_mode:gqa num_heads:8 num_kv_heads:4
+tie_embeddings:True embed_lr:0.05 head_lr:0.0 matrix_lr:0.04 scalar_lr:0.04
+train_batch_tokens:524288 train_seq_len:1024 iterations:20000 warmup_steps:20 max_wallclock_seconds:480.000
+seed:1337
