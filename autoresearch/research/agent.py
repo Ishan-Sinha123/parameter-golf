@@ -357,8 +357,9 @@ class ResearchAgent:
         )
 
         # ── Step 7: Propose idea if promising ──
+        proposed_idea = None
         if worth_exploring:
-            self._propose_idea_from_pr(pr, {
+            proposed_idea = self._propose_idea_from_pr(pr, {
                 "worth_exploring": True,
                 "novelty_score": novelty_score,
                 "critique": novelty_detail,
@@ -375,11 +376,16 @@ class ResearchAgent:
         # is the deeper read that returns a structured recommendation
         # (reproduce / stack_on_best / ignore / implement_clone). We fire
         # this async so poll cycles aren't blocked by Claude latency.
+        # Pass the just-created idea id so the downstream compose step
+        # attaches the experiment to it instead of creating a fresh one.
         if (self.claude is not None
                 and self.config.claude_auto_assess_pr
                 and worth_exploring):
             try:
-                self._spawn_claude_pr_assessment(pr)
+                self._spawn_claude_pr_assessment(
+                    pr,
+                    existing_idea_id=proposed_idea.id if proposed_idea else None,
+                )
             except Exception as e:
                 log.warning("assess_pr spawn failed for PR#%d: %s",
                             pr.number, e)
@@ -1078,7 +1084,12 @@ class ResearchAgent:
     # ── Idea Proposals ─────────────────────────────────────────────────
 
     def _propose_idea_from_pr(self, pr: PRInfo, evaluation: dict):
-        """Create an idea from a promising PR, enriched with web research."""
+        """Create an idea from a promising PR, enriched with web research.
+
+        Returns the created Idea so the caller can wire its id into the
+        downstream Claude assess_pr task — otherwise the task creates a
+        fresh idea and the original one stays orphaned at PROPOSED.
+        """
         notes_parts = [
             f"val_bpb={pr.val_bpb}",
             f"Techniques: {', '.join(pr.techniques)}",
@@ -1090,7 +1101,7 @@ class ResearchAgent:
             notes_parts.append(f"\nWeb research:\n{evaluation['web_findings']}")
         notes_parts.append(f"\nPR body:\n{pr.body[:500]}")
 
-        self.ideas.create_idea(
+        return self.ideas.create_idea(
             title=f"PR#{pr.number}: {pr.title[:50]}",
             hypothesis=(
                 f"Techniques from PR#{pr.number} by {pr.author} may improve our BPB. "

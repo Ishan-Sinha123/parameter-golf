@@ -206,6 +206,7 @@ class IdeaTracker:
                 "status": idea.status.value,
                 "priority": idea.priority,
                 "source": idea.source.value,
+                "source_ref": idea.source_ref,
                 "tags": idea.tags,
                 "total_experiments": total_exps,
                 "running_experiments": running,

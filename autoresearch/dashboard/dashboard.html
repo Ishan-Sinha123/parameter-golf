@@ -124,11 +124,11 @@ tr:hover { background: rgba(88, 166, 255, 0.04); }
 
 <div class="nav">
   <button class="active" onclick="showPanel('leaderboard')">Leaderboard</button>
-  <button onclick="showPanel('ideas')">Ideas</button>
+  <button onclick="showPanel('ideas')">Experiments</button>
   <button onclick="showPanel('cluster')">Cluster</button>
   <button onclick="showPanel('claude')">Claude</button>
   <button onclick="showPanel('events')">Events</button>
-  <button onclick="showPanel('research')">Research</button>
+  <button onclick="showPanel('research')">Discovery</button>
   <button class="btn btn-sm btn-primary" style="margin-left:auto;align-self:center" onclick="showNewIdeaModal()">+ New Idea</button>
   <button class="btn btn-sm btn-danger" style="align-self:center;margin-left:8px" onclick="stopAll()">Stop All</button>
 </div>
@@ -157,11 +157,13 @@ tr:hover { background: rgba(88, 166, 255, 0.04); }
     </table>
   </div>
 
-  <!-- IDEAS PANEL (experiments nest under each idea) -->
+  <!-- EXPERIMENTS PANEL (experiments nest under each idea) -->
   <div class="panel" id="panel-ideas">
     <div style="margin-bottom:12px;color:var(--text-dim);font-size:12px">
-      Ideas sort: running → queued → proposed → done → parked → rejected → failed.
-      Click a row to expand its experiments.
+      Each row is a research <b>idea</b>; the nested rows are the concrete <b>experiments</b>
+      run under it. Sort: running → queued → proposed → done → parked → rejected → failed.
+      Click ▸ to expand. <b>+ Variant</b> queues an additional experiment <i>in addition to</i>
+      the ones already defined.
     </div>
     <table>
       <thead>
@@ -179,6 +181,10 @@ tr:hover { background: rgba(88, 166, 255, 0.04); }
 
   <!-- CLUSTER PANEL -->
   <div class="panel" id="panel-cluster">
+    <div class="card" style="margin-bottom:12px">
+      <h3>Running experiments</h3>
+      <div id="cluster-running" style="margin-top:8px;color:var(--text-dim)">Loading...</div>
+    </div>
     <div class="cluster-grid" id="cluster-grid"></div>
   </div>
 
@@ -413,8 +419,39 @@ function bestIdeaBpb(i) {
 }
 
 function fmtTs(t) {
-  if (!t) return '—';
-  try { return new Date(t).toLocaleString(); } catch (e) { return t; }
+  if (!t || t === 'None' || t === 'null') return '—';
+  try {
+    // SQLite CURRENT_TIMESTAMP returns UTC as "YYYY-MM-DD HH:MM:SS" with no TZ;
+    // treat as UTC so new Date() converts to the browser's local TZ.
+    let s = String(t).replace(' ', 'T');
+    if (!/(Z|[+-]\d{2}:?\d{2})$/.test(s)) s += 'Z';
+    return new Date(s).toLocaleString();
+  } catch (e) { return t; }
+}
+function fmtRelTs(t) {
+  if (!t || t === 'None' || t === 'null') return '—';
+  try {
+    let s = String(t).replace(' ', 'T');
+    if (!/(Z|[+-]\d{2}:?\d{2})$/.test(s)) s += 'Z';
+    const d = new Date(s);
+    const diff = (Date.now() - d.getTime()) / 1000;
+    if (diff < 60) return Math.floor(diff) + 's ago';
+    if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
+    if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
+    return Math.floor(diff / 86400) + 'd ago';
+  } catch (e) { return t; }
+}
+function prLink(sourceRef) {
+  if (!sourceRef) return '';
+  let num = null;
+  if (/^\d+$/.test(sourceRef)) num = sourceRef;
+  else if (sourceRef.startsWith('PR#')) num = sourceRef.slice(3);
+  else {
+    const m = sourceRef.match(/\/pull\/(\d+)/);
+    if (m) num = m[1];
+  }
+  if (!num) return '';
+  return `<a href="https://github.com/openai/parameter-golf/pull/${num}" target="_blank" style="color:var(--purple)">PR#${num}</a>`;
 }
 
 async function refreshIdeas() {
@@ -435,21 +472,23 @@ async function refreshIdeas() {
     const expRow = expanded
       ? `<tr class="exp-row" id="exp-row-${i.id}"><td colspan="10"><div id="exp-inner-${i.id}">Loading...</div></td></tr>`
       : '';
+    const pr = i.source === 'github_pr' ? prLink(i.source_ref) : '';
+    const sourceCell = pr ? `${i.source}<br>${pr}` : i.source;
     return `
     <tr>
       <td><a href="#" onclick="toggleIdea('${i.id}');return false" style="font-size:14px">${caret}</a></td>
       <td class="pri-${i.priority}">${['','Low','Normal','High','CRIT'][i.priority] || i.priority}</td>
       <td><a href="#" onclick="showIdeaDetail('${i.id}');return false">${esc(i.title)}</a></td>
       <td><span class="badge badge-${i.status}">${i.status}</span></td>
-      <td>${i.source}</td>
+      <td style="font-size:11px">${sourceCell}</td>
       <td>${i.total_experiments} (${i.running_experiments} run, ${i.completed_experiments} done)</td>
       <td>${fmt(best)}</td>
-      <td style="font-size:11px;color:var(--text-dim)">${fmtTs(i.created_at)}</td>
-      <td style="font-size:11px;color:var(--text-dim)">${fmtTs(i.last_experiment_finished_at)}</td>
+      <td style="font-size:11px;color:var(--text-dim)" title="${fmtTs(i.created_at)}">${fmtRelTs(i.created_at)}</td>
+      <td style="font-size:11px;color:var(--text-dim)" title="${fmtTs(i.last_experiment_finished_at)}">${fmtRelTs(i.last_experiment_finished_at)}</td>
       <td>
         ${i.status === 'proposed' ? `<button class="btn btn-sm" onclick="approveIdea('${i.id}')">Approve</button>
         <button class="btn btn-sm btn-danger" onclick="rejectIdea('${i.id}')">Reject</button>` : ''}
-        ${i.status === 'approved' || i.status === 'active' ? `<button class="btn btn-sm" onclick="showNewExpModal('${i.id}')">+ Exp</button>
+        ${i.status === 'approved' || i.status === 'active' ? `<button class="btn btn-sm" title="Queue an additional experiment (variant) under this idea — adds to existing runs, does not replace them" onclick="showNewExpModal('${i.id}')">+ Variant</button>
         <button class="btn btn-sm btn-danger" onclick="rejectIdea('${i.id}')">Reject</button>` : ''}
       </td>
     </tr>${expRow}`;
@@ -500,9 +539,9 @@ async function loadIdeaExperiments(ideaId, container) {
             <td>${fmt(e.screen_ema_bpb)}</td>
             <td>${fmt(e.gate_int6_bpb)}</td>
             <td>${fmt(e.gate_quant_gap)}</td>
-            <td style="font-size:11px;color:var(--text-dim)">${fmtTs(e.created_at)}</td>
-            <td style="font-size:11px;color:var(--text-dim)">${fmtTs(e.started_at)}</td>
-            <td style="font-size:11px;color:var(--text-dim)">${fmtTs(e.completed_at)}</td>
+            <td style="font-size:11px;color:var(--text-dim)" title="${fmtTs(e.created_at)}">${fmtRelTs(e.created_at)}</td>
+            <td style="font-size:11px;color:var(--text-dim)" title="${fmtTs(e.started_at)}">${fmtRelTs(e.started_at)}</td>
+            <td style="font-size:11px;color:var(--text-dim)" title="${fmtTs(e.completed_at)}">${fmtRelTs(e.completed_at)}</td>
             <td>${e.node_host || '-'}</td>
             <td>
               ${['screening','gating','promoting','deploying'].includes(e.status) ? `<button class="btn btn-sm btn-danger" onclick="stopExp('${e.id}')">Stop</button>` : ''}
@@ -555,7 +594,53 @@ async function promoteExp(id) { await api('POST', `/api/experiments/${id}/promot
 
 // ── Cluster ──
 async function refreshCluster() {
-  const data = await api('GET', '/api/cluster');
+  const [data, ideaData] = await Promise.all([
+    api('GET', '/api/cluster'),
+    api('GET', '/api/ideas'),
+  ]);
+  const ideasById = {};
+  (ideaData.ideas || []).forEach(i => { ideasById[i.id] = i; });
+
+  // Fetch active experiments so we can link each to its idea + PR
+  const runningStatuses = ['screening', 'gating', 'promoting', 'deploying', 'queued'];
+  const expLists = await Promise.all(runningStatuses.map(
+    s => api('GET', `/api/experiments?status=${s}`).then(r => r.experiments || [])
+  ));
+  const runningExps = [].concat(...expLists);
+  const expById = {};
+  runningExps.forEach(e => { expById[e.id] = e; });
+
+  // Running-experiments summary at top
+  const runEl = document.getElementById('cluster-running');
+  if (runningExps.length === 0) {
+    runEl.innerHTML = '<div style="color:var(--text-dim)">No experiments currently running or queued.</div>';
+  } else {
+    runEl.innerHTML = `
+      <table style="width:100%">
+        <thead><tr>
+          <th>Experiment</th><th>Idea</th><th>Status</th>
+          <th>Node</th><th>GPUs</th><th>Source</th><th>Started</th><th>Actions</th>
+        </tr></thead>
+        <tbody>
+        ${runningExps.map(e => {
+          const idea = ideasById[e.idea_id] || {};
+          const pr = idea.source === 'github_pr' ? prLink(idea.source_ref) : '';
+          const gpus = Array.isArray(e.gpu_indices) ? e.gpu_indices.join(',') : (e.gpu_indices || '—');
+          return `<tr>
+            <td style="font-size:11px"><a href="#" onclick="showLog('${e.id}');return false">${esc(e.id)}</a></td>
+            <td><a href="#" onclick="showPanel('ideas');toggleIdea('${e.idea_id}');return false">${esc(idea.title || e.idea_id)}</a></td>
+            <td><span class="badge badge-${e.status}">${e.status}</span></td>
+            <td>${esc(e.node_host || '—')}</td>
+            <td style="font-size:11px">${gpus}</td>
+            <td>${pr || (idea.source || '—')}</td>
+            <td style="font-size:11px;color:var(--text-dim)" title="${fmtTs(e.started_at)}">${fmtRelTs(e.started_at)}</td>
+            <td>${runningStatuses.slice(0,4).includes(e.status) ? `<button class="btn btn-sm btn-danger" onclick="stopExp('${e.id}')">Stop</button>` : ''}</td>
+          </tr>`;
+        }).join('')}
+        </tbody>
+      </table>`;
+  }
+
   const grid = document.getElementById('cluster-grid');
   if (!data.nodes) { grid.innerHTML = '<div class="card">No nodes configured</div>'; return; }
   grid.innerHTML = Object.entries(data.nodes).map(([host, n]) => `
@@ -568,11 +653,17 @@ async function refreshCluster() {
       ${(n.gpus || []).map(g => {
         const pct = g.mem_total_mb ? Math.round(g.mem_used_mb / g.mem_total_mb * 100) : 0;
         const cls = pct > 80 ? 'high' : pct > 40 ? 'mid' : 'low';
+        const exp = expById[g.experiment];
+        const idea = exp ? (ideasById[exp.idea_id] || {}) : {};
+        const pr = idea.source === 'github_pr' ? prLink(idea.source_ref) : '';
+        const expLabel = g.experiment
+          ? `<a href="#" onclick="showLog('${g.experiment}');return false">${esc(g.experiment)}</a>${pr ? ' · ' + pr : ''}`
+          : '<span style="color:var(--text-dim)">idle</span>';
         return `<div class="gpu-row">
           <span class="gpu-label">GPU ${g.index}</span>
           <div class="gpu-bar"><div class="gpu-bar-fill ${cls}" style="width:${pct}%"></div></div>
           <span class="gpu-label">${pct}% ${g.temp_c}°C</span>
-          <span class="gpu-exp">${g.experiment || ''}</span>
+          <span class="gpu-exp" style="min-width:160px">${expLabel}</span>
         </div>`;
       }).join('')}
     </div>`).join('');
