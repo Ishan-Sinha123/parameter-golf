@@ -1,0 +1,9 @@
+{
+  "recipe_id": "rec_20260410_2026_03_19_seq2048_fp16emb_tunedlr_40f6692f",
+  "source_ref": "/home/azureuser/parameter-golf/records/track_10min_16mb/2026-03-19_Seq2048_FP16Emb_TunedLR",
+  "val_bpb": 1.15861696,
+  "artifact_mb": null,
+  "features": [
+    "sota_fork"
+  ]
+}
