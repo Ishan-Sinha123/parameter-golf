@@ -4,10 +4,10 @@
   "stage": "screen",
   "host": "206.125.32.60",
   "gpus": [
-    4,
-    5
+    0,
+    1
   ],
-  "commit_sha": "7efc6ebb6909ad714b59ca9ccc6d9038a2639b3b",
+  "commit_sha": "721004bc5c12e874fc8a7980611e9690e9009d72",
   "branch": "autoresearch-deploy",
   "env_overrides": {
     "ACTIVATION": "swiglu",
@@ -15,5 +15,5 @@
     "MUON_MOMENTUM": "0.97"
   },
   "wallclock_s": 180,
-  "started_at": "2026-04-10T10:02:52.042970"
+  "started_at": "2026-04-10T10:03:29.840304"
 }
