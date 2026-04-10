@@ -1,19 +1,18 @@
 {
   "experiment_id": "idea_pr_1521_record_sp8192_muon_0_9_2_exp001",
   "idea_id": "idea_pr_1521_record_sp8192_muon_0_9_2",
-  "stage": "screen",
+  "stage": "gate",
   "host": "206.125.32.60",
   "gpus": [
-    0,
-    1
+    0
   ],
-  "commit_sha": "721004bc5c12e874fc8a7980611e9690e9009d72",
+  "commit_sha": "f2428cd678d8620017080e5dc85ee20f4cb76977",
   "branch": "autoresearch-deploy",
   "env_overrides": {
     "ACTIVATION": "swiglu",
     "MLP_MULT": "3.0",
     "MUON_MOMENTUM": "0.97"
   },
-  "wallclock_s": 180,
-  "started_at": "2026-04-10T10:03:29.840304"
+  "wallclock_s": 300,
+  "started_at": "2026-04-10T10:07:47.205203"
 }
