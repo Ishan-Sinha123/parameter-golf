@@ -37,12 +37,13 @@ Key lines from `train.log`:
 
 ```
 step:0/20000    val_loss:6.9469 val_bpb:4.1143 train_time:0ms
-step:1000/20000 val_loss:2.3194 val_bpb:1.3737 train_time:322557ms
-step:1489/20000 val_loss:2.2444 val_bpb:1.3293 train_time:480124ms
+step:1000/20000 val_loss:2.3194 val_bpb:1.3737 train_time:322557ms step_avg:322.56ms
+step:1489/20000 val_loss:2.2444 val_bpb:1.3293 train_time:480124ms step_avg:322.45ms
 stopping_early: wallclock_cap train_time:480124ms step:1489/20000
 peak memory allocated: 9537 MiB reserved: 9628 MiB
 Serialized model int8+zlib: 15133368 bytes (payload:19135512 raw_torch:19170649 payload_ratio:3.91x)
 Total submission size int8+zlib: 15181061 bytes
+final_int8_zlib_roundtrip val_loss:2.2474 val_bpb:1.3310 eval_time:10793ms
 final_int8_zlib_roundtrip_exact val_loss:2.24736472 val_bpb:1.33101597
 ```
 
@@ -73,6 +74,7 @@ Notes:
   the 1.106 baseline.
 - No warnings or divergence in the log. Transient spike at step 2
   (`train_loss:19.6042`) recovers by step 4 — normal warmup behavior.
+- `step_avg` is stable at ~322 ms across the whole run — no throughput cliff.
 
 ## Verdict
 

@@ -2,7 +2,7 @@
   "experiment_id": "idea_pr_1482_record_sp8192_pre_quan_exp001",
   "idea_id": "idea_pr_1482_record_sp8192_pre_quan",
   "stage": "screen",
-  "host": "34.69.145.155",
+  "host": "206.125.32.60",
   "gpus": [
     0,
     1,
@@ -13,7 +13,7 @@
     6,
     7
   ],
-  "commit_sha": "3af2d69a88e98fbfaf2db3a345e3aba12d2dba9e",
+  "commit_sha": "f7fddbc961b07fdae02c9124659f3dd122b8a0b6",
   "branch": "autoresearch-deploy",
   "script_path": "autoresearch/baselines/rec_20260410_2026_03_31_parallelresiduals_minidepthre_4d594ac1/train_gpt.py",
   "recipe_id": "rec_20260410_pr1482_sp8192_prequant_ttt_4e55774c",
@@ -106,5 +106,5 @@
     "MAX_WALLCLOCK_SECONDS": 595
   },
   "wallclock_s": 420,
-  "started_at": "2026-04-10T23:07:20.711750"
+  "started_at": "2026-04-10T23:29:06.205835"
 }

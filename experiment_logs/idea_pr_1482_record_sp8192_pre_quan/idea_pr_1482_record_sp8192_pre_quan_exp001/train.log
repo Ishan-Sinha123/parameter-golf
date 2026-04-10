@@ -1,122 +1,63 @@
-W0410 23:03:09.672000 72866 site-packages/torch/distributed/run.py:851] 
-W0410 23:03:09.672000 72866 site-packages/torch/distributed/run.py:851] *****************************************
-W0410 23:03:09.672000 72866 site-packages/torch/distributed/run.py:851] Setting OMP_NUM_THREADS environment variable for each process to be 1 in default, to avoid your system being overloaded, please further tune the variable for optimal performance in your application as needed. 
-W0410 23:03:09.672000 72866 site-packages/torch/distributed/run.py:851] *****************************************
-Traceback (most recent call last):
-  File "/workspace/parameter-golf/autoresearch/baselines/rec_20260410_2026_03_31_parallelresiduals_minidepthre_4d594ac1/train_gpt.py", line 880, in <module>
-    if __name__=='__main__':main()
-                            ^^^^^^
-  File "/workspace/parameter-golf/autoresearch/baselines/rec_20260410_2026_03_31_parallelresiduals_minidepthre_4d594ac1/train_gpt.py", line 721, in main
-    device=torch.device(_F,local_rank);torch.cuda.set_device(device)
-                                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/venv/main/lib/python3.12/site-packages/torch/cuda/__init__.py", line 638, in set_device
-    torch._C._cuda_setDevice(device)
-torch.AcceleratorError: CUDA error: CUDA-capable device(s) is/are busy or unavailable
-Search for `cudaErrorDevicesUnavailable' in https://docs.nvidia.com/cuda/cuda-runtime-api/group__CUDART__TYPES.html for more information.
-CUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.
-For debugging consider passing CUDA_LAUNCH_BLOCKING=1
-Compile with `TORCH_USE_CUDA_DSA` to enable device-side assertions.
-
-Traceback (most recent call last):
-  File "/workspace/parameter-golf/autoresearch/baselines/rec_20260410_2026_03_31_parallelresiduals_minidepthre_4d594ac1/train_gpt.py", line 880, in <module>
-    if __name__=='__main__':main()
-                            ^^^^^^
-  File "/workspace/parameter-golf/autoresearch/baselines/rec_20260410_2026_03_31_parallelresiduals_minidepthre_4d594ac1/train_gpt.py", line 721, in main
-    device=torch.device(_F,local_rank);torch.cuda.set_device(device)
-                                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/venv/main/lib/python3.12/site-packages/torch/cuda/__init__.py", line 638, in set_device
-    torch._C._cuda_setDevice(device)
-torch.AcceleratorError: CUDA error: CUDA-capable device(s) is/are busy or unavailable
-Search for `cudaErrorDevicesUnavailable' in https://docs.nvidia.com/cuda/cuda-runtime-api/group__CUDART__TYPES.html for more information.
-CUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.
-For debugging consider passing CUDA_LAUNCH_BLOCKING=1
-Compile with `TORCH_USE_CUDA_DSA` to enable device-side assertions.
-
-W0410 23:03:17.122000 72866 site-packages/torch/distributed/elastic/multiprocessing/api.py:1012] Sending process 72974 closing signal SIGTERM
-W0410 23:03:17.123000 72866 site-packages/torch/distributed/elastic/multiprocessing/api.py:1012] Sending process 72975 closing signal SIGTERM
-W0410 23:03:17.123000 72866 site-packages/torch/distributed/elastic/multiprocessing/api.py:1012] Sending process 72976 closing signal SIGTERM
-W0410 23:03:17.123000 72866 site-packages/torch/distributed/elastic/multiprocessing/api.py:1012] Sending process 72977 closing signal SIGTERM
-W0410 23:03:17.123000 72866 site-packages/torch/distributed/elastic/multiprocessing/api.py:1012] Sending process 72978 closing signal SIGTERM
-W0410 23:03:17.123000 72866 site-packages/torch/distributed/elastic/multiprocessing/api.py:1012] Sending process 72979 closing signal SIGTERM
-W0410 23:03:17.123000 72866 site-packages/torch/distributed/elastic/multiprocessing/api.py:1012] Sending process 72980 closing signal SIGTERM
-E0410 23:03:17.679000 72866 site-packages/torch/distributed/elastic/multiprocessing/api.py:986] failed (exitcode: 1) local_rank: 0 (pid: 72973) of binary: /venv/main/bin/python3
-Traceback (most recent call last):
-  File "/venv/main/bin/torchrun", line 10, in <module>
-    sys.exit(main())
-             ^^^^^^
-  File "/venv/main/lib/python3.12/site-packages/torch/distributed/elastic/multiprocessing/errors/__init__.py", line 362, in wrapper
-    return f(*args, **kwargs)
-           ^^^^^^^^^^^^^^^^^^
-  File "/venv/main/lib/python3.12/site-packages/torch/distributed/run.py", line 990, in main
-    run(args)
-  File "/venv/main/lib/python3.12/site-packages/torch/distributed/run.py", line 981, in run
-    elastic_launch(
-  File "/venv/main/lib/python3.12/site-packages/torch/distributed/launcher/api.py", line 170, in __call__
-    return launch_agent(self._config, self._entrypoint, list(args))
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/venv/main/lib/python3.12/site-packages/torch/distributed/launcher/api.py", line 317, in launch_agent
-    raise ChildFailedError(
-torch.distributed.elastic.multiprocessing.errors.ChildFailedError: 
-============================================================
-autoresearch/baselines/rec_20260410_2026_03_31_parallelresiduals_minidepthre_4d594ac1/train_gpt.py FAILED
-------------------------------------------------------------
-Failures:
-[1]:
-  time      : 2026-04-10_23:03:17
-  host      : f46767b720d0
-  rank      : 1 (local_rank: 1)
-  exitcode  : -15 (pid: 72974)
-  error_file: <N/A>
-  traceback : Signal 15 (SIGTERM) received by PID 72974
-[2]:
-  time      : 2026-04-10_23:03:17
-  host      : f46767b720d0
-  rank      : 2 (local_rank: 2)
-  exitcode  : -15 (pid: 72975)
-  error_file: <N/A>
-  traceback : Signal 15 (SIGTERM) received by PID 72975
-[3]:
-  time      : 2026-04-10_23:03:17
-  host      : f46767b720d0
-  rank      : 3 (local_rank: 3)
-  exitcode  : -15 (pid: 72976)
-  error_file: <N/A>
-  traceback : Signal 15 (SIGTERM) received by PID 72976
-[4]:
-  time      : 2026-04-10_23:03:17
-  host      : f46767b720d0
-  rank      : 4 (local_rank: 4)
-  exitcode  : -15 (pid: 72977)
-  error_file: <N/A>
-  traceback : Signal 15 (SIGTERM) received by PID 72977
-[5]:
-  time      : 2026-04-10_23:03:17
-  host      : f46767b720d0
-  rank      : 5 (local_rank: 5)
-  exitcode  : -15 (pid: 72978)
-  error_file: <N/A>
-  traceback : Signal 15 (SIGTERM) received by PID 72978
-[6]:
-  time      : 2026-04-10_23:03:17
-  host      : f46767b720d0
-  rank      : 6 (local_rank: 6)
-  exitcode  : -15 (pid: 72979)
-  error_file: <N/A>
-  traceback : Signal 15 (SIGTERM) received by PID 72979
-[7]:
-  time      : 2026-04-10_23:03:17
-  host      : f46767b720d0
-  rank      : 7 (local_rank: 7)
-  exitcode  : -15 (pid: 72980)
-  error_file: <N/A>
-  traceback : Signal 15 (SIGTERM) received by PID 72980
-------------------------------------------------------------
-Root Cause (first observed failure):
-[0]:
-  time      : 2026-04-10_23:03:17
-  host      : f46767b720d0
-  rank      : 0 (local_rank: 0)
-  exitcode  : 1 (pid: 72973)
-  error_file: <N/A>
-  traceback : To enable traceback see: https://pytorch.org/docs/stable/elastic/errors.html
-============================================================
+W0410 23:29:06.843000 298260 torch/distributed/run.py:851] 
+W0410 23:29:06.843000 298260 torch/distributed/run.py:851] *****************************************
+W0410 23:29:06.843000 298260 torch/distributed/run.py:851] Setting OMP_NUM_THREADS environment variable for each process to be 1 in default, to avoid your system being overloaded, please further tune the variable for optimal performance in your application as needed. 
+W0410 23:29:06.843000 298260 torch/distributed/run.py:851] *****************************************
+logs/79809b78-e572-4559-8c47-c7a5cb75c584.txt
+val_bpb:enabled tokenizer_kind=sentencepiece tokenizer_path=./data/tokenizers/fineweb_1024_bpe.model
+train_loader:dataset:fineweb10B_sp1024 train_shards:10
+val_loader:shards pattern=./data/datasets/fineweb10B_sp1024/fineweb_val_*.bin tokens:62021632
+model_params:27041372
+XSA:last_11 active_layers:[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+world_size:8 grad_accum_steps:1
+sdp_backends:cudnn=False flash=True mem_efficient=False math=False
+attention_mode:gqa num_heads:8 num_kv_heads:4
+recurrence:layers=[] start_step=3000 active=0
+canon_ac:layers=[] params=0 physical_only=1
+parallel_residual:active=0 start_layer=7 start_mode=physical params=0 final_lane=mlp
+repeat_untie_mlp:mode=none layers=[] params=0
+tie_embeddings:True embed_lr:0.035 head_lr:0.0 matrix_lr:0.03 scalar_lr:0.025
+train_batch_tokens:786432 train_seq_len:2048 iterations:20000 warmup_steps:20 max_wallclock_seconds:595.000
+seed:1337
+gptq:reserving 0ms from training budget, effective=595000ms
+base_warmup_step:1/20
+base_warmup_step:2/20
+base_warmup_step:3/20
+base_warmup_step:4/20
+base_warmup_step:5/20
+base_warmup_step:6/20
+base_warmup_step:7/20
+base_warmup_step:8/20
+base_warmup_step:9/20
+base_warmup_step:10/20
+base_warmup_step:11/20
+base_warmup_step:12/20
+base_warmup_step:13/20
+base_warmup_step:14/20
+base_warmup_step:15/20
+base_warmup_step:16/20
+base_warmup_step:17/20
+base_warmup_step:18/20
+base_warmup_step:19/20
+base_warmup_step:20/20
+step:0/20000 val_loss:6.9309 val_bpb:4.1049 train_time:0ms step_avg:0.01ms
+step:1/20000 train_loss:6.9288 train_time:123ms step_avg:122.54ms
+step:2/20000 train_loss:8.9913 train_time:161ms step_avg:80.42ms
+step:3/20000 train_loss:7.6522 train_time:245ms step_avg:81.76ms
+step:4/20000 train_loss:7.1138 train_time:331ms step_avg:82.67ms
+step:5/20000 train_loss:7.0698 train_time:415ms step_avg:83.10ms
+step:6/20000 train_loss:6.9846 train_time:500ms step_avg:83.41ms
+step:7/20000 train_loss:6.9627 train_time:585ms step_avg:83.56ms
+step:8/20000 train_loss:6.7306 train_time:670ms step_avg:83.71ms
+step:9/20000 train_loss:6.3964 train_time:755ms step_avg:83.87ms
+step:10/20000 train_loss:6.0240 train_time:840ms step_avg:84.05ms
+step:500/20000 train_loss:2.2824 train_time:43116ms step_avg:86.23ms
+step:1000/20000 train_loss:2.2118 train_time:86476ms step_avg:86.48ms
+step:1500/20000 train_loss:2.1075 train_time:129879ms step_avg:86.59ms
+step:2000/20000 train_loss:2.0852 train_time:173386ms step_avg:86.69ms
+step:2500/20000 train_loss:2.0397 train_time:216923ms step_avg:86.77ms
+step:3000/20000 train_loss:2.0736 train_time:260419ms step_avg:86.81ms
+step:3500/20000 train_loss:2.0863 train_time:303885ms step_avg:86.82ms
+step:4000/20000 train_loss:2.0009 train_time:347355ms step_avg:86.84ms
+step:4000/20000 val_loss:2.0325 val_bpb:1.2038 train_time:347404ms step_avg:86.85ms
+step:4500/20000 train_loss:2.0578 train_time:390732ms step_avg:86.83ms
+step:5000/20000 train_loss:1.9595 train_time:434137ms step_avg:86.83ms
