@@ -18,6 +18,7 @@ import logging
 import threading
 import time
 from datetime import datetime
+from pathlib import Path
 from typing import Optional
 
 from ..config import AutoResearchConfig
