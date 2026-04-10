@@ -46,3 +46,9 @@ step:9/20000 train_loss:6.0870 train_time:1474ms step_avg:163.79ms
 step:10/20000 train_loss:6.0024 train_time:1639ms step_avg:163.86ms
 step:200/20000 train_loss:2.7975 train_time:33153ms step_avg:165.76ms
 step:400/20000 train_loss:2.3800 train_time:66434ms step_avg:166.08ms
+step:600/20000 train_loss:2.5375 train_time:99573ms step_avg:165.96ms
+step:800/20000 train_loss:2.3204 train_time:132614ms step_avg:165.77ms
+step:1000/20000 train_loss:2.3456 train_time:165642ms step_avg:165.64ms
+step:1000/20000 val_loss:2.3377 val_bpb:1.3845 train_time:165645ms step_avg:165.65ms
+step:1200/20000 train_loss:2.2911 train_time:198717ms step_avg:165.60ms
+step:1400/20000 train_loss:2.3113 train_time:231864ms step_avg:165.62ms
