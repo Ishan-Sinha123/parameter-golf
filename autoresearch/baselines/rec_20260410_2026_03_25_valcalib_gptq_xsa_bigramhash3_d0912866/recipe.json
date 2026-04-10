@@ -1,0 +1,11 @@
+{
+  "recipe_id": "rec_20260410_2026_03_25_valcalib_gptq_xsa_bigramhash3_d0912866",
+  "source_ref": "/home/azureuser/parameter-golf/records/track_10min_16mb/2026-03-25_ValCalib_GPTQ_XSA_BigramHash3072",
+  "val_bpb": 1.11473509,
+  "artifact_mb": 15.128400802612305,
+  "features": [
+    "gptq",
+    "muon",
+    "sota_fork"
+  ]
+}
