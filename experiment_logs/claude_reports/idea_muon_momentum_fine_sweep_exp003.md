@@ -2,7 +2,7 @@
 
 ## Hypothesis
 
-Muon optimizer momentum of 0.97 may be optimal for the constrained wallclock budget. This is part of a fine sweep (0.93, 0.96, 0.97, 0.98) to determine the best momentum setting. Higher momentum retains more gradient history, smoothing noisy updates in limited-step regimes, but excessive momentum can waste steps tracking stale gradients when total training steps are capped by wallclock.
+Muon optimizer momentum of 0.97 may be optimal for the constrained wallclock budget. This is part of a fine sweep (0.93, 0.96, 0.97, 0.98) exploring the tradeoff between gradient smoothing (higher momentum) and responsiveness to local curvature (lower momentum) when total training steps are capped by a 480-second wallclock limit.
 
 ## Configuration
 
@@ -30,28 +30,24 @@ Training stopped early at step 1434/20000 due to wallclock cap (480 s). Step ave
 | Final val_bpb (step 1434, fp16) | 1.3218 |
 | screen_ema_bpb | 1.2897 |
 | gate_int6_bpb (int8+zlib roundtrip) | 1.3227 |
-| gate_quant_gap | ~0.0009 |
-| Artifact size (int8+zlib) | 13.69 MB |
+| gate_quant_gap | ~0.001 |
+| Artifact size (int8+zlib) | 13.65 MB |
 | Gate passed | Yes |
 | Delta vs baseline | Unknown |
 
-### Sweep comparison
+### Sweep comparison (comparable runs, same hardware/wallclock)
 
-| Experiment | MUON_MOMENTUM | gate_int6_bpb | screen_ema_bpb | Steps reached |
+| Experiment | MUON_MOMENTUM | gate_int6_bpb | screen_ema_bpb | Steps |
 |---|---|---|---|---|
 | exp001 | 0.93 | 1.3301 | 1.2949 | 1431 |
 | exp002 | 0.96 | 1.3236 | 1.2901 | 1435 |
 | **exp003** | **0.97** | **1.3227** | **1.2897** | **1434** |
-| exp004 | 0.98 | 1.2901* | — | 2178* |
+| exp004 | 0.98 | pending | pending | pending |
 
-\* exp004 ran with ~165 ms/step (vs ~335 ms for others) and a 360 s wallclock cap, reaching ~50% more steps. Not directly comparable on the same hardware footing.
-
-Among comparable runs (exp001-003, all ~335 ms/step, 480 s cap), the trend is monotonically improving with higher momentum:
+Monotonic improvement with higher momentum, but gains are diminishing:
 
 - 0.93 -> 0.96: **-0.0065** int6_bpb
 - 0.96 -> 0.97: **-0.0009** int6_bpb
-
-The improvement from 0.96 to 0.97 is much smaller, suggesting diminishing returns as we approach the optimum.
 
 ### Key log lines
 
@@ -64,16 +60,16 @@ final_int8_zlib_roundtrip val_loss:2.2333 val_bpb:1.3227
 Serialized model int8+zlib: 14307775 bytes
 ```
 
-No warnings or anomalies. Loss curve steady throughout training.
+No warnings or anomalies. Loss curve decreased steadily throughout training.
 
 ## Verdict
 
-**Promising.** Momentum 0.97 is the best comparable result in the sweep, beating 0.96 by 0.0009 int6_bpb and 0.0004 ema_bpb. The monotonic improvement across 0.93 -> 0.96 -> 0.97 is clear but flattening, suggesting we are near the optimum. The exp004 (0.98) result is confounded by different hardware, so we cannot confirm whether 0.97 or 0.98 is better under identical conditions.
+**Promising.** Momentum 0.97 is the sweep leader so far, beating 0.96 on both int6_bpb (1.3227 vs 1.3236) and ema_bpb (1.2897 vs 1.2901). The consistent monotonic improvement from 0.93 to 0.97 is credible but the shrinking marginal gain (0.0065 -> 0.0009) suggests we are near the optimum. Final conclusion requires exp004 (0.98) to determine whether the trend continues or reverses.
 
 ## Suggested follow-ups
 
-- Re-run exp004 (momentum 0.98) on the same hardware as exp001-003 to complete the apples-to-apples comparison.
-- If 0.97 or 0.98 wins, run 3 seeds to establish statistical significance before promoting.
-- The improvement from 0.96 to 0.97 is small (0.0009). Consider whether the marginal gain justifies further tuning or whether momentum is effectively solved at 0.96-0.97.
-- Test the winning momentum combined with other stacking techniques (warmdown, EMA, GPTQ-lite) to confirm the improvement composes.
-- Try momentum 0.95 to confirm the valley shape and rule out non-monotonic behavior.
+- Wait for exp004 (0.98) to complete the sweep and identify the rollover point.
+- If 0.97 or 0.98 wins, run 3 seeds at that value for statistical significance before promoting.
+- The improvement from 0.96 to 0.97 is small (0.0009 int6_bpb). Consider whether further momentum tuning is worthwhile vs moving on to higher-impact techniques.
+- Test the winning momentum combined with stacking techniques (warmdown, EMA, GPTQ-lite, XSA) to confirm it composes.
+- If 0.98 also improves, extend sweep to 0.99 to find the true optimum.

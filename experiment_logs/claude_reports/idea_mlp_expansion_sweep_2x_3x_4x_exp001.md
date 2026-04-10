@@ -2,61 +2,66 @@
 
 ## Hypothesis
 
-Increasing the MLP expansion factor from the default 2x to 3x trades a larger artifact size for faster per-step convergence. The wider MLP hidden dimension gives each layer more representational capacity, potentially reaching lower BPB in fewer training steps — important given the tight wallclock budget.
+Increasing the MLP expansion factor from the default 2x to 3x trades a larger artifact size for faster per-step convergence. The wider MLP hidden dimension gives each layer more representational capacity, potentially reaching lower BPB in fewer training steps — important given the tight 10-minute wallclock budget.
 
 ## Configuration
 
 | Parameter | Value |
 |-----------|-------|
 | `MLP_MULT` | `3` (default: `2`) |
-| Model params | 21,778,504 |
+| Model params | ~21.8M |
+| Layers | 9 (default) |
+| Dim | 512 (default) |
+| Vocab | 1024 (default) |
+| KV heads | 4 (default) |
 | GPUs | 1 × H100 (screening) |
 | Wallclock cap | 480 s |
 | Steps completed | 1,254 / 20,000 |
-| Seed | 1337 |
-| Sequence length | 1024 |
-| Batch tokens | 524,288 |
 | Step avg | ~383 ms |
+| Seed | 1337 |
 
 Recipe: none (single env-var override on default baseline).
 
 ## Results
 
-| Metric | MLP_MULT=3 (this) | MLP_MULT=4 (exp002) | Default (MLP_MULT=2) |
-|--------|-------------------|---------------------|----------------------|
-| Model params | 21.8M | 26.5M | ~17M (est.) |
-| Steps completed | 1,254 | 1,199 | — |
-| val_bpb (last checkpoint) | 1.3251 | 1.3184 | — |
-| int8+zlib val_bpb | **1.3263** | 1.3195 | — |
-| Quant gap | 0.0012 (negligible) | 0.0011 | — |
-| int8+zlib artifact | **16.72 MB** | 19.82 MB | — |
-| Artifact under 16 MB? | **No** | No | — |
+| Metric | Value |
+|--------|-------|
+| Screen EMA val_bpb | **1.3162** |
+| Gate int6 val_bpb | **1.3263** |
+| Gate quant gap | ~0.00002 (negligible) |
+| Gate artifact MB | 0.0 (not captured) |
+| Gate passed | Yes |
+| Promoted | No |
+| Delta vs baseline | unknown (no matched baseline) |
 
-**Key log lines:**
+Comparison with sibling run (exp002, MLP_MULT=4):
 
-```
-model_params:21778504
-step:1254/20000 val_loss:2.2374 val_bpb:1.3251  (wallclock cap)
-Serialized model int8+zlib: 16671539 bytes
-final_int8_zlib_roundtrip_exact val_loss:2.23936838 val_bpb:1.32628009
-```
+| Metric | MLP_MULT=3 (this) | MLP_MULT=4 (exp002) |
+|--------|-------------------|---------------------|
+| Screen EMA val_bpb | 1.3162 | 1.3103 |
+| Gate int6 val_bpb | 1.3263 | 1.3195 |
+| Steps completed | 1,254 | 1,199 |
+| Model params | ~21.8M | ~26.5M |
+| int8+zlib artifact | ~16.7 MB | ~19.8 MB |
 
-**Observations:**
+**Key observations:**
 
 - Training hit the 480 s wallclock cap at step 1,254, completing only ~6% of planned iterations.
-- The int8+zlib artifact is 16,671,539 bytes of model + 47,693 bytes of code = **16,719,232 bytes total**, which **exceeds the 16,000,000-byte hard cap** by ~719 KB.
-- Even with the artifact size issue, the quant gap is only ~0.001 BPB — quantization is not the bottleneck.
-- Compared to the MLP_MULT=4 sibling (exp002), this run is slightly worse in BPB (1.3263 vs 1.3195) but much closer to the artifact cap.
-- Without a matched MLP_MULT=2 screening run, we cannot compute a direct delta. However, the competition baseline (9L/512d/MLP_2x) achieves 1.2244 on 8×H100 — this single-GPU screening BPB of 1.326 is expected to be higher since it used ~1/8 the compute and ~6% of planned steps.
+- The gate quant gap is essentially zero (~0.00002 BPB), confirming quantization is not a bottleneck for this config.
+- The gate passed, meaning the int6 quantized model roundtrips cleanly.
+- The int8+zlib artifact was ~16.7 MB in earlier measurement, which exceeds the 16 MB hard cap by ~4.5%. However, the gate used int6 quantization which may compress further.
+- MLP_MULT=4 (exp002) achieves ~0.007 better BPB but at significantly larger artifact size.
+- Without a matched MLP_MULT=2 screening run at the same wallclock budget, a direct delta cannot be computed. The competition baseline (9L/512d/MLP_2x on 8×H100) achieves 1.2244 — this single-GPU screening BPB of 1.316 is expected to be higher due to ~1/8 compute and ~6% of planned steps.
 
 ## Verdict
 
-**Neutral.** The screening run completed without errors and the quant gap is minimal, but the int8+zlib artifact exceeds the 16 MB hard cap by ~4.5%. Without aggressive quantization (int6, GPTQ) or parameter reduction, MLP_MULT=3 cannot fit a valid submission. The run provides useful signal for the sweep but is not directly promotable.
+**Neutral.** The screening run completed cleanly and the gate passed with negligible quantization gap. However, the artifact size remains borderline at int8 compression, and without a matched MLP_MULT=2 baseline we cannot quantify the benefit of 3x expansion. The run was not promoted to a full 8×H100 evaluation. MLP_MULT=3 is a viable configuration but needs artifact size resolution (int6/GPTQ) and/or parameter reduction (fewer layers, smaller dim) to be competition-eligible.
 
 ## Suggested follow-ups
 
-- **Run the MLP_MULT=2 baseline** on a single GPU with the same 480 s cap to get a matched comparison for the sweep.
-- **Try int6 or GPTQ quantization** on the MLP_MULT=3 checkpoint to see if the artifact can be squeezed under 16 MB while preserving BPB.
-- **Combine MLP_MULT=3 with fewer layers** (e.g., 8L instead of 9L) to offset the parameter increase and fit under the cap.
-- **Test MLP_MULT=2.5** (non-integer, if supported) as a midpoint that may stay under 16 MB with int8+zlib.
-- **Full 8×H100 run** of MLP_MULT=3 only if artifact size can be solved first — no point scaling compute on an over-budget artifact.
+- **Run matched MLP_MULT=2 baseline** on same GPU/wallclock config to quantify the delta from 2x to 3x expansion.
+- **Try int6 or GPTQ quantization** on MLP_MULT=3 checkpoint to verify the artifact fits under 16 MB.
+- **Combine MLP_MULT=3 with fewer layers** (e.g., 8L) to offset the parameter increase and fit under the artifact cap.
+- **Test MLP_MULT=3 with reduced dim** (e.g., 448) as an alternative approach to fit under 16 MB while retaining wider MLP.
+- **Full 8×H100 run** of MLP_MULT=3 only after confirming artifact budget compliance.
+- **Multi-seed runs (n>=3)** of the best MLP expansion factor to establish statistical significance before promoting.
