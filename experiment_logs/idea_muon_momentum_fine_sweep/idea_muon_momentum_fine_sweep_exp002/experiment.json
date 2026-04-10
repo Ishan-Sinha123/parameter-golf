@@ -1,17 +1,16 @@
 {
   "experiment_id": "idea_muon_momentum_fine_sweep_exp002",
   "idea_id": "idea_muon_momentum_fine_sweep",
-  "stage": "screen",
+  "stage": "gate",
   "host": "206.125.32.60",
   "gpus": [
-    6,
-    7
+    2
   ],
-  "commit_sha": "f6abc552f4f2cf0edf561fade5c3d23c109b26cc",
+  "commit_sha": "d7a712552db88433d6f49642153c7f2c4c2df259",
   "branch": "autoresearch-deploy",
   "env_overrides": {
     "MUON_MOMENTUM": "0.96"
   },
-  "wallclock_s": 360,
-  "started_at": "2026-04-10T10:44:15.845113"
+  "wallclock_s": 480,
+  "started_at": "2026-04-10T10:51:43.910370"
 }
