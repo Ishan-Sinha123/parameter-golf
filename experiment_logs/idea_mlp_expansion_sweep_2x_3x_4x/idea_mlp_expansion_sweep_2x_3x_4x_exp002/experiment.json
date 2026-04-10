@@ -4,14 +4,14 @@
   "stage": "screen",
   "host": "206.125.32.60",
   "gpus": [
-    3,
-    4
+    5,
+    6
   ],
-  "commit_sha": "5465e9864714df388b27ef07a2f834132abd5199",
+  "commit_sha": "8e0a62acf384756b3eaa71435db2e8ba2d656609",
   "branch": "autoresearch-deploy",
   "env_overrides": {
     "MLP_MULT": "4"
   },
-  "wallclock_s": 180,
-  "started_at": "2026-04-10T10:08:02.162586"
+  "wallclock_s": 260,
+  "started_at": "2026-04-10T10:18:11.176606"
 }
