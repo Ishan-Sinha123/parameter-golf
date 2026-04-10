@@ -4,13 +4,13 @@
   "stage": "gate",
   "host": "206.125.32.60",
   "gpus": [
-    6
+    2
   ],
-  "commit_sha": "f3b0d697816097252be32c42b81a8c665371e88c",
+  "commit_sha": "739fb23ec1d1237c00d7075f9616a9c62ced1f2a",
   "branch": "autoresearch-deploy",
   "env_overrides": {
     "MUON_MOMENTUM": "0.98"
   },
-  "wallclock_s": 480,
-  "started_at": "2026-04-10T10:59:19.953276"
+  "wallclock_s": 540,
+  "started_at": "2026-04-10T11:21:40.917193"
 }
