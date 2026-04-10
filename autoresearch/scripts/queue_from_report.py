@@ -28,7 +28,7 @@ from pathlib import Path
 
 from autoresearch.config import AutoResearchConfig
 from autoresearch.db.registry import Registry
-from autoresearch.db.models import IdeaSource, ExperimentCategory
+from autoresearch.db.models import IdeaSource, ExperimentCategory, ExperimentStatus
 from autoresearch.ideas.tracker import IdeaTracker
 
 
@@ -373,6 +373,8 @@ def main():
                 priority=exp_spec.priority,
                 notes=notes,
             )
+            # Promote DEFINED → QUEUED so the scheduler actually picks it up.
+            registry.update_experiment_status(exp.id, ExperimentStatus.QUEUED)
             total_exps += 1
             print(f"    [exp] {exp.id}  env={exp_spec.env}")
 

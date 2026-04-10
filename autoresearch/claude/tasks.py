@@ -349,7 +349,17 @@ def _build_implement_technique(*, config: AutoResearchConfig, registry: Registry
                                  research_summary: str,
                                  env_flag: str,
                                  base_commit: str = "") -> ClaudeTaskSpec:
-    slug = technique_name.lower().replace(" ", "_")
+    import hashlib, re
+    raw_slug = technique_name.lower().replace(" ", "_")
+    raw_slug = re.sub(r"[^a-z0-9_\-]", "", raw_slug)
+    # Claude Code worktree names are capped at 64 chars; "technique-" prefix
+    # is 10, so slug must be <= 54. Truncate + hash-suffix to keep uniqueness.
+    MAX_SLUG = 54
+    if len(raw_slug) > MAX_SLUG:
+        h = hashlib.sha1(raw_slug.encode()).hexdigest()[:6]
+        slug = f"{raw_slug[:MAX_SLUG - 7]}-{h}"
+    else:
+        slug = raw_slug
     branch = f"auto/technique/{slug}"
     prompt = f"""Implement the technique "{technique_name}" in `train_gpt.py` as a new
 feature flag, on a dedicated feature branch. NEVER push to main.
