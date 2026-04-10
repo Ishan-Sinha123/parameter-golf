@@ -768,10 +768,14 @@ class ResearchAgent:
         )
 
         try:
+            # Cap inline PR research at 120s so a single slow task can't
+            # starve the research loop. With ~80 open PRs per cycle and a
+            # 10-minute max_wait this was taking >13h per cycle.
             result = self.parallel.deep_research(
                 query=query,
                 processor=self.config.parallel_default_processor,
                 output_type="text",
+                max_wait=120.0,
             )
 
             if result.status in ("completed", "done") and result.output:

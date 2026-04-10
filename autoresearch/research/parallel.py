@@ -183,22 +183,40 @@ class ParallelClient:
                     error=f"No run_id in response: {create_resp}",
                 )
 
-            # Poll for result (the result endpoint blocks, but we add our
-            # own timeout wrapper)
+            # Poll the /status endpoint (non-blocking) until the task is
+            # finished, then fetch /result. Earlier versions of this client
+            # GET'd /result with a huge timeout which turned it into a
+            # 10-minute blocking call and starved the research loop.
+            status_url = TASK_STATUS_URL.format(run_id=run_id)
             result_url = TASK_RESULT_URL.format(run_id=run_id)
             start = time.monotonic()
 
             while time.monotonic() - start < max_wait:
                 try:
-                    result_resp = self._get(result_url, timeout=int(max_wait))
+                    status_resp = self._get(status_url, timeout=30)
+                except Exception as e:
+                    log.debug("Deep research %s status poll error: %s",
+                              run_id, e)
+                    time.sleep(poll_interval)
+                    continue
+
+                status = (status_resp.get("status") or "").lower()
+                if status in ("completed", "done", "succeeded", "success"):
+                    try:
+                        result_resp = self._get(result_url, timeout=60)
+                    except Exception as e:
+                        return DeepResearchResult(
+                            run_id=run_id, status="failed", processor=proc,
+                            error=f"result fetch failed: {e}",
+                        )
                     return self._parse_task_result(run_id, proc, result_resp)
-                except urllib.error.HTTPError as e:
-                    if e.code == 202:
-                        # Still processing
-                        log.debug("Deep research %s still running...", run_id)
-                        time.sleep(poll_interval)
-                        continue
-                    raise
+                if status in ("failed", "error", "cancelled", "canceled"):
+                    return DeepResearchResult(
+                        run_id=run_id, status="failed", processor=proc,
+                        error=status_resp.get("error") or f"status={status}",
+                    )
+                # queued / running — keep polling
+                time.sleep(poll_interval)
 
             return DeepResearchResult(
                 run_id=run_id, status="timeout", processor=proc,

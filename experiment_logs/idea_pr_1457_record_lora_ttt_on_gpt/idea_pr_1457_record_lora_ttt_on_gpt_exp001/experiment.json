@@ -2,7 +2,7 @@
   "experiment_id": "idea_pr_1457_record_lora_ttt_on_gpt_exp001",
   "idea_id": "idea_pr_1457_record_lora_ttt_on_gpt",
   "stage": "screen",
-  "host": "34.69.145.155",
+  "host": "206.125.32.60",
   "gpus": [
     0,
     1,
@@ -13,7 +13,7 @@
     6,
     7
   ],
-  "commit_sha": "f3d13031a2aa943190982bb79c085f1282de251f",
+  "commit_sha": "7cc4366f2c7044ca0139b2427bca4aab5cab8b20",
   "branch": "autoresearch-deploy",
   "script_path": "autoresearch/baselines/rec_20260410_2026_03_31_parallelresiduals_minidepthre_4d594ac1/train_gpt.py",
   "recipe_id": "rec_20260410_pr1457_lora_ttt_a3d0ee40",
@@ -111,5 +111,5 @@
     "MAX_WALLCLOCK_SECONDS": 600
   },
   "wallclock_s": 420,
-  "started_at": "2026-04-10T23:04:00.533229"
+  "started_at": "2026-04-10T23:38:18.146135"
 }

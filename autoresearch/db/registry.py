@@ -150,6 +150,25 @@ CREATE TABLE IF NOT EXISTS commands (
     issued_by       TEXT DEFAULT 'dashboard'
 );
 
+-- Traces: span tree for the research/experiment loop. Each row is a span;
+-- parent_span_id is null for root spans. A trace is the set of spans
+-- sharing one trace_id. The dashboard renders this as a cytoscape graph.
+CREATE TABLE IF NOT EXISTS traces (
+    span_id         TEXT PRIMARY KEY,
+    trace_id        TEXT NOT NULL,
+    parent_span_id  TEXT,
+    kind            TEXT NOT NULL,
+    name            TEXT NOT NULL,
+    entity_type     TEXT DEFAULT '',
+    entity_id       TEXT DEFAULT '',
+    status          TEXT NOT NULL DEFAULT 'running',
+    started_at      REAL NOT NULL,
+    ended_at        REAL,
+    duration_ms     INTEGER,
+    attrs           TEXT DEFAULT '{}',
+    error           TEXT DEFAULT ''
+);
+
 CREATE INDEX IF NOT EXISTS idx_experiments_idea ON experiments(idea_id);
 CREATE INDEX IF NOT EXISTS idx_experiments_status ON experiments(status);
 CREATE INDEX IF NOT EXISTS idx_events_entity ON events(entity_type, entity_id, timestamp);
@@ -158,6 +177,11 @@ CREATE INDEX IF NOT EXISTS idx_commands_status ON commands(status, created_at);
 CREATE INDEX IF NOT EXISTS idx_recipes_hash ON recipes(feature_set_hash);
 CREATE INDEX IF NOT EXISTS idx_recipes_parent ON recipes(parent_recipe);
 CREATE INDEX IF NOT EXISTS idx_recipes_bpb ON recipes(best_val_bpb);
+CREATE INDEX IF NOT EXISTS idx_traces_trace ON traces(trace_id);
+CREATE INDEX IF NOT EXISTS idx_traces_parent ON traces(parent_span_id);
+CREATE INDEX IF NOT EXISTS idx_traces_started ON traces(started_at);
+CREATE INDEX IF NOT EXISTS idx_traces_kind ON traces(kind);
+CREATE INDEX IF NOT EXISTS idx_traces_entity ON traces(entity_type, entity_id);
 """
 
 # Additive columns on existing tables. SQLite doesn't support
