@@ -1,0 +1,9 @@
+{
+  "recipe_id": "rec_20260410_2026_03_19_10l_mixedprecision_db809474",
+  "source_ref": "/home/azureuser/parameter-golf/records/track_10min_16mb/2026-03-19_10L_MixedPrecision",
+  "val_bpb": 1.214745,
+  "artifact_mb": null,
+  "features": [
+    "sota_fork"
+  ]
+}
