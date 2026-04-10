@@ -274,13 +274,26 @@ class NodeClient:
         )
         try:
             r = self._run_ssh(launch_cmd, timeout=30)
-            if r.returncode == 0 and r.stdout.strip().isdigit():
-                pid = int(r.stdout.strip())
+            # Parse PID from last non-empty line of stdout. Some env_setup
+            # scripts (e.g. conda/uv activate on vast-h100-2) print a
+            # banner to stdout before the PID, so `stdout.strip().isdigit()`
+            # would incorrectly fail even though the launch succeeded.
+            pid_line = ""
+            for line in reversed(r.stdout.splitlines()):
+                s = line.strip()
+                if s:
+                    pid_line = s
+                    break
+            if r.returncode == 0 and pid_line.isdigit():
+                pid = int(pid_line)
                 log.info("Launched %s on %s GPUs %s, PID=%d",
                          experiment_id, self.ssh.host, gpu_indices, pid)
                 return pid
             else:
-                log.error("Launch failed on %s: %s", self.ssh.host, r.stderr)
+                log.error(
+                    "Launch failed on %s: rc=%d stdout=%r stderr=%r",
+                    self.ssh.host, r.returncode, r.stdout, r.stderr,
+                )
                 return None
         except Exception as e:
             log.error("Launch error on %s: %s", self.ssh.host, e)
