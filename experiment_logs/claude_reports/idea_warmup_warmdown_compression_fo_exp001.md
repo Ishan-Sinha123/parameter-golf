@@ -2,11 +2,11 @@
 
 ## Hypothesis
 
-Spend more of the 10-minute budget at peak learning rate by compressing
-the warmup and warmdown phases. The theory: a near-instant warmup
-(10 steps) plus a late warmdown (600 iters) should leave more wallclock
-at effective peak LR and therefore accelerate loss descent within the
-cap.
+Spend more of the 10-minute training budget at peak learning rate by compressing
+both schedule ends: a near-instant warmup (`WARMUP_STEPS=10`) and a late warmdown
+(`WARMDOWN_ITERS=600`). Theory is that the stock schedule over-invests in the LR
+ramp at small scale, so removing that investment should accelerate loss descent
+within the wallclock cap.
 
 ## Configuration
 
@@ -15,13 +15,13 @@ cap.
 | `WARMUP_STEPS` | `10` |
 | `WARMDOWN_ITERS` | `600` |
 
-Recipe: **none** (ran against current default `train_gpt.py`, no forked
-recipe). Reproduction: no. Source branch: (not recorded).
+Recipe: **none** — ad-hoc env-override on the default `train_gpt.py`, no
+registered recipe (`recipe_id: null`). Reproduction: no. Source ref: not recorded.
 
 Run context from `train.log`:
 
 - `model_params:17059912`
-- `world_size:1 grad_accum_steps:8` (single GPU, not 8×H100)
+- `world_size:1 grad_accum_steps:8` (single-GPU screen, not 8×H100)
 - `attention_mode:gqa num_heads:8 num_kv_heads:4`
 - `tie_embeddings:True embed_lr:0.05 head_lr:0.0 matrix_lr:0.04 scalar_lr:0.04`
 - `train_batch_tokens:524288 train_seq_len:1024 iterations:20000 warmup_steps:10 max_wallclock_seconds:480.000`
@@ -35,8 +35,8 @@ Run context from `train.log`:
 | Gate int6 / int8+zlib val_bpb | 1.31900 | 1.10625 | +0.21275 |
 | Quant gap (int6 − ema) | ~6e-7 | — | ≈0 |
 | Artifact size (int8+zlib) | 14,748,471 B | 16 MB cap | under cap |
-| Steps completed | 1,439 / 20,000 | — | — |
-| Total train time | 480.2 s (wallclock cap hit) | — | — |
+| Steps completed | 1,439 / 20,000 | — | wallclock stop |
+| Total train time | 480.2 s | — | cap hit |
 | Step avg | ~333.7 ms | — | — |
 | Gate passed | ✅ true | — | — |
 | Promoted | ❌ no (`promote_*` null) | — | — |
@@ -46,7 +46,7 @@ Run context from `train.log`:
 ```
 warmup_step:10/10
 step:0/20000 val_loss:6.9357 val_bpb:4.1077 train_time:0ms
-step:2/20000 train_loss:16.7413 train_time:658ms    # spike from ultra-short warmup
+step:2/20000 train_loss:16.7413 train_time:658ms     # spike from ultra-short warmup
 step:3/20000 train_loss:8.7525
 step:4/20000 train_loss:6.5885
 step:1000/20000 val_loss:2.3175 val_bpb:1.3726
@@ -56,53 +56,49 @@ Serialized model int8+zlib: 14700778 bytes (payload_ratio:3.91x)
 final_int8_zlib_roundtrip val_loss:2.22707524 val_bpb:1.31899940
 ```
 
+No warnings emitted. Loss was still descending at the wallclock stop.
+
 ### Observations
 
-1. **Step-2 loss spike (16.74)** — the 10-step warmup is below the
-   stability floor for this optimizer config; training recovers by step 4
-   but the spike costs early progress.
-2. **Early stop at step 1,439 / 20,000** — the run used a single GPU
-   (`world_size:1`) and hit the 480 s cap at only ~7 % of the planned
-   schedule. `WARMDOWN_ITERS=600` is defined against a 20 k-step schedule
-   the run never came close to completing, so the "warmdown" phase was
-   never truly exercised at the intended relative position.
-3. **Quant gap negligible (~6e-7)** — int8+zlib roundtrip added
-   essentially zero BPB; weights quantize cleanly.
-4. **Loss still descending at stop** — val_bpb 1.3726 → 1.3179 between
-   steps 1000 and 1439, i.e., nowhere near converged.
-5. **Confound vs baseline.** Baseline 1.10625 was produced on the full
-   8×H100 frontier recipe; this run was single-GPU default `train_gpt.py`.
-   The +0.183 gap conflates the schedule change with both a step-count
-   deficit and the absence of the SOTA feature stack, so the experiment
-   cannot cleanly falsify the hypothesis on its own.
+1. **Step-2 loss spike (16.74)** — the 10-step warmup sits below the stability
+   floor for this optimizer config; training recovers by step 4 but the spike
+   costs early progress.
+2. **Early stop at step 1,439 / 20,000** — single-GPU screen hit the 480 s cap
+   at ~7 % of the planned schedule, so `WARMDOWN_ITERS=600` was never exercised
+   at its intended relative position inside a 20 k-step run.
+3. **Quant gap ≈ 0** — int8+zlib roundtrip added essentially no BPB; weights
+   quantize cleanly.
+4. **Baseline confound.** Baseline 1.10625 is the full 8×H100 SOTA recipe;
+   this run is single-GPU default `train_gpt.py`. The +0.183 gap conflates the
+   schedule change with both a step-count deficit and the absence of the
+   frontier feature stack, so the experiment cannot cleanly falsify the
+   hypothesis on its own.
 
 ## Verdict
 
-**regression** — screen EMA 1.28935 is +0.18310 BPB worse than the
-current SOTA baseline (1.10625). The compressed warmup triggered an
-early loss spike, the single-GPU run hit the wallclock cap at step 1439,
-and the gate result (1.31900) is far above any promote threshold. The
-gate only "passes" mechanically because int6 ≈ EMA, not because the
-score is competitive, and `promote_ema_bpb` / `promote_int6_bpb` are
-both null — the system did not advance this config.
+**regression** — screen EMA 1.28935 is +0.18310 BPB above the current SOTA
+baseline, the compressed warmup triggered an early loss spike, and the system
+did not promote this config (`promote_ema_bpb` / `promote_int6_bpb` both null).
+The gate only "passes" mechanically because int6 ≈ EMA, not because the score
+is competitive. The confound with single-GPU / truncated-schedule means this
+result should be read as "did not advance" rather than as strong evidence
+against the underlying idea.
 
 ## Suggested follow-ups
 
-- **Re-run on 8×H100.** Single-GPU confounds this result; repeat at
-  `world_size:8` so step count isn't the dominant variable.
-- **Raise the warmup floor.** Sweep `WARMUP_STEPS ∈ {50, 100, 250}` to
-  kill the step-2 spike; 10 is clearly below the stability threshold.
-- **Decouple warmdown from iteration count.** Drive warmdown by
-  fraction-of-wallclock (or by reached-step estimate) rather than a
-  fixed `WARMDOWN_ITERS` that is interpreted against an unreachable
-  20 k schedule.
-- **Re-anchor against the 1.1063 recipe.** Fork from the current leader
-  recipe (`rec_20260410_2026_04_09_sp8192_3layerrecur_parresid_q_...`)
-  instead of default `train_gpt.py`, so schedule sweeps are measured on
-  the composable frontier.
-- **Sweep paired with Muon.** Schedule compression likely interacts with
-  Parallel Muon / Muon WD momentum — joint test before declaring the
-  idea dead.
-- **Gradient-clip guard.** If tight warmup is retained, add a temporary
-  grad clip for the first ~20 steps to absorb the spike without a
-  longer LR ramp.
+- **Raise the warmup floor.** Sweep `WARMUP_STEPS ∈ {50, 100, 250}` to kill the
+  step-2 spike; 10 is clearly below the stability threshold for this LR.
+- **Matched-budget control.** Re-run the stock `WARMUP_STEPS` / `WARMDOWN_ITERS`
+  at the same single-GPU screen budget so the tight-schedule delta becomes
+  directly measurable instead of comparing to the 8×H100 frontier.
+- **Decouple warmdown from iteration count.** Drive warmdown by fraction of
+  reached-step (or fraction of wallclock) rather than a fixed `WARMDOWN_ITERS`
+  interpreted against an unreachable 20 k schedule.
+- **Re-anchor against the 1.1063 recipe.** Fork from the current leader recipe
+  instead of default `train_gpt.py`, so schedule sweeps are measured on the
+  composable frontier where promotion is realistic.
+- **Joint test with Muon momentum.** Schedule compression likely interacts with
+  Parallel Muon / Muon WD; sweep them together before declaring the idea dead.
+- **Grad-clip guard for tight warmup.** If tight warmup is retained, add a
+  temporary grad clip for the first ~20 steps to absorb the spike without
+  lengthening the LR ramp.

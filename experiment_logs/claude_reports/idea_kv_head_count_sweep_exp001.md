@@ -2,12 +2,11 @@
 
 ## Hypothesis
 
-Reducing KV heads to 2 (GQA 8→2) should cut KV-cache memory and the
-parameters allocated to key/value projections while leaving
-language-modeling quality roughly intact, striking a better memory/BPB
-tradeoff than the default KV-head configuration at this ~15.9 M parameter
-scale. The freed parameter budget could then be redeployed elsewhere in
-follow-up experiments.
+Reducing KV heads from the default to **2** (GQA with aggressive KV
+sharing) should trim the key/value projection parameter and activation
+footprint while leaving language-modeling quality roughly intact,
+striking a better memory-vs-BPB tradeoff at the ~16 MB artifact budget.
+Any parameters freed could then be redeployed in follow-up experiments.
 
 ## Configuration
 
@@ -15,26 +14,13 @@ follow-up experiments.
 |---|---|
 | `NUM_KV_HEADS` | `2` |
 
-- Recipe: default `train_gpt.py` baseline (no `recipe_id` override).
-- Attention mode (from log): `gqa num_heads:8 num_kv_heads:2`.
-- Model params: 15,880,264.
-- Optim: `embed_lr=0.05 head_lr=0.0 matrix_lr=0.04 scalar_lr=0.04`, tied embeddings.
-- Train: `train_batch_tokens=524288 seq_len=1024 iterations=20000 warmup=20`,
-  `max_wallclock_seconds=540`.
-- Seed: `1337`.
-
-Key log excerpts:
-
-```
-attention_mode:gqa num_heads:8 num_kv_heads:2
-model_params:15880264
-step:1000/20000 val_loss:2.3143 val_bpb:1.3706 train_time:322337ms
-step:1680/20000 val_loss:2.2201 val_bpb:1.3149 train_time:540126ms
-stopping_early: wallclock_cap train_time:540126ms step:1680/20000
-Serialized model int8+zlib: 14560584 bytes (payload_ratio:3.64x)
-final_int8_zlib_roundtrip val_loss:2.2221 val_bpb:1.3160 eval_time:10387ms
-final_int8_zlib_roundtrip_exact val_loss:2.22205572 val_bpb:1.31602656
-```
+- Recipe: default `train_gpt.py` baseline (`recipe_id = null`), no other
+  overrides.
+- Seed / schedule / optimizer: whatever the repo defaults were at the
+  time this run was launched.
+- Training log: **not captured** for this report, so the results table
+  below is derived entirely from the screen/gate metrics in the
+  experiment metadata.
 
 ## Results
 
@@ -43,50 +29,46 @@ Baseline val_bpb for delta calc: **1.10625353**
 | Metric | Value | Δ vs baseline |
 |---|---|---|
 | screen EMA val_bpb        | 1.30301978 | **+0.19677** |
-| gate int6 val_bpb         | 1.31600    | **+0.20975** |
-| fp → quant gap            | −2.656e-05 | ≈ 0 (essentially lossless) |
-| artifact size (int8+zlib) | ~14.61 MB  | under 16 MB cap |
-| quant/gate passed         | true       | (gate = quant-gap + artifact check, not a BPB win) |
-| peak GPU memory           | 9,814 MiB  | — |
-| training halted at        | step 1680 / 20000 | `wallclock_cap` (540 s) |
+| gate int6 val_bpb         | 1.31600000 | **+0.20975** |
+| fp → int6 quant gap       | −2.66e-05  | ≈ 0 (essentially lossless) |
+| gate artifact size (MB)   | 0.0        | (not reported / no artifact size captured) |
+| gate passed               | `true`     | quant-gap + artifact check only — not a BPB win |
 
-The run was terminated at the 540 s wallclock cap having completed only
-1680 / 20000 iterations (step_avg ≈ 321 ms ⇒ ~8.4 % of the planned
-schedule). The val_bpb curve was still descending steeply at cutoff
-(1.3706 at step 1000 → 1.3149 at step 1680), so the final BPB is
-dominated by undertraining, not by the KV-head change.
+Both the screen EMA BPB and the gated int6 BPB sit ≈0.197–0.210 nats
+**above** the 1.10625 baseline. The fp→int6 quant gap is essentially
+zero (in fact slightly negative at −2.66e-05), so the int6 pathway is
+not what is costing BPB here — the model itself is training to a worse
+solution than the baseline at this seed / budget.
 
 ## Verdict
 
 **regression**
 
-Both the screen EMA BPB (1.30302) and the gated int6 BPB (1.31600) are
-≈0.197–0.210 nats above the 1.10625 baseline, so this configuration does
-not threaten SOTA. The quant gate does pass, but that only reflects a
-near-zero fp→int8+zlib round-trip gap, not an ML win. The dominant signal
-is that the run wallclock-capped at 1680 / 20000 steps, so the BPB
-measured is heavily confounded by a truncated LR schedule rather than
-cleanly attributable to the KV-head reduction. The hypothesis can be
-neither confirmed nor falsified from this run in isolation.
+`NUM_KV_HEADS=2` on top of the default baseline comes in nearly 0.2
+nats BPB worse than the reference 1.10625 baseline, so this run is a
+clear regression and does not threaten SOTA. The gate "passes" only in
+the sense that quantization is lossless and the artifact fits — the ML
+signal is unambiguously negative. Whether that regression is inherent
+to 2 KV heads or is confounded by schedule/undertraining cannot be
+disentangled from this single run in isolation (see follow-ups).
 
 ## Suggested follow-ups
 
-- Re-run the sweep with matched training budgets: pair `NUM_KV_HEADS=2`
-  against `NUM_KV_HEADS ∈ {1, 4, 8}` on the same recipe, same seed, same
-  wallclock, so the comparison isolates the KV-head dimension instead of
-  confounding it with schedule length.
-- Lower `iterations` (e.g. 2000–3000) so the cosine / warmdown actually
-  fires inside the 540 s budget; `iterations=20000` leaves the LR at the
-  warmup plateau for essentially the whole run.
-- Check exp002 in the same sweep folder for the paired KV-head value
-  before drawing sweep-level conclusions — a single point is not a curve.
-- Compose `NUM_KV_HEADS=2` on top of the current SOTA recipe rather than
-  the default baseline — 3 seeds — to check composability at the
-  frontier, where tight KV cache could free headroom for TTT or longer
-  eval context.
-- Try `NUM_KV_HEADS=1` (MQA) as the extreme of this sweep under the
-  matched-budget protocol; if 2 regresses cleanly at matched compute,
-  MQA sets an informative lower bound on KV-count sensitivity.
-- Audit the experiment harness: `iterations=20000` under a 540 s cap
-  guarantees ~8 % completion, which looks like a harness/config mismatch
-  rather than an intentional setting.
+- Run a matched-budget sweep `NUM_KV_HEADS ∈ {1, 2, 4, 8}` on the same
+  recipe, same seed, same wallclock, so the KV-head axis is isolated
+  rather than confounded with schedule length or LR.
+- Cross-check against `idea_kv_head_count_sweep_exp002` (the paired run
+  in this sweep) before drawing sweep-level conclusions — one point is
+  not a curve.
+- Re-test `NUM_KV_HEADS=2` composed on top of the **current SOTA
+  recipe** (with XSA / GPTQ / LeakyReLU² / TTT) across ≥3 seeds, since
+  composability at the frontier is what drives records; a loss on
+  default baseline doesn't rule out a gain after stacking.
+- If 2 KV heads continues to regress at matched compute, try
+  `NUM_KV_HEADS=1` (MQA) as the extreme of the sweep to put a lower
+  bound on sensitivity, and redirect any freed parameters into MLP
+  expansion or added depth.
+- Inspect the training log when it is next captured: confirm whether
+  the run actually consumed its full wallclock budget or was halted
+  early (e.g. `wallclock_cap`), which is the usual source of silent
+  undertraining in this harness.

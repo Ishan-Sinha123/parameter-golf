@@ -75,8 +75,8 @@ result alone does not support win/regression.
   `idea_muon_momentum_fine_sweep` to locate the minimum on the momentum
   curve (and confirm whether 0.96 beats 0.95 / 0.97 / 0.98).
 - Whichever value wins the sweep, re-run it **stacked on the current
-  SOTA recipe** (`rec_20260410_..._3layerrecur_parresid_q`, 1.0810)
-  rather than the default screening baseline.
+  SOTA recipe** rather than the default screening baseline, since
+  momentum optima often do not transfer across recipes.
 - Confirm the sweep winner with ≥3 seeds before treating it as a real
   signal — at this model size, seed noise is comparable to the
   competition's 0.005-nat / p<0.01 record bar.
