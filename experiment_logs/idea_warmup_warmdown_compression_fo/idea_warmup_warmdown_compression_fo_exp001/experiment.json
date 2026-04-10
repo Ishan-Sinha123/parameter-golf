@@ -4,15 +4,15 @@
   "stage": "screen",
   "host": "206.125.32.60",
   "gpus": [
-    6,
-    7
+    3,
+    4
   ],
-  "commit_sha": "57723b5be4ebe5ee64faae7143c01ca7c18188ab",
+  "commit_sha": "4fda3ce80a750d1554ab27de258c4b1a9c4ba3f8",
   "branch": "autoresearch-deploy",
   "env_overrides": {
     "WARMUP_STEPS": "10",
     "WARMDOWN_ITERS": "600"
   },
-  "wallclock_s": 180,
-  "started_at": "2026-04-10T09:59:03.024227"
+  "wallclock_s": 260,
+  "started_at": "2026-04-10T10:26:20.879004"
 }

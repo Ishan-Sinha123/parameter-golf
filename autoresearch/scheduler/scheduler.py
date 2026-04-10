@@ -796,6 +796,12 @@ class Scheduler:
                 metrics["int6_bpb"] = float(m.group(1))
         for m in _QUANT_GAP_RE.finditer(log_text):
             metrics["quant_gap"] = float(m.group(1))
+        # Fallback: quant_gap = int6/int8-quantized bpb minus unquantized ema/train bpb.
+        # train_gpt.py emits both but doesn't compute the delta itself.
+        if "quant_gap" not in metrics:
+            ref = metrics.get("ema_bpb") or metrics.get("train_bpb")
+            if ref is not None and metrics.get("int6_bpb") is not None:
+                metrics["quant_gap"] = metrics["int6_bpb"] - ref
         for m in _ARTIFACT_MB_RE.finditer(log_text):
             metrics["artifact_mb"] = float(m.group(1))
         last_step = 0
