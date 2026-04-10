@@ -2,13 +2,13 @@
 
 ## Hypothesis
 
-Muon momentum `0.93` (slightly below the conventional `0.95`) may be the
-sweet spot for the current screening wallclock: with only a few hundred
-effective updates inside the 480 s cap, a lower beta should track a
-rapidly-moving loss surface better and reduce stale-gradient drag. This
-is `exp001` of 4 in the `idea_muon_momentum_fine_sweep` arm, run on the
-plain baseline config (`recipe_id=null`, `source_ref=""`), not stacked on
-the current SOTA recipe.
+Muon optimizer momentum `0.93` (slightly below the conventional `0.95`)
+may be the sweet spot at the current screen wallclock. With only a few
+hundred effective updates inside the 480 s cap, a lower beta should
+track a rapidly-moving loss surface better and reduce stale-gradient
+drag. This is `exp001` of the `idea_muon_momentum_fine_sweep` arm, run
+as a single env-var override on the plain baseline (`recipe_id=null`,
+`source_ref=""`), not stacked on the current SOTA recipe.
 
 ## Configuration
 
@@ -18,9 +18,9 @@ the current SOTA recipe.
 |-----------------|-------|
 | `MUON_MOMENTUM` | 0.93  |
 
-**Recipe:** none — single env-var override on the baseline `train_gpt.py`.
+**Recipe:** none — single env-var override on baseline `train_gpt.py`.
 
-**Run shape (from `train.log`):**
+**Run shape** (from `train.log`):
 
 - `model_params:17059912`
 - `world_size:1 grad_accum_steps:8`
@@ -31,9 +31,9 @@ the current SOTA recipe.
 
 ## Results
 
-The run hit the 480 s wallclock cap after step 1431 / 20000
+Run hit the 480 s wallclock cap at step `1431 / 20000`
 (step_avg ≈ 335.6 ms) — heavily undertrained relative to the nominal
-horizon. Loss decreased monotonically post-warmup; no warnings in the log.
+horizon. Loss decreased monotonically post-warmup; no warnings.
 
 **Quoted key lines** from
 `experiment_logs/idea_muon_momentum_fine_sweep/idea_muon_momentum_fine_sweep_exp001/train.log`:
@@ -53,51 +53,52 @@ final_int8_zlib_roundtrip_exact val_loss:2.24589635 val_bpb:1.33014633
 **Metrics table**
 
 | Metric             | Value        | Baseline   | Δ vs baseline |
-|--------------------|--------------|------------|----------------|
-| `screen_ema_bpb`   | **1.29489**  | 1.10625    | **+0.18864**   |
-| `gate_int6_bpb`    | 1.33010      | —          | —              |
-| `gate_quant_gap`   | −4.633e-05   | —          | ≈ 0            |
-| `gate_artifact_mb` | 0.0 (n/a)    | 16.0 cap   | —              |
-| artifact (log)     | 13.52 MB     | 16.0 cap   | well under     |
-| peak memory        | 10 303 MiB   | —          | —              |
-| `gate_passed`      | **True**     | —          | —              |
-| `promote_ema_bpb`  | null         | —          | pending        |
-| `promote_int6_bpb` | null         | —          | pending        |
+|--------------------|--------------|------------|---------------|
+| `screen_ema_bpb`   | **1.29489**  | 1.10625    | **+0.18864**  |
+| `gate_int6_bpb`    | 1.33010      | —          | —             |
+| `gate_quant_gap`   | −4.633e-05   | —          | ≈ 0           |
+| `gate_artifact_mb` | 0.0 (n/a)    | 16.0 cap   | —             |
+| artifact (log)     | 13.52 MB     | 16.0 cap   | well under    |
+| peak memory        | 10 303 MiB   | —          | —             |
+| `gate_passed`      | **True**     | —          | —             |
+| `promote_ema_bpb`  | null         | —          | pending       |
+| `promote_int6_bpb` | null         | —          | pending       |
 
 **Caveat on the +0.189 nat delta.** The baseline (`1.10625`) is the
-current stacked-SOTA bar, while this run is a plain-baseline config on a
-single GPU that only reached 1431 steps before the 480 s cap. The gap is
-dominated by the missing recipe stack and the shortened budget, not by
-the momentum choice. The sweep gate still passed, and the int8+zlib
-quant gap is essentially zero (−4.6 × 10⁻⁵) — a nice property of this
-momentum value independent of the absolute delta.
+current stacked-SOTA bar; this run is a plain-baseline config on a
+single GPU that reached only 1431 steps before the 480 s cap. The gap is
+dominated by the missing recipe stack and the truncated budget, not by
+the momentum choice. The sweep gate still passed and the int8+zlib
+quant gap is effectively zero — a nice side property of this momentum
+value independent of the absolute delta.
 
 ## Verdict
 
-**promising** — `gate_passed=True`, clean wallclock termination, and an
-effectively-zero int8+zlib quant gap, so `0.93` survives into the
-promote stage of the sweep. The headline +0.189 nat gap versus the
-stacked-SOTA baseline is *not* evidence against the momentum change,
-because the recipe stack is absent here. Whether `0.93` actually beats
-`0.95` (or another neighbor) can only be decided by ranking against
-`exp002`–`exp004`, and ultimately by re-running the winner on top of the
-current SOTA recipe at 8×H100 scale.
+**promising** — `gate_passed=True`, clean wallclock termination, and a
+~zero int8+zlib quant gap (−4.6 × 10⁻⁵), so `0.93` survives into the
+promote stage. The headline +0.189 nat gap vs stacked-SOTA is *not*
+evidence against the momentum change, because the recipe stack is absent
+here. Whether `0.93` actually beats `0.95` or other neighbors can only
+be decided by ranking it against `exp002`–`exp004`, and ultimately by
+re-running the sweep winner on top of the current SOTA recipe at
+8×H100 scale.
 
 ## Suggested follow-ups
 
 - Cross-compare `exp001`–`exp004` `screen_ema_bpb` within the
   `idea_muon_momentum_fine_sweep` arm to pick the momentum that
-  minimizes BPB at this wallclock; `0.93` is only interpretable relative
-  to its siblings.
-- Re-run the sweep winner on top of the current SOTA recipe so the
-  delta is measured on a stacked config, not a plain baseline.
-- Promote the screening winner to 8×H100 full-lane — the `world_size:1`
-  cap at 1431/20000 is far from the true 10-minute budget and may
-  re-order the ranking.
+  minimizes BPB at this wallclock; `0.93` is only interpretable
+  relative to its siblings.
+- Re-run the sweep winner on top of the current SOTA recipe (PR #1019
+  self-gen GPTQ + all-layer XSA) so the delta is measured on the
+  stacked config, not a plain baseline.
+- Promote the screening winner to the 8×H100 full lane — the
+  `world_size:1` cap at 1431/20000 is far from the true 10-minute
+  budget and may re-order the ranking.
 - Once a winner is selected, run ≥ 3 seeds to clear the 0.005-nat,
   p < 0.01 record bar before any PR.
-- Probe interaction with `MUON_MOMENTUM_WARMUP_STEPS` (if present): a
+- Probe interaction with `MUON_MOMENTUM_WARMUP_STEPS` if exposed: a
   lower steady-state momentum may prefer a shorter warmup ramp.
-- Verify the near-zero quant gap also holds under int6 / ternary paths;
-  if so, `0.93` may be disproportionately friendly to aggressive
+- Verify the ~zero quant gap also holds under int6 / ternary paths; if
+  so, `0.93` may be disproportionately friendly to aggressive
   quantization.

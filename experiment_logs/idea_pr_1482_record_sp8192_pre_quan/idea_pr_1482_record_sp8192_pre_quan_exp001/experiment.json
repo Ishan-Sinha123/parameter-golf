@@ -13,7 +13,7 @@
     6,
     7
   ],
-  "commit_sha": "9c61178aa0b7a27c864d29ddbf0045a76f5c8060",
+  "commit_sha": "3af2d69a88e98fbfaf2db3a345e3aba12d2dba9e",
   "branch": "autoresearch-deploy",
   "script_path": "autoresearch/baselines/rec_20260410_2026_03_31_parallelresiduals_minidepthre_4d594ac1/train_gpt.py",
   "recipe_id": "rec_20260410_pr1482_sp8192_prequant_ttt_4e55774c",
@@ -106,5 +106,5 @@
     "MAX_WALLCLOCK_SECONDS": 595
   },
   "wallclock_s": 420,
-  "started_at": "2026-04-10T23:03:09.182180"
+  "started_at": "2026-04-10T23:07:20.711750"
 }
