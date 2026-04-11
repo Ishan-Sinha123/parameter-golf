@@ -1,7 +1,7 @@
 {
   "experiment_id": "idea_pr_1421_record_11l_depth_recur_exp001",
   "idea_id": "idea_pr_1421_record_11l_depth_recur",
-  "stage": "screen",
+  "stage": "gate",
   "host": "206.125.32.60",
   "gpus": [
     0,
@@ -13,7 +13,7 @@
     6,
     7
   ],
-  "commit_sha": "4a0a3ceecf5f1e06fb632c0284768d2e7524b80e",
+  "commit_sha": "98db50d8d644e40814270ee35d2efb6d1bd9d723",
   "branch": "autoresearch-deploy",
   "script_path": "autoresearch/baselines/rec_20260410_2026_03_31_parallelresiduals_minidepthre_4d594ac1/train_gpt.py",
   "recipe_id": "rec_20260411_pr1421_pr1421_ema_decay_tuning_0_f92bf538",
@@ -105,6 +105,6 @@
     "LOCAL_RANK": "0",
     "EMA_DECAY": "0.9965"
   },
-  "wallclock_s": 420,
-  "started_at": "2026-04-11T00:22:55.889064"
+  "wallclock_s": 540,
+  "started_at": "2026-04-11T00:27:34.414494"
 }

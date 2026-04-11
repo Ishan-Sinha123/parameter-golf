@@ -475,7 +475,8 @@ class Scheduler:
                                 try:
                                     self.cluster.reserve_gpus_for(
                                         exp.id, exp.node_host or "",
-                                        exp.gpu_indices or list(range(8)))
+                                        exp.gpu_indices or list(range(8)),
+                                        pid=int(remote_pid))
                                 except Exception:
                                     pass
                                 # Re-add to _active_runs so the regular

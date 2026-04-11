@@ -282,7 +282,8 @@ class ClusterManager:
         return None
 
     def reserve_gpus_for(self, experiment_id: str, host: str,
-                          gpu_indices: list[int]):
+                          gpu_indices: list[int],
+                          pid: Optional[int] = None):
         """Mark specific GPUs on a host as assigned to an experiment
         without running the normal allocator. Used by orphan recovery
         to re-establish tracking for runs that survived a scheduler
@@ -296,7 +297,7 @@ class ClusterManager:
                 if g.index in gpu_indices:
                     g.assigned_experiment = experiment_id
             self._running_jobs[experiment_id] = _RunningJob(
-                host=host, gpu_indices=list(gpu_indices),
+                host=host, gpu_indices=list(gpu_indices), pid=pid,
             )
             log.info("Reserved (recovery) %s: %s GPUs %s",
                      experiment_id, host, gpu_indices)
