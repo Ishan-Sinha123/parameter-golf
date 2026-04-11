@@ -3,14 +3,15 @@
 ## Hypothesis
 
 Reproduce PR#1458 (`midnight_12l_brotli_mixed_int`) on our own infra before
-stacking anything on top. The author claims **mean 1.10597 bpb across 3 seeds
-(σ = 0.00032)**, a ~0.0087-nat beat over the 1.1147 SOTA. The novel lever is
-"spend compression headroom (Brotli + mixed-int `attn=int5` / `mlp=int6` /
-`embed=int8`) on an extra transformer layer": 11 L → 12 L while staying under
-the 16 MB artifact cap. If the reproduction lands within noise of the claim,
-the natural follow-up is `stack_on_best`: layer Legal Score-First TTT (PR
-#549) and self-gen GPTQ calibration (PR #1019) on top of this 12 L + Brotli
-base to combine both gain sources.
+stacking anything on top. The author claims **mean 1.10597 bpb across 3
+seeds (σ = 0.00032)**, a ~0.0087-nat beat over the 1.1147 SOTA. The novel
+lever is "spend compression headroom (Brotli + mixed-int `attn=int5` /
+`mlp=int6` / `embed=int8`) on an extra transformer layer": 11 L → 12 L
+while staying under the 16 MB artifact cap. If the reproduction lands
+within noise of the claim, the natural follow-up is `stack_on_best`:
+layer Legal Score-First TTT (PR #549) and self-gen GPTQ calibration
+(PR #1019) on top of this 12 L + Brotli base to combine both gain
+sources.
 
 ## Configuration
 
@@ -109,10 +110,10 @@ step:3500/20000  train_loss:2.0667               train_time:328442ms step_avg:93
 ```
 
 Log was captured only through **step 3500 / 20000 @ 328 s**. No
-`VAL_LOSS_EVERY=4000` tick, no final val, no post-training GPTQ or gate lines
-made it into the slice. No warnings, no divergence — train loss is trending
-normally (2.30 → 2.07 between steps 500–3500). Observed step time ≈
-**94 ms/step**.
+`VAL_LOSS_EVERY=4000` tick, no final val, no post-training GPTQ or gate
+lines made it into the slice. No warnings, no divergence — train loss is
+trending normally (2.30 → 2.07 between steps 500–3500). Observed step
+time ≈ **94 ms/step**.
 
 ### Gate metrics (from `experiment.json`)
 
@@ -129,72 +130,74 @@ prompt). Author-claim reference: **1.10597 bpb (σ = 0.00032, n=3)**.
 | `promote_ema_bpb` | null | — | not yet run |
 | `promote_int6_bpb` | null | — | not yet run |
 
-Vs. the author's 1.10597 claim, our `screen_ema_bpb=1.1293` is **+0.0233 nats
-above** the PR#1458 target and **+0.0146 above** the 1.1147 SOTA.
+Vs. the author's 1.10597 claim, our `screen_ema_bpb=1.1293` is **+0.0233
+nats above** the PR#1458 target and **+0.0146 above** the 1.1147 SOTA.
 
-The gate passed **structurally**: Brotli + mixed-int5-attn compression math
-works and the artifact lands at 14.39 MB with 1.61 MB headroom, validating
-the "spend it on a 12th layer" premise. The quant gap of 0.0109 nats is
-healthy. But the screen BPB sits well above both our baseline and the
-author's claim.
+The gate passed **structurally**: Brotli + mixed-int5-attn compression
+math works and the artifact lands at 14.39 MB with 1.61 MB headroom,
+validating the "spend it on a 12th layer" premise. The quant gap of
+0.0109 nats is healthy. But the screen BPB sits well above both our
+baseline and the author's claim.
 
 ### Critical observation: the schedule does not fit the wallclock cap on our infra
 
-At the logged **94 ms/step**, 20000 iterations ⇒ 20000 × 0.094 s ≈ **1880 s ≈
-31.3 min**, more than 3× the `MAX_WALLCLOCK_SECONDS=600` budget. The recorded
-`wallclock_s=420` plus the last logged `step 3500 @ 328 s` imply the run was
-terminated by the wallclock cap somewhere around step 4000–4500, missing
-**~80 % of the schedule** including the entire `WARMDOWN_ITERS=3500` tail.
-That is the most likely reason screen BPB landed so far from both our 1.081
-baseline and the author's 1.10597 claim: the model was cut off mid-training
-before warmdown, not because the PR's ML ideas are wrong. Either our
-per-step cost is higher than the author's, or the config needs to be adapted
-(shorter `ITERATIONS` / smaller batch / seq len) to actually fit 20 k steps
-inside 600 s on our 8× H100 box.
+At the logged **94 ms/step**, 20000 iterations ⇒ 20000 × 0.094 s ≈
+**1880 s ≈ 31.3 min**, more than 3× the `MAX_WALLCLOCK_SECONDS=600`
+budget. The recorded `wallclock_s=420` plus the last logged `step 3500 @
+328 s` imply the run was terminated by the wallclock cap somewhere
+around step 4000–4500, missing **~80 % of the schedule** including the
+entire `WARMDOWN_ITERS=3500` tail. That is the most likely reason screen
+BPB landed so far from both our 1.081 baseline and the author's 1.10597
+claim: the model was cut off mid-training before warmdown, not because
+the PR's ML ideas are wrong. Either our per-step cost is higher than the
+author's, or the config needs to be adapted (shorter `ITERATIONS` /
+smaller batch / seq len) to actually fit 20 k steps inside 600 s on our
+8× H100 box.
 
 ## Verdict
 
-**neutral** — reproduction is inconclusive. The gate passed on a structural
-level (artifact 14.39 MB, quant gap 0.0109 nats), so the 12 L + Brotli +
-`attn=int5` budget math holds up. But screen `ema_bpb = 1.1293` is +0.0483
-vs our 1.0810 baseline and +0.0233 vs the 1.10597 author claim, and the
-leading diagnosis is a wallclock-budget mismatch on our infra (~94 ms/step
-× 20 k steps ≫ 600 s cap), not a failure of the PR's ML ideas. Cannot call
-this a win or a regression until the schedule actually fits the budget and
-we rerun.
+**neutral** — reproduction is inconclusive. The gate passed on a
+structural level (artifact 14.39 MB, quant gap 0.0109 nats), so the 12 L
++ Brotli + `attn=int5` budget math holds up. But screen `ema_bpb =
+1.1293` is +0.0483 vs our 1.0810 baseline and +0.0233 vs the 1.10597
+author claim, and the leading diagnosis is a wallclock-budget mismatch
+on our infra (~94 ms/step × 20 k steps ≫ 600 s cap), not a failure of
+the PR's ML ideas. Cannot call this a win or a regression until the
+schedule actually fits the budget and we rerun.
 
 ## Suggested follow-ups
 
 - **Root-cause the step time first.** 94 ms/step on 8× H100 at
   `TRAIN_BATCH_TOKENS=786432`, `SEQ_LEN=2048`, 12 L × 512 dim is notably
-  slower than records that finish 20 k steps in ~450–550 s. Profile one step
-  (`torch.cuda.Event`, `nsys`) to see whether Brotli / mixed-int /
-  XSA-on-all-11-layers introduced the slowdown, or whether we are missing a
-  `torch.compile` / kernel the author had.
+  slower than records that finish 20 k steps in ~450–550 s. Profile one
+  step (`torch.cuda.Event`, `nsys`) to see whether Brotli / mixed-int /
+  XSA-on-all-11-layers introduced the slowdown, or whether we are
+  missing a `torch.compile` / kernel the author had.
 - **Re-run at a schedule that actually fits 600 s.** Either (a) drop
   `ITERATIONS` to ~5500–6000 at the current step time, or (b) cut
-  `TRAIN_BATCH_TOKENS` / `TRAIN_SEQ_LEN` so 20 k steps fit in 600 s. Option
-  (b) is preferable because it preserves the warmdown length the recipe was
-  tuned for, then re-measure screen BPB.
-- **Run the promote phase (3-seed full-fidelity)** once the wallclock issue
-  is fixed. Only 3-seed promote data is informative against the author's
-  1.10597 ± 0.00032 claim.
-- **Fix training-log capture.** Only steps 0–3500 made it into `train.log`.
-  We need the warmdown / final val / GPTQ / gate lines in every screen log
-  to diagnose runs like this without guesswork.
-- **Audit a suspicious env var.** `INT8_KEEP_FLOAT_FP32_NAME_PATTERNS` is
-  literally `"','.join(CONTROL_TENSOR_NAME_PATTERNS"` — an unevaluated
-  Python fragment that leaked into the env. Verify `train_gpt.py` parses
-  this safely (or that the code path is skipped because `SKIP_GPTQ=1`);
-  otherwise control tensors may not be kept in fp32 during int8 conversion.
-- **Bit-level ablation of the novel lever** (conditional on a clean rerun):
-  isolate the contributions of 11 L → 12 L, attn int6 → int5, and Brotli
-  vs the previous default compressor. Quantify the compressor-only delta as
-  a reusable nugget.
+  `TRAIN_BATCH_TOKENS` / `TRAIN_SEQ_LEN` so 20 k steps fit in 600 s.
+  Option (b) is preferable because it preserves the warmdown length the
+  recipe was tuned for, then re-measure screen BPB.
+- **Run the promote phase (3-seed full-fidelity)** once the wallclock
+  issue is fixed. Only 3-seed promote data is informative against the
+  author's 1.10597 ± 0.00032 claim.
+- **Fix training-log capture.** Only steps 0–3500 made it into
+  `train.log`. We need the warmdown / final val / GPTQ / gate lines in
+  every screen log to diagnose runs like this without guesswork.
+- **Audit a suspicious env var.** `INT8_KEEP_FLOAT_FP32_NAME_PATTERNS`
+  is literally `"','.join(CONTROL_TENSOR_NAME_PATTERNS"` — an
+  unevaluated Python fragment that leaked into the env. Verify
+  `train_gpt.py` parses this safely (or that the code path is skipped
+  because `SKIP_GPTQ=1`); otherwise control tensors may not be kept in
+  fp32 during int8 conversion.
+- **Bit-level ablation of the novel lever** (conditional on a clean
+  rerun): isolate the contributions of 11 L → 12 L, attn int6 → int5,
+  and Brotli vs the previous default compressor. Quantify the
+  compressor-only delta as a reusable nugget.
 - **Use the 1.61 MB artifact headroom.** If promote reproduces, leftover
-  cap is enough for e.g. a second VE bank, wider `BIGRAM_DIM`, or per-layer
-  MLP expansion — any of which could buy further BPB.
+  cap is enough for e.g. a second VE bank, wider `BIGRAM_DIM`, or
+  per-layer MLP expansion — any of which could buy further BPB.
 - **`stack_on_best` branch, conditional on reproduction.** Layer Legal
-  Score-First TTT (PR #549) and self-gen GPTQ calibration (PR #1019) on top
-  of the confirmed 12 L + Brotli base on a new branch
+  Score-First TTT (PR #549) and self-gen GPTQ calibration (PR #1019) on
+  top of the confirmed 12 L + Brotli base on a new branch
   `auto/recipe/12l_brotli_ttt_gptq`.
