@@ -281,6 +281,26 @@ class ClusterManager:
                     return (host, indices)
         return None
 
+    def reserve_gpus_for(self, experiment_id: str, host: str,
+                          gpu_indices: list[int]):
+        """Mark specific GPUs on a host as assigned to an experiment
+        without running the normal allocator. Used by orphan recovery
+        to re-establish tracking for runs that survived a scheduler
+        restart so new launches don't collide with them."""
+        with self._lock:
+            node = self._nodes.get(host)
+            if not node:
+                log.warning("reserve_gpus_for: unknown host %s", host)
+                return
+            for g in node.gpus:
+                if g.index in gpu_indices:
+                    g.assigned_experiment = experiment_id
+            self._running_jobs[experiment_id] = _RunningJob(
+                host=host, gpu_indices=list(gpu_indices),
+            )
+            log.info("Reserved (recovery) %s: %s GPUs %s",
+                     experiment_id, host, gpu_indices)
+
     def release_gpus(self, experiment_id: str):
         """Release GPUs held by an experiment."""
         with self._lock:

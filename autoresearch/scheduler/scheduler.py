@@ -448,12 +448,47 @@ class Scheduler:
                     recent_losses=[],
                     last_step=0,
                 )
-                # Try to read the remote log directly — go straight to
-                # the NodeClient because _running_jobs is empty on a
-                # fresh scheduler and get_log_tail() would return "".
+                # First check if the remote process is still alive. A
+                # scheduler restart in the middle of a long training run
+                # leaves the remote torchrun happily running — we must
+                # NOT mark it failed or the scheduler will launch a new
+                # experiment on top of it.
+                client = self.cluster._clients.get(exp.node_host or "")
+                if client is not None:
+                    try:
+                        pid_r = client._run_ssh(
+                            f"cat {client.ssh.work_dir}/experiments/{exp.id}/launch.pid 2>/dev/null",
+                            timeout=10)
+                        remote_pid = (pid_r.stdout or "").strip()
+                        if remote_pid.isdigit():
+                            alive_r = client._run_ssh(
+                                f"kill -0 {remote_pid} 2>/dev/null && echo ALIVE",
+                                timeout=10)
+                            if "ALIVE" in (alive_r.stdout or ""):
+                                log.warning(
+                                    "orphan %s: remote PID %s still alive "
+                                    "— re-tracking instead of recovering",
+                                    exp.id, remote_pid)
+                                # Re-allocate the GPUs in the in-memory
+                                # cluster state so other experiments don't
+                                # collide with this run.
+                                try:
+                                    self.cluster.reserve_gpus_for(
+                                        exp.id, exp.node_host or "",
+                                        exp.gpu_indices or list(range(8)))
+                                except Exception:
+                                    pass
+                                # Re-add to _active_runs so the regular
+                                # completion checker picks it up.
+                                with self._lock:
+                                    self._active_runs[exp.id] = stub
+                                continue
+                    except Exception as e:
+                        log.debug("orphan %s: liveness probe failed: %s",
+                                  exp.id, e)
+                # Process is gone — try to read log and recover metrics.
                 log_text = ""
                 try:
-                    client = self.cluster._clients.get(exp.node_host or "")
                     if client is not None:
                         log_text = client.fetch_log_tail(exp.id, lines=500) or ""
                 except Exception as e:
