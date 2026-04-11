@@ -1,0 +1,9 @@
+{
+  "recipe_id": "rec_20260411_2026_04_03_muoneqr_depthrecurrence_wd090_f95f0efd",
+  "source_ref": "/home/azureuser/parameter-golf/records/track_10min_16mb/2026-04-03_MuonEqR_DepthRecurrence_WD090_AllInt6",
+  "val_bpb": 1.0912,
+  "artifact_mb": null,
+  "features": [
+    "sota_fork"
+  ]
+}

@@ -1,0 +1,72 @@
+id: rec_20260411_2026_04_03_muoneqr_depthrecurrence_wd090_f95f0efd
+name: 2026-04-03_MuonEqR_DepthRecurrence_WD090_AllInt6
+description: 'Forked from 2026-04-03_MuonEqR_DepthRecurrence_WD090_AllInt6. '
+parent_recipe: null
+features:
+- sota_fork
+feature_set_hash: f95f0efdec3b985b
+env_overrides:
+  ITERATIONS: '20000'
+  WARMDOWN_FRAC: '.667'
+  TRAIN_BATCH_TOKENS: '786432'
+  TRAIN_SEQ_LEN: '2048'
+  EVAL_SEQ_LEN: '2048'
+  TRAIN_LOG_EVERY: '500'
+  VAL_BATCH_TOKENS: '524288'
+  VAL_LOSS_EVERY: '4000'
+  VOCAB_SIZE: '4096'
+  NUM_LAYERS: '11'
+  XSA_LAST_N: '11'
+  NUM_KV_HEADS: '4'
+  MODEL_DIM: '512'
+  EMBEDDING_DIM: '512'
+  NUM_HEADS: '8'
+  MLP_MULT: '4.'
+  LOGIT_SOFTCAP: 3e1
+  ROPE_BASE: 1e4
+  ROPE_DIMS: '16'
+  ROPE_TRAIN_SEQ_LEN: '2048'
+  VE_DIM: '128'
+  VE_LAYERS: 9,10
+  QK_GAIN_INIT: '4.'
+  EMBED_LR: '.6'
+  HEAD_LR: '.008'
+  TIED_EMBED_LR: '.03'
+  TIED_EMBED_INIT_STD: '.005'
+  MATRIX_LR: '.02'
+  SCALAR_LR: '.02'
+  MUON_MOMENTUM: '.99'
+  MUON_BACKEND_STEPS: '5'
+  MUON_MOMENTUM_WARMUP_START: '.92'
+  MUON_MOMENTUM_WARMUP_STEPS: '1500'
+  BETA1: '.9'
+  BETA2: '.95'
+  ADAM_EPS: 1e-08
+  GRAD_CLIP_NORM: '.3'
+  EVAL_STRIDE: '64'
+  MUON_BETA2: '.95'
+  ADAM_WD: '.02'
+  MUON_WD: '.085'
+  EMBED_WD: '.085'
+  EMA_DECAY: '.997'
+  PARALLEL_RESIDUAL: '0'
+  PARALLEL_START_LAYER: '7'
+  RECUR_LAYERS: 4,5
+  RECUR_START_STEP: '3000'
+  REPEAT_UNTIE_MLP_LAYERS: ''
+  DISABLE_LAYER0_ATTN: '0'
+  MIXED_QUANT: '0'
+  N_INT6_LAYERS: '32'
+  GPTQ_CALIBRATION_BATCHES: '64'
+  GPTQ_RESERVE_SECONDS: 1e1
+  CONTROL_TENSOR_NAME_PATTERNS: attn_scale,attn_scales,mlp_scale,mlp_scales,resid_mix,resid_mixes,q_gain,skip_weight,skip_weights,skip_gates,ve_layer_scales,ve_shared.scale,parallel_post_lambdas,parallel_resid_lambdas
+  SAVE_QUANT_STATE: ''
+  INT5_LAYERS: ''
+script_path: train_gpt.py
+base_commit: ''
+base_branch: ''
+source_experiment: null
+best_val_bpb: null
+best_int6_bpb: null
+best_artifact_mb: null
+best_experiment_id: null
