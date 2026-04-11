@@ -1,0 +1,9 @@
+{
+  "recipe_id": "rec_20260411_2026_04_01_vocab4096_mlpmult4_wd085_c773605d",
+  "source_ref": "/home/azureuser/parameter-golf/records/track_10min_16mb/2026-04-01_Vocab4096_MLPMult4_WD085",
+  "val_bpb": 1.09785,
+  "artifact_mb": 15.168628692626953,
+  "features": [
+    "sota_fork"
+  ]
+}
