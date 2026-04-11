@@ -47,13 +47,13 @@ final_int8_zlib_roundtrip val_loss:2.2474 val_bpb:1.3310 eval_time:10793ms
 final_int8_zlib_roundtrip_exact val_loss:2.24736472 val_bpb:1.33101597
 ```
 
-Baseline val_bpb for delta: **1.10625353**
+Baseline val_bpb for delta: **1.081** (current SOTA reference).
 
-| Metric             | Value       | Δ vs baseline              |
+| Metric             | Value       | Δ vs baseline (1.081)      |
 |--------------------|-------------|----------------------------|
-| screen_ema_bpb     | **1.29712** | **+0.19087 (worse)**       |
-| gate_int6_bpb      | **1.33100** | **+0.22475 (worse)**       |
-| gate_quant_gap     | −1.6e−05    | ≈ 0 (clean roundtrip)      |
+| screen_ema_bpb     | **1.29712** | **+0.21612 (worse)**       |
+| gate_int6_bpb      | **1.33100** | **+0.25000 (worse)**       |
+| gate_quant_gap     | −1.6e−05    | ≈ 0 (clean int8+zlib roundtrip) |
 | gate_artifact_mb   | 0.0 reported (actual int8+zlib ≈ 15.18 MB, under 16 MB cap) | — |
 | gate_passed        | true (quant-gap/artifact only, not BPB) | —          |
 | wallclock          | 480.124 s — hit cap at step 1489 / 20000 | —         |
@@ -71,15 +71,15 @@ Notes:
   were absent in this environment.
 - Only **1489 / 20000 steps** completed before the wallclock cap, leaving the
   config deeply undertrained relative to the 8×H100 SOTA regime that produced
-  the 1.106 baseline.
+  the 1.081 baseline.
 - No warnings or divergence in the log. Transient spike at step 2
   (`train_loss:19.6042`) recovers by step 4 — normal warmup behavior.
 - `step_avg` is stable at ~322 ms across the whole run — no throughput cliff.
 
 ## Verdict
 
-**regression** — absolute val_bpb (EMA 1.297, int6 1.331) is ~0.19–0.22 nats
-worse than the 1.10625 baseline. `gate_passed=true` reflects only the
+**regression** — absolute val_bpb (EMA 1.297, int6 1.331) is ~0.22–0.25 nats
+worse than the 1.081 baseline. `gate_passed=true` reflects only the
 quant-gap and artifact-size checks, not a BPB win. The single-GPU,
 wallclock-truncated screen also undersells the hypothesis's core claim
 (sync-point reduction), so the result does not fully falsify shallower-wider
@@ -88,8 +88,8 @@ approach SOTA BPB and should not be promoted.
 
 ## Suggested follow-ups
 
-- **Drop 7L from the depth sweep** for now — the screen gap (>0.19 nats) is
-  too large to justify additional seeds; leaderboard SOTA clusters at 10–11
+- **Drop 7L from the depth sweep** for now — the screen gap (>0.21 nats) is
+  too large to justify additional seeds; leaderboard SOTA clusters at 10–12
   layers.
 - **Matched-param depth control:** screen 10L/480d and 11L/448d at ~19 M
   params under the same gate to confirm depth dominance before abandoning
@@ -103,7 +103,7 @@ approach SOTA BPB and should not be promoted.
   for reduced depth by extending effective receptive field.
 - **Stop env-only forks from vanilla `train_gpt.py`.** Future shape sweeps
   should stack on the current SOTA recipe (Self-Gen GPTQ + all-layer XSA +
-  EMA) so the result is comparable to the frontier.
+  EMA, val_bpb ≈ 1.081) so results are comparable to the frontier.
 - **Fix the screening budget.** A 480 s 1-GPU gate starves shallow configs
   of steps. Consider gating on tokens/sec-adjusted projected BPB, not
   absolute truncated BPB, before declaring more shape regressions.

@@ -107,6 +107,9 @@ tr:hover { background: rgba(88, 166, 255, 0.04); }
 /* Responsive */
 @media (max-width: 768px) { .card-grid { grid-template-columns: 1fr; } .cluster-grid { flex-direction: column; } }
 </style>
+<script src="https://unpkg.com/cytoscape@3.28.1/dist/cytoscape.min.js"></script>
+<script src="https://unpkg.com/dagre@0.8.5/dist/dagre.min.js"></script>
+<script src="https://unpkg.com/cytoscape-dagre@2.5.0/cytoscape-dagre.js"></script>
 </head>
 <body>
 
@@ -128,6 +131,7 @@ tr:hover { background: rgba(88, 166, 255, 0.04); }
   <button onclick="showPanel('cluster')">Cluster</button>
   <button onclick="showPanel('claude')">Claude</button>
   <button onclick="showPanel('events')">Events</button>
+  <button onclick="showPanel('trace')">Trace</button>
   <button onclick="showPanel('research')">Discovery</button>
   <button class="btn btn-sm btn-primary" style="margin-left:auto;align-self:center" onclick="showNewIdeaModal()">+ New Idea</button>
   <button class="btn btn-sm btn-danger" style="align-self:center;margin-left:8px" onclick="stopAll()">Stop All</button>
@@ -217,6 +221,34 @@ tr:hover { background: rgba(88, 166, 255, 0.04); }
     </div>
   </div>
 
+  <!-- TRACE PANEL -->
+  <div class="panel" id="panel-trace">
+    <div class="card" style="margin-bottom:12px">
+      <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+        <h3 style="margin:0">Span Graph</h3>
+        <label style="color:var(--text-dim);font-size:12px">Since
+          <select id="trace-since" onchange="refreshTrace()">
+            <option value="600">10 min</option>
+            <option value="3600" selected>1 hour</option>
+            <option value="21600">6 hours</option>
+            <option value="86400">24 hours</option>
+            <option value="604800">7 days</option>
+          </select>
+        </label>
+        <label style="color:var(--text-dim);font-size:12px">
+          <input type="checkbox" id="trace-errors-only" onchange="refreshTrace()"> errors only
+        </label>
+        <input type="text" id="trace-kind-filter" placeholder="kind filter (comma-sep)" style="flex:0 0 240px;background:var(--bg);border:1px solid var(--border);color:var(--text);padding:4px 8px;border-radius:3px;font-family:inherit;font-size:12px" oninput="refreshTrace()">
+        <button class="btn btn-sm" onclick="refreshTrace()">Refresh</button>
+        <span id="trace-summary" style="color:var(--text-dim);font-size:12px;margin-left:auto"></span>
+      </div>
+    </div>
+    <div class="card" style="padding:0;position:relative;height:680px">
+      <div id="trace-cy" style="position:absolute;inset:0"></div>
+      <div id="trace-detail" style="position:absolute;top:8px;right:8px;width:320px;max-height:calc(100% - 16px);overflow:auto;background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:10px;font-size:12px;display:none"></div>
+    </div>
+  </div>
+
   <!-- RESEARCH PANEL -->
   <div class="panel" id="panel-research">
     <div class="card" style="margin-bottom:12px">
@@ -302,6 +334,175 @@ function showPanel(name) {
   if (name === 'claude') refreshClaude();
   if (name === 'events') refreshEvents();
   if (name === 'research') refreshResearch();
+  if (name === 'trace') refreshTrace();
+}
+
+// ── Span trace graph ──
+const KIND_COLORS = {
+  poll_cycle: '#7aa2f7',
+  fetch_prs: '#7dcfff',
+  pr_eval: '#9ece6a',
+  deep_research: '#bb9af7',
+  web_research_cycle: '#bb9af7',
+  fetch_papers: '#7dcfff',
+  paper_eval: '#9ece6a',
+  mine_records: '#e0af68',
+  poll_merged_prs: '#e0af68',
+  experiment_launch: '#f7768e',
+  stage_screen: '#ff9e64',
+  stage_gate: '#ff9e64',
+  stage_promote: '#ff9e64',
+};
+let _cy = null;
+
+async function refreshTrace() {
+  if (typeof cytoscape === 'undefined') {
+    document.getElementById('trace-cy').innerHTML = '<div style="padding:20px;color:var(--text-dim)">cytoscape.js failed to load</div>';
+    return;
+  }
+  const since = document.getElementById('trace-since').value;
+  const onlyErr = document.getElementById('trace-errors-only').checked;
+  const kindFilter = document.getElementById('trace-kind-filter').value.trim();
+  const qs = new URLSearchParams({ since_s: since, limit: '2000' });
+  if (onlyErr) qs.set('only_errors', '1');
+  if (kindFilter) qs.set('kind', kindFilter);
+  const data = await api('GET', '/api/traces?' + qs.toString());
+  const nodes = data.nodes || [];
+  const edges = data.edges || [];
+
+  const summary = document.getElementById('trace-summary');
+  const kc = data.kind_counts || {};
+  const sc = data.status_counts || {};
+  const kcStr = Object.entries(kc).sort((a,b)=>b[1]-a[1]).slice(0,6).map(([k,v])=>k+':'+v).join(' · ');
+  summary.textContent = `${data.total} spans · ${kcStr}` + (sc.error ? ` · err:${sc.error}` : '') + (sc.running ? ` · running:${sc.running}` : '');
+
+  const cyNodes = nodes.map(n => ({
+    data: {
+      id: n.id,
+      label: (n.name || n.kind).slice(0, 32),
+      kind: n.kind,
+      status: n.status,
+      duration_ms: n.duration_ms || 0,
+      raw: n,
+    },
+  }));
+  const cyEdges = edges.map(e => ({
+    data: { id: e.source + '->' + e.target, source: e.source, target: e.target },
+  }));
+
+  if (_cy) { _cy.destroy(); _cy = null; }
+  _cy = cytoscape({
+    container: document.getElementById('trace-cy'),
+    elements: { nodes: cyNodes, edges: cyEdges },
+    style: [
+      {
+        selector: 'node',
+        style: {
+          'label': 'data(label)',
+          'background-color': ele => KIND_COLORS[ele.data('kind')] || '#565f89',
+          'color': '#c0caf5',
+          'font-size': '9px',
+          'text-outline-color': '#1a1b26',
+          'text-outline-width': 1,
+          'text-valign': 'center',
+          'text-halign': 'center',
+          'width': ele => {
+            const d = ele.data('duration_ms') || 0;
+            return Math.max(16, Math.min(70, 16 + Math.log10(1 + d) * 10));
+          },
+          'height': ele => {
+            const d = ele.data('duration_ms') || 0;
+            return Math.max(16, Math.min(70, 16 + Math.log10(1 + d) * 10));
+          },
+          'border-width': 1,
+          'border-color': '#1a1b26',
+        },
+      },
+      {
+        selector: 'node[status = "error"]',
+        style: { 'border-color': '#f7768e', 'border-width': 3 },
+      },
+      {
+        selector: 'node[status = "timeout"]',
+        style: { 'border-color': '#e0af68', 'border-width': 3 },
+      },
+      {
+        selector: 'node[status = "running"]',
+        style: { 'border-color': '#9ece6a', 'border-width': 2, 'border-style': 'dashed' },
+      },
+      {
+        selector: 'edge',
+        style: {
+          'width': 1,
+          'line-color': '#414868',
+          'target-arrow-color': '#414868',
+          'target-arrow-shape': 'triangle',
+          'curve-style': 'bezier',
+          'arrow-scale': 0.7,
+        },
+      },
+      {
+        selector: 'node:selected',
+        style: { 'border-color': '#bb9af7', 'border-width': 3 },
+      },
+    ],
+    layout: {
+      name: (typeof cytoscape !== 'undefined' && cytoscape('layout', 'dagre')) ? 'dagre' : 'breadthfirst',
+      rankDir: 'LR',
+      nodeSep: 20,
+      rankSep: 60,
+      padding: 20,
+      animate: false,
+    },
+    wheelSensitivity: 0.2,
+  });
+
+  _cy.on('tap', 'node', evt => {
+    const n = evt.target.data('raw');
+    const d = document.getElementById('trace-detail');
+    d.style.display = 'block';
+    const started = n.started_at ? new Date(n.started_at * 1000).toLocaleTimeString() : '';
+    const dur = n.duration_ms != null ? (n.duration_ms + ' ms') : '(running)';
+    const entity = n.entity_type ? `${n.entity_type}:${n.entity_id}` : '';
+    const attrRows = Object.entries(n.attrs || {}).map(([k, v]) => {
+      let vs = typeof v === 'object' ? JSON.stringify(v) : String(v);
+      if (vs.length > 120) vs = vs.slice(0, 117) + '…';
+      return `<tr><td style="color:var(--text-dim);padding-right:6px;vertical-align:top">${k}</td><td>${vs}</td></tr>`;
+    }).join('');
+    d.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <strong>${n.kind}</strong>
+        <span style="color:var(--text-dim);cursor:pointer" onclick="document.getElementById('trace-detail').style.display='none'">✕</span>
+      </div>
+      <div style="margin:6px 0 8px 0;word-break:break-word">${n.name}</div>
+      <div style="color:var(--text-dim);font-size:11px">status: <span style="color:${n.status==='error'?'#f7768e':n.status==='running'?'#9ece6a':'#c0caf5'}">${n.status}</span> · ${started} · ${dur}</div>
+      ${entity ? `<div style="color:var(--text-dim);font-size:11px;margin-top:2px">entity: ${entity}</div>` : ''}
+      ${n.error ? `<div style="color:#f7768e;font-size:11px;margin-top:4px">${n.error}</div>` : ''}
+      <div style="margin-top:8px;font-size:11px;color:var(--text-dim)">trace: <a href="#" onclick="loadTraceById('${n.trace_id}');return false">${(n.trace_id||'').slice(0,10)}…</a></div>
+      <table style="margin-top:6px;font-size:11px;width:100%;border-collapse:collapse">${attrRows}</table>
+    `;
+  });
+  _cy.on('tap', evt => {
+    if (evt.target === _cy) {
+      document.getElementById('trace-detail').style.display = 'none';
+    }
+  });
+}
+
+async function loadTraceById(traceId) {
+  if (!traceId) return;
+  const qs = new URLSearchParams({ trace_id: traceId, limit: '2000' });
+  const data = await api('GET', '/api/traces?' + qs.toString());
+  // Replace elements with this trace's spans only.
+  if (!_cy) return refreshTrace();
+  _cy.elements().remove();
+  const cyNodes = (data.nodes || []).map(n => ({
+    data: { id: n.id, label: (n.name || n.kind).slice(0,32), kind: n.kind, status: n.status, duration_ms: n.duration_ms || 0, raw: n },
+  }));
+  const cyEdges = (data.edges || []).map(e => ({ data: { id: e.source+'->'+e.target, source: e.source, target: e.target } }));
+  _cy.add(cyNodes);
+  _cy.add(cyEdges);
+  _cy.layout({ name: cytoscape('layout','dagre')?'dagre':'breadthfirst', rankDir: 'LR', nodeSep: 20, rankSep: 60 }).run();
 }
 
 // ── Leaderboard ──

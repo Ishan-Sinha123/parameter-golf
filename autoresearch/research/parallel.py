@@ -124,6 +124,91 @@ class ParallelClient:
 
     # ── Task API (Deep Research) ──────────────────────────────────────
 
+    def submit_deep_research(
+        self,
+        query: str,
+        processor: Optional[str] = None,
+        output_type: str = "text",
+        json_schema: Optional[dict] = None,
+    ) -> DeepResearchResult:
+        """Fire-and-forget variant: creates the task, returns run_id, does
+        not wait for the result. Use `fetch_deep_research(run_id)` later.
+        """
+        proc = processor or self.default_processor
+        if output_type == "json" and json_schema:
+            output_schema = {"type": "json", "json_schema": json_schema}
+        elif output_type == "text":
+            output_schema = {"type": "text"}
+        else:
+            output_schema = {"type": "auto"}
+        data = {
+            "input": query,
+            "processor": proc,
+            "task_spec": {"output_schema": output_schema},
+        }
+        try:
+            create_resp = self._request(TASK_CREATE_URL, data, timeout=30)
+            run_id = create_resp.get("run_id") or create_resp.get("id", "")
+            log.info("Parallel deep research submitted: run_id=%s processor=%s",
+                     run_id, proc)
+            if not run_id:
+                return DeepResearchResult(
+                    run_id="", status="failed", processor=proc,
+                    error=f"No run_id in response: {create_resp}",
+                )
+            return DeepResearchResult(
+                run_id=run_id, status="submitted", processor=proc,
+            )
+        except urllib.error.HTTPError as e:
+            body = e.read().decode()[:500]
+            log.error("Parallel submit HTTP error %d: %s", e.code, body)
+            return DeepResearchResult(
+                run_id="", status="failed", processor=proc,
+                error=f"HTTP {e.code}: {body}",
+            )
+        except Exception as e:
+            log.error("Parallel submit error: %s", e)
+            return DeepResearchResult(
+                run_id="", status="failed", processor=proc,
+                error=str(e),
+            )
+
+    def fetch_deep_research(self, run_id: str, processor: str = "pro") -> DeepResearchResult:
+        """Poll /status once and, if finished, fetch /result.
+
+        Returns a result whose `status` is one of: submitted | running |
+        queued | completed | failed | error. Caller is responsible for
+        retrying while status is still pending.
+        """
+        status_url = TASK_STATUS_URL.format(run_id=run_id)
+        result_url = TASK_RESULT_URL.format(run_id=run_id)
+        try:
+            status_resp = self._get(status_url, timeout=30)
+        except Exception as e:
+            return DeepResearchResult(
+                run_id=run_id, status="running", processor=processor,
+                error=f"status poll error: {e}",
+            )
+        status = (status_resp.get("status") or "").lower()
+        if status in ("completed", "done", "succeeded", "success"):
+            try:
+                result_resp = self._get(result_url, timeout=60)
+            except Exception as e:
+                return DeepResearchResult(
+                    run_id=run_id, status="failed", processor=processor,
+                    error=f"result fetch failed: {e}",
+                )
+            return self._parse_task_result(run_id, processor, result_resp)
+        if status in ("failed", "error", "cancelled", "canceled"):
+            return DeepResearchResult(
+                run_id=run_id, status="failed", processor=processor,
+                error=status_resp.get("error") or f"status={status}",
+            )
+        # queued / running — still pending
+        return DeepResearchResult(
+            run_id=run_id, status=status or "running", processor=processor,
+        )
+
     def deep_research(
         self,
         query: str,
@@ -245,15 +330,44 @@ class ParallelClient:
         content = resp.get("content")
         basis = resp.get("basis", [])
 
-        # output can be a string (text mode) or dict (auto/json mode)
-        output_str = None
-        content_dict = None
+        # output can be a string (text mode) or dict (auto/json mode).
+        # When dict, Parallel nests the text in "content"/"text"/"markdown"
+        # and may also put citations under "basis".
+        output_str: Optional[str] = None
+        content_dict: Optional[dict] = None
         if isinstance(output, str):
             output_str = output
         elif isinstance(output, dict):
             content_dict = output
+            for key in ("content", "text", "markdown", "output", "answer", "summary"):
+                v = output.get(key)
+                if isinstance(v, str) and v.strip():
+                    output_str = v
+                    break
+            if output_str is None:
+                # Last resort: serialize the dict so downstream code still
+                # has *something* to store rather than dropping silently.
+                try:
+                    output_str = json.dumps(output, indent=2)[:20000]
+                except Exception:
+                    pass
+            inner_basis = output.get("basis")
+            if isinstance(inner_basis, list) and not basis:
+                basis = inner_basis
         if isinstance(content, dict):
             content_dict = content
+            if output_str is None:
+                for key in ("content", "text", "markdown", "output", "answer", "summary"):
+                    v = content.get(key)
+                    if isinstance(v, str) and v.strip():
+                        output_str = v
+                        break
+        elif isinstance(content, str) and output_str is None:
+            output_str = content
+
+        if output_str is None and not content_dict:
+            log.warning("Parallel result %s: no output/content found. keys=%s",
+                        run_id, list(resp.keys()))
 
         return DeepResearchResult(
             run_id=run_id,

@@ -199,9 +199,11 @@ class KnowledgeBase:
         tags: Optional[list[str]] = None,
     ) -> int:
         """Store web research findings from Parallel."""
+        citations = citations or []
         citation_text = "\n".join(
             f"- {c.get('url', 'unknown')}: {c.get('excerpt', '')[:200]}"
             for c in citations[:10]
+            if isinstance(c, dict)
         )
         content = (
             f"Research query: {query}\n\n"

@@ -71,6 +71,8 @@ class APIHandler(BaseHTTPRequestHandler):
             (r"^/api/experiments/([^/]+)$", self._api_experiment_detail),
             (r"^/api/experiments/([^/]+)/logs$", self._api_experiment_logs),
             (r"^/api/events$", self._api_events),
+            (r"^/api/traces$", self._api_traces),
+            (r"^/api/traces/([^/]+)$", self._api_trace_detail),
             (r"^/api/research/sota$", self._api_sota),
             (r"^/api/knowledge$", self._api_knowledge),
             (r"^/api/knowledge/search$", self._api_knowledge_search),
@@ -312,6 +314,146 @@ class APIHandler(BaseHTTPRequestHandler):
                 except (json.JSONDecodeError, TypeError):
                     pass
         self._json_response({"events": events})
+
+    def _api_traces(self, query):
+        """Span tree for dashboard visualization.
+
+        Query params:
+          since_s: only return spans with started_at >= now - since_s
+                   (default 3600)
+          trace_id: filter to a single trace
+          kind: comma-separated list of kinds to include
+          limit: max spans to return (default 2000)
+          only_errors: if set, only error/timeout spans
+        """
+        if _registry is None:
+            self._json_response({"nodes": [], "edges": []})
+            return
+        import sqlite3, time as _t
+        since_s = float(query.get("since_s", [3600])[0])
+        trace_id = query.get("trace_id", [None])[0]
+        kinds = query.get("kind", [None])[0]
+        limit = int(query.get("limit", [2000])[0])
+        only_errors = query.get("only_errors", [None])[0] is not None
+
+        clauses = []
+        args: list = []
+        if trace_id:
+            clauses.append("trace_id = ?")
+            args.append(trace_id)
+        else:
+            clauses.append("started_at >= ?")
+            args.append(_t.time() - since_s)
+        if kinds:
+            kl = [k.strip() for k in kinds.split(",") if k.strip()]
+            if kl:
+                clauses.append("kind IN (" + ",".join("?" * len(kl)) + ")")
+                args.extend(kl)
+        if only_errors:
+            clauses.append("status IN ('error','timeout')")
+        where = " WHERE " + " AND ".join(clauses) if clauses else ""
+        sql = (
+            "SELECT span_id, trace_id, parent_span_id, kind, name, "
+            "entity_type, entity_id, status, started_at, ended_at, "
+            "duration_ms, attrs, error "
+            f"FROM traces{where} ORDER BY started_at DESC LIMIT ?"
+        )
+        args.append(limit)
+
+        conn = sqlite3.connect(str(_registry.db_path), timeout=5)
+        conn.row_factory = sqlite3.Row
+        try:
+            rows = conn.execute(sql, args).fetchall()
+        finally:
+            conn.close()
+
+        nodes = []
+        edges = []
+        seen = set()
+        for r in rows:
+            attrs_raw = r["attrs"] or "{}"
+            try:
+                attrs = json.loads(attrs_raw)
+            except (json.JSONDecodeError, TypeError):
+                attrs = {}
+            nodes.append({
+                "id": r["span_id"],
+                "trace_id": r["trace_id"],
+                "parent": r["parent_span_id"],
+                "kind": r["kind"],
+                "name": r["name"],
+                "entity_type": r["entity_type"],
+                "entity_id": r["entity_id"],
+                "status": r["status"],
+                "started_at": r["started_at"],
+                "ended_at": r["ended_at"],
+                "duration_ms": r["duration_ms"],
+                "attrs": attrs,
+                "error": r["error"],
+            })
+            seen.add(r["span_id"])
+        for r in rows:
+            p = r["parent_span_id"]
+            if p and p in seen:
+                edges.append({"source": p, "target": r["span_id"]})
+        # Summary counts per kind for the legend.
+        kind_counts: dict[str, int] = {}
+        status_counts: dict[str, int] = {}
+        for n in nodes:
+            kind_counts[n["kind"]] = kind_counts.get(n["kind"], 0) + 1
+            status_counts[n["status"]] = status_counts.get(n["status"], 0) + 1
+        self._json_response({
+            "nodes": nodes,
+            "edges": edges,
+            "kind_counts": kind_counts,
+            "status_counts": status_counts,
+            "total": len(nodes),
+        })
+
+    def _api_trace_detail(self, query, span_id):
+        """Full trace tree containing the given span_id."""
+        if _registry is None:
+            self._json_response({"nodes": [], "edges": []})
+            return
+        import sqlite3
+        conn = sqlite3.connect(str(_registry.db_path), timeout=5)
+        conn.row_factory = sqlite3.Row
+        try:
+            row = conn.execute(
+                "SELECT trace_id FROM traces WHERE span_id=?", (span_id,)
+            ).fetchone()
+            if not row:
+                self._json_response({"error": "span not found"}, 404)
+                return
+            trace_id = row["trace_id"]
+            rows = conn.execute(
+                "SELECT * FROM traces WHERE trace_id=? "
+                "ORDER BY started_at ASC",
+                (trace_id,)
+            ).fetchall()
+        finally:
+            conn.close()
+        spans = []
+        for r in rows:
+            try:
+                attrs = json.loads(r["attrs"] or "{}")
+            except (json.JSONDecodeError, TypeError):
+                attrs = {}
+            spans.append({
+                "span_id": r["span_id"],
+                "parent_span_id": r["parent_span_id"],
+                "kind": r["kind"],
+                "name": r["name"],
+                "status": r["status"],
+                "entity_type": r["entity_type"],
+                "entity_id": r["entity_id"],
+                "started_at": r["started_at"],
+                "ended_at": r["ended_at"],
+                "duration_ms": r["duration_ms"],
+                "attrs": attrs,
+                "error": r["error"],
+            })
+        self._json_response({"trace_id": trace_id, "spans": spans})
 
     def _api_sota(self, query):
         best = _registry.get_best_sota() if _registry else None

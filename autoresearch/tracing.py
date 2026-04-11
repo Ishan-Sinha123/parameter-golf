@@ -48,6 +48,19 @@ def _new_id() -> str:
 
 
 class Span:
+    span_id: str
+    trace_id: str
+    parent_span_id: Optional[str]
+    kind: str
+    name: str
+    entity_type: str
+    entity_id: str
+    started_at: float
+    ended_at: Optional[float]
+    status: str
+    attrs: dict[str, Any]
+    error: str
+
     __slots__ = ("span_id", "trace_id", "parent_span_id", "kind", "name",
                  "entity_type", "entity_id", "started_at", "ended_at",
                  "status", "attrs", "error", "_tracer")
@@ -57,16 +70,16 @@ class Span:
                  parent: Optional["Span"]):
         self._tracer = tracer
         self.span_id = _new_id()
-        self.trace_id = parent.trace_id if parent else _new_id()
-        self.parent_span_id = parent.span_id if parent else None
+        self.trace_id = parent.trace_id if parent is not None else _new_id()
+        self.parent_span_id = parent.span_id if parent is not None else None
         self.kind = kind
         self.name = name
         self.entity_type = entity[0] if entity else ""
         self.entity_id = entity[1] if entity else ""
         self.started_at = time.time()
-        self.ended_at: Optional[float] = None
+        self.ended_at = None
         self.status = "running"
-        self.attrs: dict[str, Any] = {}
+        self.attrs = {}
         self.error = ""
 
     def set(self, key: str, value: Any) -> None:
@@ -170,6 +183,43 @@ class Tracer:
         if sp is None:
             return
         sp.set(key, value)
+
+    def record(self, *, kind: str, name: str,
+               started_at: float, ended_at: float,
+               entity: Optional[tuple[str, str]] = None,
+               parent_trace_id: Optional[str] = None,
+               status: str = "ok",
+               attrs: Optional[dict[str, Any]] = None,
+               error: str = "") -> Optional[str]:
+        """Write a retroactive, already-closed span.
+
+        Useful for async completions (e.g. experiment stage lifetimes
+        that span the deploy→poll→completion cycle across threads).
+        Returns the span_id, or None if tracing is disabled.
+        """
+        if not self._enabled:
+            return None
+        span_id = _new_id()
+        trace_id = parent_trace_id or _new_id()
+        duration_ms = int((ended_at - started_at) * 1000)
+        try:
+            with self._lock, self._connect() as conn:
+                conn.execute(
+                    """INSERT INTO traces (span_id, trace_id, parent_span_id,
+                        kind, name, entity_type, entity_id, status,
+                        started_at, ended_at, duration_ms, attrs, error)
+                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                    (span_id, trace_id, None, kind, name,
+                     entity[0] if entity else "",
+                     entity[1] if entity else "",
+                     status, started_at, ended_at, duration_ms,
+                     json.dumps(attrs or {}), error),
+                )
+                conn.commit()
+            return span_id
+        except Exception as e:
+            log.debug("trace record failed: %s", e)
+            return None
 
     # ── DB writes ─────────────────────────────────────────────────────
 

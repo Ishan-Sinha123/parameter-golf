@@ -242,17 +242,25 @@ class NodeClient:
                 log.error("rsync timeout to %s", self.ssh.host)
                 return None
 
-        # 4. Build env string
+        # 4. Build env string.
+        # Stage-budget variables (MAX_WALLCLOCK_SECONDS etc.) must always
+        # win over recipe env_overrides — SOTA baselines ship with a 4h
+        # budget which, if not clamped, makes screen/gate stages train
+        # for the full baseline duration instead of their stage budget.
         cuda_devices = ",".join(str(i) for i in gpu_indices)
+        _stage_budget_keys = {"MAX_WALLCLOCK_SECONDS"}
         env_parts = [
             f"CUDA_VISIBLE_DEVICES={cuda_devices}",
-            f"MAX_WALLCLOCK_SECONDS={wallclock_s}",
             f"EXPERIMENT_DESC='{experiment_id}'",
             f"RESULTS_TSV_PATH={remote_exp_dir}/results.tsv",
             f"LOG_DIR={remote_exp_dir}",
         ]
         for k, v in env_overrides.items():
+            if k in _stage_budget_keys:
+                continue  # clamped to stage budget below
             env_parts.append(f"{k}='{v}'")
+        # Append the stage budget LAST so it wins.
+        env_parts.append(f"MAX_WALLCLOCK_SECONDS={wallclock_s}")
         env_str = " ".join(env_parts)
 
         # 5. Launch via nohup + torchrun.

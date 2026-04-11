@@ -45,12 +45,12 @@ final_int8_zlib_roundtrip val_loss:2.2280 val_bpb:1.3195 eval_time:13493ms
 final_int8_zlib_roundtrip_exact val_loss:2.22798977 val_bpb:1.31954104
 ```
 
-Baseline for delta: **val_bpb = 1.10625353**.
+Baseline for delta: **val_bpb = 1.081** (current SOTA-class anchor).
 
-| Metric | Value | Δ vs baseline |
+| Metric | Value | Δ vs baseline (1.081) |
 |---|---|---|
-| `screen_ema_bpb` | 1.31026301 | **+0.20401** |
-| `gate_int6_bpb` (int8+zlib roundtrip) | 1.31954104 | **+0.21329** |
+| `screen_ema_bpb` | 1.31026301 | **+0.22926** |
+| `gate_int6_bpb` (int8+zlib roundtrip) | 1.31954104 | **+0.23854** |
 | `gate_quant_gap` | −4.10e-05 | ≈0 (lossless) |
 | `gate_artifact_mb` (metadata) | 0.0 | not populated — see anomalies |
 | Total int8+zlib artifact (log) | **19,822,953 B ≈ 19.82 MB** | **+3,822,953 B over 16 MB cap** |
@@ -89,7 +89,7 @@ Baseline for delta: **val_bpb = 1.10625353**.
 MLP_MULT=4 on the default shape blows both competition budgets: ~26.5 M
 params → 19.82 MB int8+zlib artifact (over the 16 MB decimal cap by
 ~3.82 MB) and ~400 ms/step → only 1,199 of 20,000 steps in 480 s,
-leaving int8+zlib val_bpb at **+0.21329 nats** vs the 1.10625 baseline.
+leaving int8+zlib val_bpb at **+0.23854 nats** vs the 1.081 baseline.
 The convergence-speed hypothesis is effectively unfalsified — the run
 never converged — and the artifact cap would disqualify this config as
 a submission even if quality had been competitive. The near-zero

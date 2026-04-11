@@ -66,6 +66,10 @@ def _build_core(config: AutoResearchConfig):
     processes. That's what lets the worker and dashboard run independently.
     """
     registry = Registry(config.abs_db_path)
+    # Initialize the span tracer against the same DB so spans land in the
+    # traces table. Safe to call multiple times.
+    from .tracing import init as _tracing_init
+    _tracing_init(config.abs_db_path)
     kb_path = Path(config.workspace_dir) / "db" / "knowledge_lance"
     knowledge = KnowledgeBase(kb_path)
     cluster = ClusterManager(config, registry)

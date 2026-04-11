@@ -27,6 +27,7 @@ from typing import Optional
 
 from ..config import AutoResearchConfig
 from ..cluster.manager import ClusterManager
+from ..tracing import tracer
 from ..db.models import (
     Experiment, ExperimentStatus, EventType,
 )
@@ -117,6 +118,12 @@ class Scheduler:
         summary = self.cluster.get_cluster_summary()
         log.info("Cluster: %d nodes online, %d GPUs total, %d free",
                  summary["online_nodes"], summary["total_gpus"], summary["free_gpus"])
+
+        # Recover orphan runs left over from a prior scheduler process.
+        try:
+            self._recover_orphan_runs()
+        except Exception as e:
+            log.exception("orphan recovery failed: %s", e)
 
         tick_count = 0
         while not self._stop_event.is_set():
@@ -391,6 +398,95 @@ class Scheduler:
             except Exception as e:
                 log.error("Error processing %s: %s", yaml_path.name, e)
 
+    # ── Orphan Recovery ────────────────────────────────────────────────
+
+    def _recover_orphan_runs(self):
+        """Finalize experiments left in SCREENING/GATING/PROMOTING across
+        a scheduler restart. In-memory _active_runs is empty at this
+        point, so these runs would otherwise sit forever. Strategy: pull
+        the remote train.log, parse metrics if present, and call the
+        stage-completion handler. If no metrics can be parsed, mark
+        FAILED so the loop makes forward progress."""
+        active_statuses = (
+            ExperimentStatus.SCREENING,
+            ExperimentStatus.GATING,
+            ExperimentStatus.PROMOTING,
+            ExperimentStatus.DEPLOYING,
+        )
+        orphans = []
+        for st in active_statuses:
+            orphans.extend(self.registry.list_experiments(status=st))
+        if not orphans:
+            return
+        log.warning("Recovering %d orphan experiment run(s)", len(orphans))
+        for exp in orphans:
+            try:
+                stage = {
+                    ExperimentStatus.SCREENING: "screen",
+                    ExperimentStatus.GATING: "gate",
+                    ExperimentStatus.PROMOTING: "promote",
+                    ExperimentStatus.DEPLOYING: "screen",
+                }.get(exp.status, "screen")
+                # Build a minimal _ActiveRun stub so _handle_* helpers
+                # can read stage/host/started_at.
+                started_at = time.time()
+                if exp.started_at:
+                    try:
+                        started_at = datetime.fromisoformat(
+                            str(exp.started_at).replace(" ", "T")
+                        ).timestamp()
+                    except Exception:
+                        pass
+                stub = _ActiveRun(
+                    experiment=exp,
+                    stage=stage,
+                    host=exp.node_host or "",
+                    gpu_indices=exp.gpu_indices or [],
+                    started_at=started_at,
+                    commit_sha=exp.commit_sha or "",
+                    local_log_path=None,
+                    recent_losses=[],
+                    last_step=0,
+                )
+                # Try to sync & parse the log.
+                log_text = ""
+                try:
+                    self.cluster.sync_experiment_results(
+                        exp.id,
+                        self.config.abs_ideas_dir / exp.idea_id / exp.id,
+                    )
+                    log_text = self.cluster.get_log_tail(exp.id, lines=500) or ""
+                except Exception as e:
+                    log.warning("orphan %s: log fetch failed: %s", exp.id, e)
+                metrics = self._parse_metrics(log_text) if log_text else {}
+                if metrics:
+                    log.info("orphan %s: recovered metrics %s",
+                             exp.id, metrics)
+                    try:
+                        self.cluster.release_gpus(exp.id)
+                    except Exception:
+                        pass
+                    if stage == "screen":
+                        self._handle_screen_completion(exp.id, stub, metrics)
+                    elif stage == "gate":
+                        self._handle_gate_completion(exp.id, stub, metrics)
+                    elif stage == "promote":
+                        self._handle_promote_completion(exp.id, stub, metrics)
+                else:
+                    log.warning("orphan %s: no metrics, marking FAILED", exp.id)
+                    try:
+                        self.cluster.release_gpus(exp.id)
+                    except Exception:
+                        pass
+                    self.registry.update_experiment_status(
+                        exp.id, ExperimentStatus.FAILED,
+                        "orphaned by scheduler restart, no metrics in log")
+                    self.registry.emit_event(
+                        EventType.EXP_FAILED, "experiment", exp.id,
+                        {"reason": "orphaned_restart"})
+            except Exception as e:
+                log.exception("orphan recovery of %s failed: %s", exp.id, e)
+
     # ── Completion Checking ────────────────────────────────────────────
 
     def _check_completions(self):
@@ -430,6 +526,36 @@ class Scheduler:
         self.cluster.release_gpus(exp_id)
         with self._lock:
             self._active_runs.pop(exp_id, None)
+
+        # Record retroactive stage span covering deploy→completion. This
+        # runs on the scheduler completion thread, not the launch thread,
+        # so we use tracer.record() to write an already-closed row.
+        exp_after = self.registry.get_experiment(exp_id)
+        status_str = "ok"
+        error = ""
+        if exp_after is not None:
+            s = str(exp_after.status.value) if hasattr(
+                exp_after.status, "value") else str(exp_after.status)
+            if s in ("failed", "rejected"):
+                status_str = "error"
+                error = exp_after.rejection_reason or ""
+        tracer.record(
+            kind=f"stage_{run.stage}",
+            name=f"{run.stage}:{exp_id}",
+            entity=("experiment", exp_id),
+            started_at=run.started_at,
+            ended_at=time.time(),
+            status=status_str,
+            attrs={
+                "stage": run.stage,
+                "host": run.host,
+                "gpus": run.gpu_indices,
+                "commit": (run.commit_sha or "")[:12],
+                "idea_id": run.experiment.idea_id,
+                **{k: v for k, v in (metrics or {}).items() if v is not None},
+            },
+            error=error,
+        )
 
     def _handle_screen_completion(self, exp_id: str, run: _ActiveRun, metrics: dict):
         train_bpb = metrics.get("train_bpb")
@@ -735,6 +861,20 @@ class Scheduler:
 
     def _launch_experiment(self, exp: Experiment, stage: str,
                             host: str, gpu_indices: list[int]):
+        with tracer.span("experiment_launch",
+                         name=f"{stage}:{exp.id}",
+                         entity=("experiment", exp.id)) as _s:
+            _s.set("stage", stage)
+            _s.set("host", host)
+            _s.set("gpus", gpu_indices)
+            _s.set("idea_id", exp.idea_id)
+            if exp.recipe_id:
+                _s.set("recipe_id", exp.recipe_id)
+            self._launch_experiment_impl(exp, stage, host, gpu_indices, _s)
+
+    def _launch_experiment_impl(self, exp: Experiment, stage: str,
+                                host: str, gpu_indices: list[int],
+                                _span):
         """Deploy and start an experiment on a node.
 
         Flow:
@@ -825,11 +965,14 @@ class Scheduler:
 
             log.info("Deployed %s: commit=%s branch=%s", exp.id,
                      commit_sha[:8] if commit_sha else "?", branch)
+            _span.set("commit", commit_sha[:12] if commit_sha else "")
+            _span.set("script_path", script_path)
         else:
             log.error("Failed to deploy %s", exp.id)
             self.cluster.release_gpus(exp.id)
             self.registry.update_experiment_status(
                 exp.id, ExperimentStatus.FAILED, "Deploy failed")
+            _span.fail("cluster.deploy_experiment returned False")
 
     # ── User Controls ──────────────────────────────────────────────────
 

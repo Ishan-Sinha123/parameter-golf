@@ -42,6 +42,7 @@ from ..db.models import IdeaSource, IdeaStatus, EventType
 from ..db.registry import Registry
 from ..db.knowledge import KnowledgeBase
 from ..ideas.tracker import IdeaTracker
+from ..tracing import tracer
 from .parallel import ParallelClient, SearchResult, DeepResearchResult
 
 log = logging.getLogger(__name__)
@@ -139,6 +140,12 @@ class ResearchAgent:
             log.info("Parallel Web Systems API enabled (processor=%s)",
                      config.parallel_default_processor)
 
+        # Pending async deep-research runs awaiting completion.
+        # Structure: run_id -> dict(query, tags, pr_number?, idea_id?,
+        # topic, submitted_at, processor)
+        self._pending_research: dict[str, dict] = {}
+        self._pending_lock = threading.Lock()
+
     # ── Main Loop ──────────────────────────────────────────────────────
 
     def run(self):
@@ -146,6 +153,20 @@ class ResearchAgent:
         log.info("Research agent starting, poll interval=%dm",
                  self.config.poll_interval_m)
         self._load_seen()
+
+        # Background thread: finish pending async deep-research runs
+        # every 60s (the main poll cycle runs every 30min, which is too
+        # slow for 3-5min Parallel tasks).
+        def _pending_loop():
+            while not self._stop_event.is_set():
+                try:
+                    self._poll_pending_research()
+                except Exception as e:
+                    log.exception("pending research poll error: %s", e)
+                self._stop_event.wait(60.0)
+        t = threading.Thread(target=_pending_loop, daemon=True,
+                             name="parallel-finisher")
+        t.start()
 
         while not self._stop_event.is_set():
             try:
@@ -157,48 +178,180 @@ class ResearchAgent:
     def stop(self):
         self._stop_event.set()
 
+    def _poll_pending_research(self):
+        """Check pending Parallel deep-research runs. For completed ones,
+        fetch results, store in KB, and emit a completion span."""
+        if not self.parallel:
+            return
+        with self._pending_lock:
+            run_ids = list(self._pending_research.keys())
+        if not run_ids:
+            return
+        log.info("Polling %d pending deep-research runs", len(run_ids))
+        for run_id in run_ids:
+            with self._pending_lock:
+                meta = self._pending_research.get(run_id)
+            if meta is None:
+                continue
+            # Give up after 30 minutes — these will just be lost.
+            age = time.time() - meta["submitted_at"]
+            try:
+                result = self.parallel.fetch_deep_research(
+                    run_id, processor=meta.get("processor", "pro"))
+            except Exception as e:
+                log.warning("poll deep_research %s error: %s", run_id, e)
+                continue
+            if result.status in ("completed", "done") and not result.output:
+                # Parallel says done but we couldn't extract text. Drop
+                # from pending to avoid an infinite loop and log loudly.
+                log.warning("Deep research %s completed but output empty "
+                            "(content=%s) — dropping", run_id,
+                            "dict" if result.content else "none")
+                tracer.record(
+                    kind="deep_research",
+                    name=f"{meta['topic'][:60]} [empty]",
+                    entity=("pr", str(meta["pr_number"])) if meta.get("pr_number") else None,
+                    started_at=meta["submitted_at"],
+                    ended_at=time.time(),
+                    status="error",
+                    attrs={"run_id": run_id, "processor": meta.get("processor")},
+                    error="completed with empty output",
+                )
+                with self._pending_lock:
+                    self._pending_research.pop(run_id, None)
+                continue
+            if result.status in ("completed", "done") and result.output:
+                self.kb.store_web_research(
+                    run_id=run_id,
+                    query=meta["query"],
+                    findings=result.output,
+                    citations=result.basis,
+                    tags=meta.get("tags") or [],
+                )
+                self.registry.emit_event(
+                    EventType.DEEP_RESEARCH, "research", run_id,
+                    {"pr_number": meta.get("pr_number"),
+                     "idea_id": meta.get("idea_id"),
+                     "topic": meta["topic"],
+                     "findings_length": len(result.output)},
+                )
+                # Emit a completed span back-dated to submit time
+                tracer.record(
+                    kind="deep_research",
+                    name=f"{meta['topic'][:60]} [done]",
+                    entity=("pr", str(meta["pr_number"])) if meta.get("pr_number") else None,
+                    started_at=meta["submitted_at"],
+                    ended_at=time.time(),
+                    status="ok",
+                    attrs={
+                        "run_id": run_id,
+                        "findings_chars": len(result.output),
+                        "citations": len(result.basis or []),
+                        "processor": meta.get("processor"),
+                    },
+                )
+                log.info("Deep research %s completed: %d chars",
+                         run_id, len(result.output))
+                with self._pending_lock:
+                    self._pending_research.pop(run_id, None)
+            elif result.status == "failed":
+                log.warning("Deep research %s failed: %s",
+                            run_id, result.error)
+                tracer.record(
+                    kind="deep_research",
+                    name=f"{meta['topic'][:60]} [failed]",
+                    entity=("pr", str(meta["pr_number"])) if meta.get("pr_number") else None,
+                    started_at=meta["submitted_at"],
+                    ended_at=time.time(),
+                    status="error",
+                    attrs={"run_id": run_id, "processor": meta.get("processor")},
+                    error=(result.error or "")[:500],
+                )
+                with self._pending_lock:
+                    self._pending_research.pop(run_id, None)
+            elif age > 1800:
+                log.warning("Deep research %s abandoned after %ds",
+                            run_id, int(age))
+                tracer.record(
+                    kind="deep_research",
+                    name=f"{meta['topic'][:60]} [abandoned]",
+                    entity=("pr", str(meta["pr_number"])) if meta.get("pr_number") else None,
+                    started_at=meta["submitted_at"],
+                    ended_at=time.time(),
+                    status="timeout",
+                    attrs={"run_id": run_id, "age_s": int(age)},
+                    error="exceeded 30 minute max age",
+                )
+                with self._pending_lock:
+                    self._pending_research.pop(run_id, None)
+            # else: still queued/running, check again next cycle
+
     def _poll_cycle(self):
         """One polling cycle: PRs, papers, web research, records."""
         log.info("Research poll cycle starting")
 
-        # 1. Poll ALL open GitHub PRs — evaluate each for novelty
-        prs = self._fetch_open_prs()
-        new_prs = 0
-        for pr in prs:
-            if pr.number in self._seen_prs:
-                continue
-            self._seen_prs.add(pr.number)
-            new_prs += 1
-            self._evaluate_and_store_pr(pr)
+        with tracer.span("poll_cycle", name="research_poll") as root:
+            # 0. Finish any pending async deep-research runs from
+            # previous cycles so findings land in the KB.
+            with tracer.span("poll_pending_research",
+                             name="parallel_async_finisher"):
+                self._poll_pending_research()
 
-        # 2. Poll arxiv papers
-        papers = self._fetch_recent_papers()
-        new_papers = 0
-        for paper in papers:
-            if paper.arxiv_id in self._seen_papers:
-                continue
-            self._seen_papers.add(paper.arxiv_id)
-            new_papers += 1
-            evaluation = self._evaluate_paper(paper)
-            if evaluation["worth_exploring"]:
-                self._propose_idea_from_paper(paper, evaluation)
-            self.registry.emit_event(
-                EventType.PAPER_FOUND, "research", paper.arxiv_id,
-                {"title": paper.title, "worth": evaluation["worth_exploring"]},
-            )
+            # 1. Poll ALL open GitHub PRs — evaluate each for novelty
+            with tracer.span("fetch_prs", name="gh pr list"):
+                prs = self._fetch_open_prs()
+            new_prs = 0
+            for pr in prs:
+                if pr.number in self._seen_prs:
+                    continue
+                self._seen_prs.add(pr.number)
+                new_prs += 1
+                with tracer.span("pr_eval", name=f"PR#{pr.number}",
+                                 entity=("pr", str(pr.number))) as s:
+                    s.set("title", pr.title[:120])
+                    s.set("author", pr.author)
+                    self._evaluate_and_store_pr(pr)
 
-        # 3. Run periodic deep web research on promising topics
-        if self.parallel:
-            self._run_web_research_cycle()
+            # 2. Poll arxiv papers
+            with tracer.span("fetch_papers", name="arxiv"):
+                papers = self._fetch_recent_papers()
+            new_papers = 0
+            for paper in papers:
+                if paper.arxiv_id in self._seen_papers:
+                    continue
+                self._seen_papers.add(paper.arxiv_id)
+                new_papers += 1
+                with tracer.span("paper_eval", name=paper.title[:80],
+                                 entity=("paper", paper.arxiv_id)) as s:
+                    evaluation = self._evaluate_paper(paper)
+                    s.set("worth", evaluation["worth_exploring"])
+                    if evaluation["worth_exploring"]:
+                        self._propose_idea_from_paper(paper, evaluation)
+                self.registry.emit_event(
+                    EventType.PAPER_FOUND, "research", paper.arxiv_id,
+                    {"title": paper.title,
+                     "worth": evaluation["worth_exploring"]},
+                )
 
-        # 4. Mine local records
-        self._mine_records()
+            # 3. Run periodic deep web research on promising topics
+            if self.parallel:
+                with tracer.span("web_research_cycle",
+                                 name="proactive_web_research"):
+                    self._run_web_research_cycle()
 
-        # 5. Check recently-merged PRs that touch records/ and fork them
-        try:
-            self._poll_merged_prs()
-        except Exception as e:
-            log.warning("_poll_merged_prs failed: %s", e)
+            # 4. Mine local records
+            with tracer.span("mine_records", name="records/"):
+                self._mine_records()
+
+            # 5. Check recently-merged PRs that touch records/ and fork them
+            try:
+                with tracer.span("poll_merged_prs", name="merged-records"):
+                    self._poll_merged_prs()
+            except Exception as e:
+                log.warning("_poll_merged_prs failed: %s", e)
+
+            root.set("new_prs", new_prs)
+            root.set("new_papers", new_papers)
 
         log.info("Research poll cycle done: %d new PRs, %d new papers",
                  new_prs, new_papers)
@@ -768,38 +921,50 @@ class ResearchAgent:
         )
 
         try:
-            # Cap inline PR research at 120s so a single slow task can't
-            # starve the research loop. With ~80 open PRs per cycle and a
-            # 10-minute max_wait this was taking >13h per cycle.
-            result = self.parallel.deep_research(
-                query=query,
-                processor=self.config.parallel_default_processor,
-                output_type="text",
-                max_wait=120.0,
-            )
+            # Fire-and-forget: Parallel's pro tier takes 3-5 min per task,
+            # so blocking PR eval on it starves the whole research loop
+            # (80 PRs × 300s = ~7 hours/cycle). Submit the task, record a
+            # pending span, and let _poll_pending_research() finish the
+            # span + write to KB when the result arrives.
+            with tracer.span("deep_research_submit",
+                             name=f"PR#{pr.number} {techniques_str[:60]}",
+                             entity=("pr", str(pr.number))) as s:
+                s.set("processor",
+                      self.config.parallel_default_processor)
+                s.set("query_len", len(query))
+                result = self.parallel.submit_deep_research(
+                    query=query,
+                    processor=self.config.parallel_default_processor,
+                    output_type="text",
+                )
+                s.set("run_id", result.run_id)
+                s.set("submit_status", result.status)
+                if result.error:
+                    s.set("error_msg", result.error[:200])
 
-            if result.status in ("completed", "done") and result.output:
-                # Store in knowledge base
-                self.kb.store_web_research(
-                    run_id=result.run_id,
-                    query=f"PR#{pr.number} techniques: {techniques_str}",
-                    findings=result.output,
-                    citations=result.basis,
-                    tags=pr.techniques,
-                )
-                self.registry.emit_event(
-                    EventType.DEEP_RESEARCH, "research", result.run_id,
-                    {"pr_number": pr.number, "processor": result.processor,
-                     "query_topic": techniques_str[:100],
-                     "findings_length": len(result.output)},
-                )
-                return result.output
+            if result.run_id and result.status == "submitted":
+                with self._pending_lock:
+                    self._pending_research[result.run_id] = {
+                        "query": f"PR#{pr.number} techniques: {techniques_str}",
+                        "tags": pr.techniques,
+                        "pr_number": pr.number,
+                        "idea_id": None,
+                        "topic": techniques_str[:100],
+                        "submitted_at": time.time(),
+                        "processor": result.processor,
+                    }
+                log.info("Queued deep_research PR#%d run_id=%s",
+                         pr.number, result.run_id)
             else:
-                log.warning("Deep research for PR#%d returned status=%s: %s",
-                            pr.number, result.status, result.error)
-                return ""
+                log.warning("Deep research submit PR#%d failed: %s",
+                            pr.number, result.error)
+            # Always return "" — the PR eval doesn't block on findings.
+            # Later PR evals will pick up accumulated web_research context
+            # from the KB automatically.
+            return ""
         except Exception as e:
-            log.warning("Deep research failed for PR#%d: %s", pr.number, e)
+            log.warning("Deep research submit PR#%d exception: %s",
+                        pr.number, e)
             return ""
 
     # ── Web Research Cycle ─────────────────────────────────────────────
@@ -861,9 +1026,14 @@ class ResearchAgent:
         )
 
         try:
-            result = self.parallel.deep_research(
-                query=query, processor="pro", output_type="text",
-            )
+            with tracer.span("deep_research",
+                             name="broad_survey") as s:
+                s.set("processor", "pro")
+                result = self.parallel.deep_research(
+                    query=query, processor="pro", output_type="text",
+                )
+                s.set("run_id", result.run_id)
+                s.set("result_status", result.status)
             if result.output:
                 self.kb.store_web_research(
                     run_id=result.run_id,
@@ -914,11 +1084,18 @@ class ResearchAgent:
         )
 
         try:
-            result = self.parallel.deep_research(
-                query=query,
-                processor=self.config.parallel_default_processor,
-                output_type="text",
-            )
+            with tracer.span("deep_research",
+                             name=f"targeted:{idea.title[:60]}",
+                             entity=("idea", idea.id)) as s:
+                s.set("processor",
+                      self.config.parallel_default_processor)
+                result = self.parallel.deep_research(
+                    query=query,
+                    processor=self.config.parallel_default_processor,
+                    output_type="text",
+                )
+                s.set("run_id", result.run_id)
+                s.set("result_status", result.status)
             if result.output:
                 tags = idea.tags if hasattr(idea, 'tags') else []
                 self.kb.store_web_research(

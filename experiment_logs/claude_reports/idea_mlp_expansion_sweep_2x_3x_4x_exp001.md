@@ -10,7 +10,7 @@ Widening the MLP inner expansion to 3× should trade a larger parameter count (a
 |---|---|
 | `MLP_MULT` | `3` |
 
-- **Recipe:** none — single env-override on the default baseline.
+- **Recipe:** none — single env-override on the default baseline (`recipe_id = null`).
 - **Source ref:** *(not set)*
 - **Reproduction:** no
 - **Arch (from log):** GQA `num_heads=8 num_kv_heads=4`, tied embeddings, SentencePiece vocab 1024, `model_params=21,778,504`.
@@ -33,10 +33,10 @@ final_int8_zlib_roundtrip val_loss:2.2394 val_bpb:1.3263 eval_time:11859ms
 final_int8_zlib_roundtrip_exact val_loss:2.23936838 val_bpb:1.32628009
 ```
 
-| Metric | Value | Δ vs baseline (1.10625) |
+| Metric | Value | Δ vs baseline (1.0810) |
 |---|---|---|
-| `screen_ema_bpb` | 1.31622 | **+0.20997** |
-| `gate_int6_bpb` (int8+zlib roundtrip) | 1.32628 | **+0.22003** |
+| `screen_ema_bpb` | 1.31622 | **+0.23522** |
+| `gate_int6_bpb` (int8+zlib roundtrip) | 1.32628 | **+0.24528** |
 | Quant gap (ema → int6) | 1.99e-05 | — (effectively lossless) |
 | **Total int8+zlib artifact** | **16,719,232 B** | **+719,232 over 16,000,000 cap** |
 | `model_params` | 21,778,504 | — |
@@ -56,15 +56,15 @@ Anomalies and warnings:
 
 **broken**
 
-Not a fair regression — this run violates a hard competition rule (16 MB decimal artifact cap) and is simultaneously starved for wallclock (6% of planned steps). The +0.22 BPB gap vs the 1.10625 baseline is partly genuine and partly an artifact of under-training. The config cannot be submitted as-is regardless of how training continues, so the correct call is "broken config, needs shrinking before the idea can be evaluated fairly" rather than "3× MLP loses to 2× MLP on the merits".
+Not a fair regression — this run violates a hard competition rule (16 MB decimal artifact cap) and is simultaneously starved for wallclock (6% of planned steps). The +0.245 BPB gap vs the 1.0810 baseline is partly genuine and partly an artifact of under-training. The config cannot be submitted as-is regardless of how training continues, so the correct call is "broken config, needs shrinking before the idea can be evaluated fairly" rather than "3× MLP loses to 2× MLP on the merits".
 
 The `gate_passed=true` flag in metadata should be treated as a gate instrumentation bug: the gate is checking quant gap but not the absolute artifact size.
 
 ## Suggested follow-ups
 
 - **Fix the gate first.** Add an artifact-size precheck (`total_bytes <= 16_000_000`) so any over-cap run is flagged and not promoted, regardless of quant gap. Also backfill `gate_artifact_mb` — it is currently always 0.0.
-- **Shrink to fit, then re-test.** Re-run MLP_MULT=3 with a reduced `DIM` and/or fewer layers so `model_params` drops enough that the int8+zlib artifact lands ≤15.5 MB with headroom. Only then is the 3× vs 2× comparison meaningful.
-- **Couple to stronger quant.** Try MLP_MULT=3 with int5 / int4 / ternary MLP weights (leaderboard has ternary at 1.1570 and 1-bit at 1.1239); the 3× width may fit if the MLP params are quantized harder than the rest.
+- **Shrink to fit, then re-test.** Re-run `MLP_MULT=3` with a reduced `DIM` and/or fewer layers so `model_params` drops enough that the int8+zlib artifact lands ≤15.5 MB with headroom. Only then is the 3× vs 2× comparison meaningful.
+- **Couple to stronger quant.** Try `MLP_MULT=3` with int5 / int4 / ternary MLP weights (leaderboard has ternary at 1.1570 and 1-bit at 1.1239); the 3× width may fit if the MLP params are quantized harder than the rest.
 - **Sweep ratios at matched param count.** Once size is fixed, run `MLP_MULT ∈ {2, 2.5, 3}` at matched `model_params` (compensating with `DIM` or depth) to isolate the effect of *shape* from the effect of *total capacity*.
-- **Composability check.** If a shrunk MLP_MULT=3 variant ever beats its matched-param 2× control, stack it onto the current SOTA chain (PR #1019 / 11L AR Self-Gen GPTQ + XSA, 1.1147) before claiming a win — the 11L XSA/EMA backbone changes the FLOP/param tradeoff significantly.
-- **Kill sibling sweep cells early** if MLP_MULT=4 (exp002) also exceeds the cap at default `DIM`/depth — no point burning the remaining budget on configurations that cannot be submitted.
+- **Composability check.** If a shrunk `MLP_MULT=3` variant ever beats its matched-param 2× control, stack it onto the current SOTA chain (`rec_20260411_..._sp8192_parallelresid_scorefir_6ad17e09`, val_bpb=1.0822) before claiming a win — the tuned backbone changes the FLOP/param tradeoff significantly.
+- **Kill sibling sweep cells early** if `MLP_MULT=4` (exp002) also exceeds the cap at default `DIM`/depth — no point burning the remaining budget on configurations that cannot be submitted.
