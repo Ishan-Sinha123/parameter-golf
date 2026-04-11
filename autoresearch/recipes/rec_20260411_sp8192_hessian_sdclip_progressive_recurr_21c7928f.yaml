@@ -1,0 +1,132 @@
+id: rec_20260411_sp8192_hessian_sdclip_progressive_recurr_21c7928f
+name: sp8192_hessian_sdclip_progressive_recurrence
+description: 'Reproduction of records/track_10min_16mb/2026-04-06_SP8192_HessianSDClip_ProgressiveRecurrence.
+  Confidence: medium. Claimed bpb: 1.08354. Reproduces Robby Sneiderman''s 2026-04-06
+  non-record submission on top of PR #1394 (@clarkkev): 11L/d=512 GPT-J-style parallel
+  residuals from layer 7+, Hessian-aware SDClip (lambda=0.175), and two-phas'
+parent_recipe: rec_20260410_2026_04_09_sp8192_3layerrecur_parresid_q_3710821c
+features:
+- 11l
+- brotli
+- d512
+- depth_recurrence
+- depth_recurrence_2loop
+- ema
+- ema_0.997
+- gpt_j_parallel
+- gptq
+- gptq_int6_matrix
+- gptq_int8_embed
+- gqa_8_4
+- hessian_aware_sdclip
+- leaky_relu_squared
+- legal_ttt
+- ln_scale
+- logit_softcap_30
+- muon
+- muon_row_normalize
+- parallel_residuals
+- parallel_residuals_from_layer7
+- partial_rope_16
+- progressive_recurrence
+- qk_gain
+- sdclip
+- skip_gates
+- sliding_window_eval_stride64
+- sota_fork
+- sp8192
+- sp8192_bpe
+- tied_embeddings
+- vocab_8192
+- warmdown_0.667
+- xsa_all_layers
+feature_set_hash: 21c7928f71528228
+env_overrides:
+  ITERATIONS: '20000'
+  WARMDOWN_FRAC: '0.667'
+  WARMUP_STEPS: '20'
+  TRAIN_BATCH_TOKENS: '786432'
+  TRAIN_SEQ_LEN: '2048'
+  TRAIN_LOG_EVERY: '500'
+  VAL_BATCH_TOKENS: '524288'
+  EVAL_SEQ_LEN: '2048'
+  VAL_LOSS_EVERY: '4000'
+  SLIDING_WINDOW_ENABLED: '1'
+  VOCAB_SIZE: '8192'
+  NUM_LAYERS: '11'
+  XSA_LAST_N: '11'
+  MODEL_DIM: '512'
+  EMBEDDING_DIM: '512'
+  NUM_KV_HEADS: '4'
+  NUM_HEADS: '8'
+  MLP_MULT: '4.0'
+  SKIP_GATES_ENABLED: '1'
+  TIE_EMBEDDINGS: '1'
+  LOGIT_SOFTCAP: '30.0'
+  ROPE_BASE: '10000.0'
+  ROPE_DIMS: '16'
+  ROPE_TRAIN_SEQ_LEN: '2048'
+  LN_SCALE: '1'
+  QK_GAIN_INIT: '4.0'
+  NUM_LOOPS: '2'
+  LOOP_START: '4'
+  LOOP_END: '5'
+  ENABLE_LOOPING_AT: '0.5'
+  PARALLEL_RESIDUAL_START: '7'
+  MIN_LR: '.0'
+  EMBED_LR: '0.6'
+  HEAD_LR: '0.008'
+  TIED_EMBED_LR: '0.03'
+  TIED_EMBED_INIT_STD: '0.005'
+  MATRIX_LR: '0.02'
+  SCALAR_LR: '0.02'
+  MUON_MOMENTUM: '0.99'
+  MUON_BACKEND_STEPS: '5'
+  MUON_MOMENTUM_WARMUP_START: '0.92'
+  MUON_MOMENTUM_WARMUP_STEPS: '1500'
+  MUON_ROW_NORMALIZE: '1'
+  BETA1: '0.9'
+  BETA2: '0.95'
+  ADAM_EPS: 1e-8
+  GRAD_CLIP_NORM: '0.3'
+  EVAL_STRIDE: '64'
+  MUON_BETA2: '0.95'
+  ADAM_WD: '0.02'
+  MUON_WD: '0.085'
+  EMBED_WD: '0.085'
+  EMA_DECAY: '0.997'
+  TTT_ENABLED: '0'
+  TTT_LR: '.005'
+  TTT_EPOCHS: '3'
+  TTT_MOMENTUM: '.9'
+  TTT_CHUNK_TOKENS: '32768'
+  ETLB_ENABLED: '0'
+  ETLB_LR: '.05'
+  ETLB_STEPS: '5'
+  ETLB_CLIP: '3.'
+  GPTQ_CALIBRATION_BATCHES: '64'
+  GPTQ_RESERVE_SECONDS: '12.0'
+  MATRIX_BITS: '6'
+  EMBED_BITS: '8'
+  MATRIX_CLIP_SIGMAS: '12.85'
+  EMBED_CLIP_SIGMAS: '20.0'
+  RANK: '0'
+  WORLD_SIZE: '1'
+  LOCAL_RANK: '0'
+  CONTROL_TENSOR_NAME_PATTERNS: attn_scale,attn_scales,mlp_scale,mlp_scales,resid_mix,resid_mixes,q_gain,skip_weight,skip_weights,skip_gates
+  HESSIAN_CLIP_LAMBDA: '0.175'
+  LOOP_PHASE2_AT: '0.65'
+  SEED: '1337'
+  UNTIE_LOOP_MLPS: '0'
+  MAX_WALLCLOCK_SECONDS: '600.0'
+  LOOP_LAYER_BITS: '0'
+  LOOP_LAYER_CLIP_SIGMAS: '0'
+  COMPRESSOR: brotli
+script_path: autoresearch/baselines/rec_20260410_2026_04_09_sp8192_3layerrecur_parresid_q_3710821c/train_gpt.py
+base_commit: ''
+base_branch: ''
+source_experiment: null
+best_val_bpb: null
+best_int6_bpb: null
+best_artifact_mb: null
+best_experiment_id: null

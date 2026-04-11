@@ -1,0 +1,136 @@
+id: rec_20260411_sp8192_gptq_embed_sdclip_loop45x2_42fa0e99
+name: sp8192_gptq_embed_sdclip_loop45x2
+description: 'Reproduction of records/track_10min_16mb/2026-04-05_SP8192_GPTQ-Embeddings_SDClip_Loop45x2.
+  Confidence: medium. Claimed bpb: 1.08563. Reproduces Kevin Clark''s 2026-04-05 record
+  (PR #1218 base + SP8192 vocab + GPTQ''d int8 embeddings + loop-layers-4-5-twice
+  depth recurrence + row-normalized Muon + std-dev-based quant clipping). 11L/51'
+parent_recipe: rec_20260410_2026_04_09_sp8192_3layerrecur_parresid_q_3710821c
+features:
+- 11_layers
+- brotli
+- brotli_byte_shuffle_compress
+- depth_recurrence
+- depth_recurrence_loop_4_5_x2
+- ema
+- ema_0.997
+- enable_looping_at_0.5
+- flash_attn_3
+- gptq
+- gptq_embed_int8
+- gptq_matrix_int6
+- gqa_4kv
+- grad_clip_0.3
+- leaky_relu_sq
+- legal_ttt
+- ln_scale
+- logit_softcap_30
+- mlp_4x
+- model_dim_512
+- muon_momentum_warmup
+- muon_row_normalize
+- orthogonal_init
+- parallel_residuals
+- partial_rope_16
+- pytorch_2.11_cu130
+- qk_gain
+- qk_gain_4.0
+- sd_clip_k12.85_matrix
+- sd_clip_k20_embed
+- sdclip
+- shuffled_sequence_loader
+- skip_gates
+- sliding_window_eval_stride_64
+- sota_fork
+- sp8192
+- sp8192_vocab
+- tied_embed_init_std_0.005
+- tied_embeddings
+- warmdown_0.667
+- warmup_20_steps
+- xsa_all_layers
+feature_set_hash: 42fa0e99e859d788
+env_overrides:
+  ITERATIONS: '20000'
+  WARMDOWN_FRAC: '0.667'
+  WARMUP_STEPS: '20'
+  TRAIN_BATCH_TOKENS: '786432'
+  TRAIN_SEQ_LEN: '2048'
+  TRAIN_LOG_EVERY: '500'
+  VAL_BATCH_TOKENS: '524288'
+  EVAL_SEQ_LEN: '2048'
+  VAL_LOSS_EVERY: '4000'
+  SLIDING_WINDOW_ENABLED: '1'
+  VOCAB_SIZE: '8192'
+  NUM_LAYERS: '11'
+  XSA_LAST_N: '11'
+  MODEL_DIM: '512'
+  EMBEDDING_DIM: '512'
+  NUM_KV_HEADS: '4'
+  NUM_HEADS: '8'
+  MLP_MULT: '4.0'
+  SKIP_GATES_ENABLED: '1'
+  TIE_EMBEDDINGS: '1'
+  LOGIT_SOFTCAP: '30.0'
+  ROPE_BASE: '10000.0'
+  ROPE_DIMS: '16'
+  ROPE_TRAIN_SEQ_LEN: '2048'
+  LN_SCALE: '1'
+  QK_GAIN_INIT: '4.0'
+  NUM_LOOPS: '2'
+  LOOP_START: '4'
+  LOOP_END: '5'
+  ENABLE_LOOPING_AT: '0.5'
+  PARALLEL_RESIDUAL_START: '7'
+  MIN_LR: '0.0'
+  EMBED_LR: '0.6'
+  HEAD_LR: '0.008'
+  TIED_EMBED_LR: '0.03'
+  TIED_EMBED_INIT_STD: '0.005'
+  MATRIX_LR: '0.02'
+  SCALAR_LR: '0.02'
+  MUON_MOMENTUM: '0.99'
+  MUON_BACKEND_STEPS: '5'
+  MUON_MOMENTUM_WARMUP_START: '0.92'
+  MUON_MOMENTUM_WARMUP_STEPS: '1500'
+  MUON_ROW_NORMALIZE: '1'
+  BETA1: '0.9'
+  BETA2: '0.95'
+  ADAM_EPS: 1e-8
+  GRAD_CLIP_NORM: '0.3'
+  EVAL_STRIDE: '64'
+  MUON_BETA2: '0.95'
+  ADAM_WD: '0.02'
+  MUON_WD: '0.085'
+  EMBED_WD: '0.085'
+  EMA_DECAY: '0.997'
+  TTT_ENABLED: '0'
+  TTT_LR: '.005'
+  TTT_EPOCHS: '3'
+  TTT_MOMENTUM: '.9'
+  TTT_CHUNK_TOKENS: '32768'
+  ETLB_ENABLED: '0'
+  ETLB_LR: '.05'
+  ETLB_STEPS: '5'
+  ETLB_CLIP: '3.'
+  GPTQ_CALIBRATION_BATCHES: '64'
+  GPTQ_RESERVE_SECONDS: '12.0'
+  MATRIX_BITS: '6'
+  EMBED_BITS: '8'
+  MATRIX_CLIP_SIGMAS: '12.85'
+  EMBED_CLIP_SIGMAS: '20.0'
+  RANK: '0'
+  WORLD_SIZE: '1'
+  LOCAL_RANK: '0'
+  CONTROL_TENSOR_NAME_PATTERNS: attn_scale,attn_scales,mlp_scale,mlp_scales,resid_mix,resid_mixes,q_gain,skip_weight,skip_weights,skip_gates
+  SEED: '1337'
+  RUN_ID: '1337'
+  MAX_WALLCLOCK_SECONDS: '600.0'
+  COMPRESSOR: brotli
+script_path: autoresearch/baselines/rec_20260410_2026_04_09_sp8192_3layerrecur_parresid_q_3710821c/train_gpt.py
+base_commit: ''
+base_branch: ''
+source_experiment: null
+best_val_bpb: null
+best_int6_bpb: null
+best_artifact_mb: null
+best_experiment_id: null

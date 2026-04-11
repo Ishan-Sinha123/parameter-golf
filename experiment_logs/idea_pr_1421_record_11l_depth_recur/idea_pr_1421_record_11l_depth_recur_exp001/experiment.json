@@ -13,7 +13,7 @@
     6,
     7
   ],
-  "commit_sha": "98db50d8d644e40814270ee35d2efb6d1bd9d723",
+  "commit_sha": "4196c60505abde81ae95fe77d469a608baff51fb",
   "branch": "autoresearch-deploy",
   "script_path": "autoresearch/baselines/rec_20260410_2026_03_31_parallelresiduals_minidepthre_4d594ac1/train_gpt.py",
   "recipe_id": "rec_20260411_pr1421_pr1421_ema_decay_tuning_0_f92bf538",
@@ -106,5 +106,5 @@
     "EMA_DECAY": "0.9965"
   },
   "wallclock_s": 540,
-  "started_at": "2026-04-11T00:27:34.414494"
+  "started_at": "2026-04-11T00:29:45.197262"
 }

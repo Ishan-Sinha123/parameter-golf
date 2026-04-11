@@ -887,9 +887,15 @@ class Scheduler:
         1 GPU only reached ~1608/20000 steps and gave a fundamentally
         broken signal.
         """
-        if exp.screen_ema_bpb is None and "screen" in exp.stages:
+        # Skip the screen stage for experiments anchored to a SOTA
+        # baseline recipe. SOTA baselines only emit val_bpb every ~8k
+        # steps (~11 min at 86ms/step), so a 540s screen window just
+        # captures step-0 garbage and wastes a GPU-cycle. Go straight
+        # to gate, which runs the full training budget.
+        if exp.screen_ema_bpb is None and "screen" in exp.stages and not exp.recipe_id:
             return "screen", self.config.screen_gpus_per_job
-        if exp.gate_int6_bpb is None and "gate" in exp.stages and exp.screen_ema_bpb is not None:
+        if exp.gate_int6_bpb is None and "gate" in exp.stages and (
+                exp.screen_ema_bpb is not None or exp.recipe_id):
             return "gate", self.config.gate_gpus_per_job
         if exp.promote_ema_bpb is None and "promote" in exp.stages and exp.gate_passed:
             return "promote", self.config.promote_gpus_per_job

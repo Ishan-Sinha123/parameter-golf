@@ -1,0 +1,141 @@
+id: rec_20260411_rec_11l_ema_gptqlite_warmdown3500_qat015_e1ecab45
+name: rec_11L_ema_gptqlite_warmdown3500_qat015
+description: 'Reproduction of records/track_10min_16mb/2026-03-22_11L_EMA_GPTQ-lite_warmdown3500_QAT015_1.1233.
+  Confidence: high. Claimed bpb: 1.12278022. Reproduces signalrush''s 2026-03-22 record
+  (1.1228 val_bpb on seed 1337) by stacking EMA(0.997), GPTQ-lite per-row clip percentile
+  search, warmdown=3500, and late QAT threshold=0.15 on the PR #374 11L '
+parent_recipe: rec_20260410_2026_04_09_sp8192_3layerrecur_parresid_q_3710821c
+features:
+- 11l
+- bigram_hash_2048
+- brotli
+- d512
+- depth_recurrence
+- ema
+- ema_0997
+- gptq
+- gptq_lite
+- gqa_8_4
+- int6_mlp_attn
+- int8_embed
+- late_qat_015
+- legal_ttt
+- ln_scale
+- logit_softcap_30
+- mlp3x
+- muon_wd
+- mup_output_proj
+- ntk_rope
+- ortho_init
+- parallel_residuals
+- partial_rope_16_64
+- qk_gain
+- relu2
+- sdclip
+- shared_value_embed_128
+- smeargate
+- sota_fork
+- sp8192
+- tied_embeddings
+- tight_swa_50
+- unet_skip
+- warmdown3500
+- xsa4
+- zstd22
+feature_set_hash: e1ecab45661c6595
+env_overrides:
+  ITERATIONS: '20000'
+  WARMDOWN_FRAC: '.72'
+  WARMUP_STEPS: '20'
+  TRAIN_BATCH_TOKENS: '786432'
+  TRAIN_SEQ_LEN: '2048'
+  TRAIN_LOG_EVERY: '500'
+  VAL_BATCH_TOKENS: '524288'
+  EVAL_SEQ_LEN: '2048'
+  VAL_LOSS_EVERY: '4000'
+  SLIDING_WINDOW_ENABLED: '1'
+  VOCAB_SIZE: '1024'
+  NUM_LAYERS: '11'
+  XSA_LAST_N: '4'
+  MODEL_DIM: '512'
+  EMBEDDING_DIM: '512'
+  NUM_KV_HEADS: '4'
+  NUM_HEADS: '8'
+  MLP_MULT: '3.0'
+  SKIP_GATES_ENABLED: '1'
+  TIE_EMBEDDINGS: '1'
+  LOGIT_SOFTCAP: '30.0'
+  ROPE_BASE: '10000.0'
+  ROPE_DIMS: '16'
+  ROPE_TRAIN_SEQ_LEN: '2048'
+  LN_SCALE: '1'
+  QK_GAIN_INIT: '1.5'
+  NUM_LOOPS: '2'
+  LOOP_START: '3'
+  LOOP_END: '5'
+  ENABLE_LOOPING_AT: '.35'
+  PARALLEL_RESIDUAL_START: '7'
+  MIN_LR: '.0'
+  EMBED_LR: '0.6'
+  HEAD_LR: '0.008'
+  TIED_EMBED_LR: '0.035'
+  TIED_EMBED_INIT_STD: '0.005'
+  MATRIX_LR: '0.025'
+  SCALAR_LR: '0.025'
+  MUON_MOMENTUM: '0.99'
+  MUON_BACKEND_STEPS: '5'
+  MUON_MOMENTUM_WARMUP_START: '0.92'
+  MUON_MOMENTUM_WARMUP_STEPS: '1500'
+  MUON_ROW_NORMALIZE: '1'
+  BETA1: '0.9'
+  BETA2: '0.95'
+  ADAM_EPS: 1e-8
+  GRAD_CLIP_NORM: '0.3'
+  EVAL_STRIDE: '64'
+  MUON_BETA2: '0.95'
+  ADAM_WD: '0.04'
+  MUON_WD: '0.04'
+  EMBED_WD: '.085'
+  EMA_DECAY: '.9965'
+  TTT_ENABLED: '0'
+  TTT_LR: '.005'
+  TTT_EPOCHS: '3'
+  TTT_MOMENTUM: '.9'
+  TTT_CHUNK_TOKENS: '32768'
+  ETLB_ENABLED: '0'
+  ETLB_LR: '.05'
+  ETLB_STEPS: '5'
+  ETLB_CLIP: '3.'
+  GPTQ_CALIBRATION_BATCHES: '64'
+  GPTQ_RESERVE_SECONDS: '12.'
+  MATRIX_BITS: '6'
+  EMBED_BITS: '8'
+  MATRIX_CLIP_SIGMAS: '12.85'
+  EMBED_CLIP_SIGMAS: 2e1
+  RANK: '0'
+  WORLD_SIZE: '1'
+  LOCAL_RANK: '0'
+  CONTROL_TENSOR_NAME_PATTERNS: attn_scale,attn_scales,mlp_scale,mlp_scales,resid_mix,resid_mixes,q_gain,skip_weight,skip_weights,skip_gates
+  SEED: '1337'
+  WARMDOWN_ITERS: '3500'
+  MAX_WALLCLOCK_SECONDS: '600.0'
+  VE_ENABLED: '1'
+  VE_DIM: '128'
+  VE_LAYERS: 9,10
+  BIGRAM_VOCAB_SIZE: '2048'
+  BIGRAM_DIM: '128'
+  SWA_ENABLED: '1'
+  SWA_EVERY: '50'
+  LATE_QAT_THRESHOLD: '0.15'
+  QAT_ENABLED: '0'
+  MTP_NUM_HEADS: '0'
+  DTG_ENABLED: '0'
+  VAL_BATCH_SIZE: '524288'
+script_path: autoresearch/baselines/rec_20260410_2026_04_09_sp8192_3layerrecur_parresid_q_3710821c/train_gpt.py
+base_commit: ''
+base_branch: ''
+source_experiment: null
+best_val_bpb: null
+best_int6_bpb: null
+best_artifact_mb: null
+best_experiment_id: null

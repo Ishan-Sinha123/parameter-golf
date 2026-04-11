@@ -1,0 +1,129 @@
+id: rec_20260411_ar_selfgen_gptq_xsa_all_bigramhash_3072x_5258765d
+name: ar_selfgen_gptq_xsa_all_bigramhash_3072x112
+description: "Reproduction of records/track_10min_16mb/2026-03-25_ValCalib_GPTQ_XSA_BigramHash3072.\
+  \ Confidence: medium. Claimed bpb: 1.11473509. Reproduction of abaybektursun's 2026-03-25\
+  \ record (1.1147 BPB): 11L XSA-all-layers + LeakyReLU\xB2 MLP3x + BigramHash 3072\xD7\
+  112 + VE128 + Parallel Muon + warmdown=4000, quantized with Full Hessian GPTQ us"
+parent_recipe: rec_20260410_2026_04_09_sp8192_3layerrecur_parresid_q_3710821c
+features:
+- 11l
+- ar_self_gen_calibration
+- bigram_hash_3072x112
+- brotli
+- depth_recurrence
+- ema
+- ema_0.997
+- flash_attention_3
+- full_hessian_gptq
+- gptq
+- gqa_8_4
+- int6
+- late_qat
+- leakyrelu_squared
+- legal_ttt
+- ln_scale
+- lzma_preset_9
+- mlp_3x
+- parallel_muon
+- parallel_residuals
+- parameter_banking
+- partial_rope_16
+- qk_gain
+- sdclip
+- selective_prune_pm1
+- smear_gate
+- sota_fork
+- sp8192
+- swa_every_50
+- tied_embeddings
+- unet_skips
+- ve128_layers_9_10
+- warmdown_4000
+- xsa_all_11l
+feature_set_hash: 5258765d94197f43
+env_overrides:
+  ITERATIONS: '20000'
+  WARMDOWN_FRAC: '.72'
+  WARMUP_STEPS: '20'
+  TRAIN_BATCH_TOKENS: '786432'
+  TRAIN_SEQ_LEN: '2048'
+  TRAIN_LOG_EVERY: '500'
+  VAL_BATCH_TOKENS: '524288'
+  EVAL_SEQ_LEN: '2048'
+  VAL_LOSS_EVERY: '4000'
+  SLIDING_WINDOW_ENABLED: '1'
+  VOCAB_SIZE: '8192'
+  NUM_LAYERS: '11'
+  XSA_LAST_N: '11'
+  MODEL_DIM: '512'
+  EMBEDDING_DIM: '512'
+  NUM_KV_HEADS: '4'
+  NUM_HEADS: '8'
+  MLP_MULT: '4.'
+  SKIP_GATES_ENABLED: '1'
+  TIE_EMBEDDINGS: '1'
+  LOGIT_SOFTCAP: 3e1
+  ROPE_BASE: 1e4
+  ROPE_DIMS: '16'
+  ROPE_TRAIN_SEQ_LEN: '2048'
+  LN_SCALE: '1'
+  QK_GAIN_INIT: '5.'
+  NUM_LOOPS: '2'
+  LOOP_START: '3'
+  LOOP_END: '5'
+  ENABLE_LOOPING_AT: '.35'
+  PARALLEL_RESIDUAL_START: '7'
+  MIN_LR: '.0'
+  EMBED_LR: '.6'
+  HEAD_LR: '.008'
+  TIED_EMBED_LR: '.03'
+  TIED_EMBED_INIT_STD: '.005'
+  MATRIX_LR: '.022'
+  SCALAR_LR: '.02'
+  MUON_MOMENTUM: '.99'
+  MUON_BACKEND_STEPS: '5'
+  MUON_MOMENTUM_WARMUP_START: '.92'
+  MUON_MOMENTUM_WARMUP_STEPS: '1500'
+  MUON_ROW_NORMALIZE: '1'
+  BETA1: '.9'
+  BETA2: '.95'
+  ADAM_EPS: 1e-08
+  GRAD_CLIP_NORM: '.3'
+  EVAL_STRIDE: '64'
+  MUON_BETA2: '.95'
+  ADAM_WD: '.02'
+  MUON_WD: '.095'
+  EMBED_WD: '.085'
+  EMA_DECAY: '.9965'
+  TTT_ENABLED: '0'
+  TTT_LR: '.005'
+  TTT_EPOCHS: '3'
+  TTT_MOMENTUM: '.9'
+  TTT_CHUNK_TOKENS: '32768'
+  ETLB_ENABLED: '0'
+  ETLB_LR: '.05'
+  ETLB_STEPS: '5'
+  ETLB_CLIP: '3.'
+  GPTQ_CALIBRATION_BATCHES: '64'
+  GPTQ_RESERVE_SECONDS: '12.'
+  MATRIX_BITS: '6'
+  EMBED_BITS: '8'
+  MATRIX_CLIP_SIGMAS: '12.85'
+  EMBED_CLIP_SIGMAS: 2e1
+  RANK: '0'
+  WORLD_SIZE: '1'
+  LOCAL_RANK: '0'
+  CONTROL_TENSOR_NAME_PATTERNS: attn_scale,attn_scales,mlp_scale,mlp_scales,resid_mix,resid_mixes,q_gain,skip_weight,skip_weights,skip_gates
+  BIGRAM_VOCAB_SIZE: '3072'
+  BIGRAM_DIM: '112'
+  WARMDOWN_ITERS: '4000'
+  TARGET_MB: '15.9'
+  SEED: '314'
+script_path: autoresearch/baselines/rec_20260410_2026_04_09_sp8192_3layerrecur_parresid_q_3710821c/train_gpt.py
+base_commit: ''
+base_branch: ''
+source_experiment: null
+best_val_bpb: null
+best_int6_bpb: null
+best_artifact_mb: null
+best_experiment_id: null
