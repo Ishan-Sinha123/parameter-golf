@@ -1,0 +1,126 @@
+W0411 01:00:51.062000 338155 torch/distributed/run.py:851] 
+W0411 01:00:51.062000 338155 torch/distributed/run.py:851] *****************************************
+W0411 01:00:51.062000 338155 torch/distributed/run.py:851] Setting OMP_NUM_THREADS environment variable for each process to be 1 in default, to avoid your system being overloaded, please further tune the variable for optimal performance in your application as needed. 
+W0411 01:00:51.062000 338155 torch/distributed/run.py:851] *****************************************
+Hyperparameters:
+  adam_eps: 1e-08
+  adam_wd: 0.04
+  beta1: 0.9
+  beta2: 0.95
+  compressor: brotli
+  data_dir: ./data/
+  datasets_dir: ./data/datasets/fineweb10B_sp1024
+  distributed: True
+  ema_decay: 0.9965
+  embed_bits: 8
+  embed_clip_sigmas: 20.0
+  embed_lr: 0.6
+  embed_wd: 0.085
+  embedding_dim: 512
+  enable_looping_at: 0.35
+  etlb_clip: 3.0
+  etlb_enabled: False
+  etlb_lr: 0.05
+  etlb_steps: 5
+  eval_seq_len: 2048
+  eval_stride: 64
+  gptq_calibration_batches: 64
+  gptq_reserve_seconds: 12.0
+  grad_accum_steps: 1
+  grad_clip_norm: 0.3
+  head_lr: 0.008
+  is_main_process: True
+  iterations: 20000
+  ln_scale: True
+  local_rank: 0
+  logfile: logs/cf2cc4b8-2d09-412d-9a72-ea088d2a96c9.txt
+  logit_softcap: 30.0
+  loop_end: 5
+  loop_start: 3
+  matrix_bits: 6
+  matrix_clip_sigmas: 12.85
+  matrix_lr: 0.025
+  max_wallclock_seconds: 420.0
+  min_lr: 0.0
+  mlp_mult: 3.0
+  model_dim: 512
+  model_path: final_model.pt
+  muon_backend_steps: 5
+  muon_beta2: 0.95
+  muon_momentum: 0.99
+  muon_momentum_warmup_start: 0.92
+  muon_momentum_warmup_steps: 1500
+  muon_row_normalize: True
+  muon_wd: 0.04
+  num_heads: 8
+  num_kv_heads: 4
+  num_layers: 11
+  num_loops: 2
+  parallel_residual_start: 7
+  qk_gain_init: 1.5
+  quantized_model_path: final_model.int6.ptz
+  rank: 0
+  rope_base: 10000.0
+  rope_dims: 16
+  rope_train_seq_len: 2048
+  run_id: cf2cc4b8-2d09-412d-9a72-ea088d2a96c9
+  scalar_lr: 0.025
+  seed: 1337
+  skip_gates_enabled: True
+  sliding_window_enabled: True
+  tie_embeddings: True
+  tied_embed_init_std: 0.005
+  tied_embed_lr: 0.035
+  tokenizer_path: ./data/tokenizers/fineweb_1024_bpe.model
+  train_batch_tokens: 786432
+  train_files: ./data/datasets/fineweb10B_sp1024/fineweb_train_*.bin
+  train_log_every: 500
+  train_seq_len: 2048
+  ttt_chunk_tokens: 32768
+  ttt_enabled: False
+  ttt_epochs: 3
+  ttt_lr: 0.005
+  ttt_momentum: 0.9
+  val_batch_tokens: 524288
+  val_files: ./data/datasets/fineweb10B_sp1024/fineweb_val_*.bin
+  val_loss_every: 4000
+  vocab_size: 1024
+  warmdown_frac: 0.72
+  warmup_steps: 20
+  world_size: 8
+  xsa_last_n: 4
+train_shards: 10
+val_tokens: 62021632
+model_params:26507352
+gptq:reserving 12s, effective=408000ms
+warmup_step: 1/20
+warmup_step: 2/20
+warmup_step: 3/20
+warmup_step: 4/20
+warmup_step: 5/20
+warmup_step: 6/20
+warmup_step: 10/20
+warmup_step: 20/20
+loop_warmup:enabled encoder:[0, 1, 2, 3, 4, 5, 3, 4] decoder:[5, 3, 4, 5, 6, 7, 8, 9, 10]
+loop_warmup_step: 1/20
+loop_warmup_step: 2/20
+loop_warmup_step: 3/20
+loop_warmup_step: 4/20
+loop_warmup_step: 5/20
+loop_warmup_step: 6/20
+loop_warmup_step: 10/20
+loop_warmup_step: 20/20
+0/20000 val_loss: 6.9356 val_bpb: 4.1077
+1/20000 train_loss: 6.9356 train_time: 0.0m tok/s: 9815624
+2/20000 train_loss: 13.5821 train_time: 0.0m tok/s: 9730789
+3/20000 train_loss: 11.3496 train_time: 0.0m tok/s: 9648936
+4/20000 train_loss: 8.7797 train_time: 0.0m tok/s: 9619331
+5/20000 train_loss: 7.0284 train_time: 0.0m tok/s: 9577384
+500/20000 train_loss: 2.2923 train_time: 0.7m tok/s: 9361330
+1000/20000 train_loss: 2.2534 train_time: 1.4m tok/s: 9345086
+1500/20000 train_loss: 2.1246 train_time: 2.1m tok/s: 9334658
+layer_loop:enabled step:1695 frac:0.350 encoder:[0, 1, 2, 3, 4, 5, 3, 4] decoder:[5, 3, 4, 5, 6, 7, 8, 9, 10]
+2000/20000 train_loss: 2.0980 train_time: 3.1m tok/s: 8588765
+2500/20000 train_loss: 2.1461 train_time: 4.1m tok/s: 7948190
+3000/20000 train_loss: 2.0445 train_time: 5.2m tok/s: 7601265
+3500/20000 train_loss: 1.9433 train_time: 6.2m tok/s: 7371536
