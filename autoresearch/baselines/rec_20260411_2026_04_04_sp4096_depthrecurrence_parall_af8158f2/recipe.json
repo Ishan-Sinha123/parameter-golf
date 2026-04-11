@@ -1,0 +1,15 @@
+{
+  "recipe_id": "rec_20260411_2026_04_04_sp4096_depthrecurrence_parall_af8158f2",
+  "source_ref": "/home/azureuser/parameter-golf/records/track_10min_16mb/2026-04-04_SP4096_DepthRecurrence_ParallelResid_MuonEqR",
+  "val_bpb": 1.08971631,
+  "artifact_mb": 15.247796058654785,
+  "features": [
+    "depth_recurrence",
+    "parallel_residuals",
+    "qk_gain",
+    "gptq",
+    "brotli",
+    "muon",
+    "sota_fork"
+  ]
+}

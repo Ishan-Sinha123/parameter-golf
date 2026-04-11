@@ -1,0 +1,90 @@
+id: rec_20260411_2026_04_04_sp4096_depthrecurrence_parall_af8158f2
+name: 2026-04-04_SP4096_DepthRecurrence_ParallelResid_MuonEqR
+description: Forked from 2026-04-04_SP4096_DepthRecurrence_ParallelResid_MuonEqR.
+  SP4096 + MLP 4x + WD 0.090 + Depth Recurrence + Parallel Residuals + MuonEq-R +
+  QK-Gain 5.0 + Full GPTQ int6 + Brotli
+parent_recipe: null
+features:
+- brotli
+- depth_recurrence
+- gptq
+- muon
+- parallel_residuals
+- qk_gain
+- sota_fork
+feature_set_hash: af8158f2c39f9362
+env_overrides:
+  ITERATIONS: '20000'
+  WARMDOWN_FRAC: '0.667'
+  WARMUP_STEPS: '20'
+  TRAIN_SEQ_LEN: '2048'
+  EVAL_SEQ_LEN: '2048'
+  TRAIN_LOG_EVERY: '500'
+  VAL_LOSS_EVERY: '4000'
+  SLIDING_WINDOW_ENABLED: '1'
+  VOCAB_SIZE: '4096'
+  NUM_LAYERS: '11'
+  XSA_LAST_N: '11'
+  NUM_KV_HEADS: '4'
+  MODEL_DIM: '512'
+  EMBEDDING_DIM: '512'
+  NUM_HEADS: '8'
+  MLP_MULT: '4.0'
+  SKIP_GATES_ENABLED: '1'
+  TIE_EMBEDDINGS: '1'
+  LOGIT_SOFTCAP: '30.0'
+  ROPE_BASE: '10000.0'
+  ROPE_DIMS: '16'
+  ROPE_TRAIN_SEQ_LEN: '2048'
+  LN_SCALE: '1'
+  VE_ENABLED: '1'
+  VE_DIM: '128'
+  VE_LAYERS: 9,10
+  QK_GAIN_INIT: '5.0'
+  MIN_LR: '0.0'
+  EMBED_LR: '0.6'
+  HEAD_LR: '0.008'
+  TIED_EMBED_LR: '0.03'
+  TIED_EMBED_INIT_STD: '0.005'
+  MATRIX_LR: '0.02'
+  SCALAR_LR: '0.02'
+  MUON_MOMENTUM: '0.99'
+  MUON_BACKEND_STEPS: '5'
+  MUON_MOMENTUM_WARMUP_START: '0.92'
+  MUON_MOMENTUM_WARMUP_STEPS: '1500'
+  BETA1: '0.9'
+  BETA2: '0.95'
+  ADAM_EPS: 1e-8
+  GRAD_CLIP_NORM: '0.3'
+  EVAL_STRIDE: '64'
+  MUON_BETA2: '0.95'
+  ADAM_WD: '0.02'
+  MUON_WD: '0.090'
+  EMBED_WD: '0.090'
+  EMA_DECAY: '0.997'
+  RECUR_LAYERS: 4,5
+  RECUR_START_STEP: '3000'
+  PARALLEL_START_LAYER: '7'
+  TTT_ENABLED: '0'
+  TTT_LR: '0.002'
+  TTT_EPOCHS: '3'
+  TTT_CHUNK_TOKENS: '32768'
+  TTT_FREEZE_BLOCKS: '0'
+  TTT_MOMENTUM: '0.9'
+  TTT_BATCH_SEQS: '32'
+  TTT_GRAD_CLIP: '1.0'
+  COMPRESSOR: brotli
+  GPTQ_ENABLED: '1'
+  GPTQ_CALIBRATION_BATCHES: '64'
+  GPTQ_RESERVE_SECONDS: '10.0'
+  RANK: '0'
+  WORLD_SIZE: '1'
+  LOCAL_RANK: '0'
+script_path: train_gpt.py
+base_commit: ''
+base_branch: ''
+source_experiment: null
+best_val_bpb: null
+best_int6_bpb: null
+best_artifact_mb: null
+best_experiment_id: null
