@@ -1,0 +1,18 @@
+{
+  "recipe_id": "rec_20260411_2026_04_08_sp8192_parallelresid_scorefir_6ad17e09",
+  "source_ref": "/home/azureuser/parameter-golf/records/track_10min_16mb/2026-04-08_SP8192_ParallelResid_ScoreFirstTTT",
+  "val_bpb": 1.08217956,
+  "artifact_mb": 15.250669479370117,
+  "features": [
+    "sp8192",
+    "depth_recurrence",
+    "parallel_residuals",
+    "qk_gain",
+    "legal_ttt",
+    "gptq",
+    "sdclip",
+    "brotli",
+    "muon",
+    "sota_fork"
+  ]
+}
