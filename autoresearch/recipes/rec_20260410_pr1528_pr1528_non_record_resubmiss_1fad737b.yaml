@@ -105,7 +105,7 @@ script_path: autoresearch/baselines/rec_20260410_2026_03_31_parallelresiduals_mi
 base_commit: ''
 base_branch: ''
 source_experiment: null
-best_val_bpb: null
+best_val_bpb: 1.13852133
 best_int6_bpb: null
 best_artifact_mb: null
-best_experiment_id: null
+best_experiment_id: idea_pr_1528_non_record_11l_s2048_4_exp001

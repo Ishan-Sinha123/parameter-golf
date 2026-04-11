@@ -448,14 +448,14 @@ class Scheduler:
                     recent_losses=[],
                     last_step=0,
                 )
-                # Try to sync & parse the log.
+                # Try to read the remote log directly — go straight to
+                # the NodeClient because _running_jobs is empty on a
+                # fresh scheduler and get_log_tail() would return "".
                 log_text = ""
                 try:
-                    self.cluster.sync_experiment_results(
-                        exp.id,
-                        self.config.abs_ideas_dir / exp.idea_id / exp.id,
-                    )
-                    log_text = self.cluster.get_log_tail(exp.id, lines=500) or ""
+                    client = self.cluster._clients.get(exp.node_host or "")
+                    if client is not None:
+                        log_text = client.fetch_log_tail(exp.id, lines=500) or ""
                 except Exception as e:
                     log.warning("orphan %s: log fetch failed: %s", exp.id, e)
                 metrics = self._parse_metrics(log_text) if log_text else {}

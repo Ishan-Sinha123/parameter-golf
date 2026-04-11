@@ -2,12 +2,12 @@
 
 ## Hypothesis
 
-Fewer transformer layers reduce sequential sync points per step, so a 7-layer
-geometry should raise tokens/sec and buy back training steps under the
-10-minute wallclock cap. Widening to `d_model=640` with 10 heads / 2 KV heads
-(GQA) is meant to offset the capacity lost from cutting depth. Net hope:
-shallower-wider beats deeper-narrower at this parameter budget once the
-throughput bonus is folded in.
+Fewer transformer layers reduce sequential sync points per training step, so a
+7-layer geometry should raise tokens/sec and buy back gradient updates under
+the 10-minute wallclock cap. Widening to `d_model=640` with 10 heads and 2 KV
+heads (GQA, 5× ratio) is meant to recover the capacity lost from cutting
+depth. Net hope: shallower-wider beats deeper-narrower at this parameter
+budget once the throughput bonus is folded in.
 
 ## Configuration
 
@@ -19,8 +19,8 @@ throughput bonus is folded in.
 | `NUM_KV_HEADS` | 2     |
 
 - **Recipe:** none (`recipe_id: null` — env-only override on default `train_gpt.py`)
-- **Reproduction:** false
 - **Source ref:** —
+- **Reproduction:** false
 
 Resolved from `train.log`:
 
@@ -57,6 +57,7 @@ Baseline val_bpb for delta: **1.081** (current SOTA reference).
 | gate_artifact_mb   | 0.0 reported (actual int8+zlib ≈ 15.18 MB, under 16 MB cap) | — |
 | gate_passed        | true (quant-gap/artifact only, not BPB) | —          |
 | wallclock          | 480.124 s — hit cap at step 1489 / 20000 | —         |
+| step_avg           | ~322.5 ms (stable across the run) | —             |
 | peak GPU mem       | 9537 MiB    | —                          |
 | model_params       | 19,025,350  | —                          |
 | promote_ema_bpb    | null (not promoted) | —                  |
@@ -64,27 +65,28 @@ Baseline val_bpb for delta: **1.081** (current SOTA reference).
 
 Notes:
 
-- Quantization gap is essentially zero — the shape compresses cleanly into the
-  16 MB cap at int8+zlib.
-- Run was **single-GPU** (`world_size:1`) under a 480 s screening cap, so the
-  "fewer sync points" claim was not actually exercised — multi-GPU collectives
-  were absent in this environment.
-- Only **1489 / 20000 steps** completed before the wallclock cap, leaving the
-  config deeply undertrained relative to the 8×H100 SOTA regime that produced
-  the 1.081 baseline.
-- No warnings or divergence in the log. Transient spike at step 2
-  (`train_loss:19.6042`) recovers by step 4 — normal warmup behavior.
-- `step_avg` is stable at ~322 ms across the whole run — no throughput cliff.
+- **Quant gap is essentially zero** — int8+zlib roundtrip lands within 2e−5 of
+  the screen EMA, and the 15.18 MB artifact fits comfortably under the 16 MB
+  cap. The shape compresses cleanly.
+- **Single-GPU screen.** `world_size:1` means the "fewer sync points → more
+  tokens/sec" claim was never actually exercised — there were no multi-GPU
+  collectives to amortize. The throughput hypothesis is untested by this run.
+- **Severely undertrained.** Only 1489 / 20000 iterations completed before the
+  480 s wallclock cap fired. SOTA baselines at 1.081 are trained for many more
+  steps on 8×H100; this screen is not directly comparable.
+- **No divergence or warnings.** Transient `train_loss:19.6042` spike at step
+  2 recovers to 9.61 → 6.44 by step 4 — normal warmup behavior. `step_avg`
+  is flat at ~322 ms throughout, no throughput cliff.
 
 ## Verdict
 
 **regression** — absolute val_bpb (EMA 1.297, int6 1.331) is ~0.22–0.25 nats
-worse than the 1.081 baseline. `gate_passed=true` reflects only the
-quant-gap and artifact-size checks, not a BPB win. The single-GPU,
-wallclock-truncated screen also undersells the hypothesis's core claim
-(sync-point reduction), so the result does not fully falsify shallower-wider
-— it just shows that at ~19 M params and 1489 steps, 7L × 640d does not
-approach SOTA BPB and should not be promoted.
+worse than the 1.081 baseline. `gate_passed=true` reflects only the quant-gap
+and artifact-size checks, not a BPB win. The single-GPU, wallclock-truncated
+screen also undersells the hypothesis's core claim (sync-point reduction), so
+this does not fully falsify shallower-wider — it just shows that at ~19 M
+params and 1489 steps, 7L × 640d does not approach SOTA BPB and should not
+be promoted.
 
 ## Suggested follow-ups
 
@@ -92,18 +94,20 @@ approach SOTA BPB and should not be promoted.
   too large to justify additional seeds; leaderboard SOTA clusters at 10–12
   layers.
 - **Matched-param depth control:** screen 10L/480d and 11L/448d at ~19 M
-  params under the same gate to confirm depth dominance before abandoning
-  the shape axis.
+  params under the same gate to confirm depth dominance before abandoning the
+  shape axis entirely.
 - **Multi-GPU rerun before declaring it dead.** If the tokens/sec hypothesis
-  is to be tested at all, re-run 7L × 640d on 8×H100 SXM at the full budget
-  so the sync-point lever is actually exercised — the 1-GPU gate masked it.
+  is to be tested at all, re-run 7L × 640d on 8×H100 SXM at the full 10-min
+  budget so the sync-point lever is actually exercised — the 1-GPU gate
+  masks it.
 - **7L/640d + MLP 3× expansion** to recover capacity through a wider FFN
   rather than more layers, if the shallow-wide direction is kept alive.
 - **7L/640d + XSA last-4** — cross sliding attention may partially compensate
-  for reduced depth by extending effective receptive field.
+  for reduced depth by extending effective receptive field at low cost.
 - **Stop env-only forks from vanilla `train_gpt.py`.** Future shape sweeps
   should stack on the current SOTA recipe (Self-Gen GPTQ + all-layer XSA +
-  EMA, val_bpb ≈ 1.081) so results are comparable to the frontier.
-- **Fix the screening budget.** A 480 s 1-GPU gate starves shallow configs
-  of steps. Consider gating on tokens/sec-adjusted projected BPB, not
-  absolute truncated BPB, before declaring more shape regressions.
+  EMA, val_bpb ≈ 1.081) so deltas are comparable to the frontier rather than
+  to a stripped baseline.
+- **Fix the screening budget.** A 480 s 1-GPU gate starves shallow configs of
+  steps. Consider gating on tokens/sec-adjusted projected BPB, not absolute
+  truncated BPB, before declaring more shape regressions.
