@@ -18,21 +18,21 @@ nodes:
   #   user: azureuser
   #   work_dir: /workspace/parameter-golf
   #   label: "8xA100 Node 2"
+  - host: 146.115.17.183
+    user: root
+    ssh_port: 9285
+    ssh_key: ~/.ssh/id_ed25519
+    work_dir: /workspace/parameter-golf
+    label: "vast-h100-1"
+    enabled: true
+    env_setup: "source /workspace/parameter-golf/.venv/bin/activate"
   - host: 206.125.32.60
     user: root
     ssh_port: 58063
     ssh_key: ~/.ssh/id_ed25519
     work_dir: /workspace/parameter-golf
-    label: "vast-h100"
-    enabled: true
-    env_setup: "source /workspace/parameter-golf/.venv/bin/activate"
-  - host: 34.69.145.155
-    user: root
-    ssh_port: 7691
-    ssh_key: ~/.ssh/id_ed25519
-    work_dir: /workspace/parameter-golf
     label: "vast-h100-2"
-    enabled: false  # CUDA runtime wedged (cudaErrorDevicesUnavailable); re-enable after instance reboot
+    enabled: true
     env_setup: "source /workspace/parameter-golf/.venv/bin/activate"
 
 
