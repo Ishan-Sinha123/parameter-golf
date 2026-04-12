@@ -955,6 +955,7 @@ class Scheduler:
         success = self.cluster.deploy_experiment(
             exp.id, job_dir=job_dir, env_overrides=resolved_env,
             script=script_path, wallclock_s=wallclock,
+            train_wallclock_s=getattr(self.config, "train_wallclock_s", 600),
             branch=branch,
         )
 

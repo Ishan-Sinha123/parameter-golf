@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import json
 import logging
+import shlex
 import subprocess
 import time  # noqa: F401 (used by probe_gpus retries)
 from dataclasses import dataclass, field
@@ -205,6 +206,7 @@ class NodeClient:
                    env_overrides: dict, gpu_indices: list[int],
                    script: str = "train_gpt.py",
                    wallclock_s: int = 180,
+                   train_wallclock_s: Optional[int] = None,
                    nproc: int = 2,
                    branch: Optional[str] = None) -> Optional[int]:
         """Deploy and launch a training job on this node.
@@ -250,17 +252,17 @@ class NodeClient:
         cuda_devices = ",".join(str(i) for i in gpu_indices)
         _stage_budget_keys = {"MAX_WALLCLOCK_SECONDS"}
         env_parts = [
-            f"CUDA_VISIBLE_DEVICES={cuda_devices}",
-            f"EXPERIMENT_DESC='{experiment_id}'",
-            f"RESULTS_TSV_PATH={remote_exp_dir}/results.tsv",
-            f"LOG_DIR={remote_exp_dir}",
+            f"CUDA_VISIBLE_DEVICES={shlex.quote(cuda_devices)}",
+            f"EXPERIMENT_DESC={shlex.quote(experiment_id)}",
+            f"RESULTS_TSV_PATH={shlex.quote(f'{remote_exp_dir}/results.tsv')}",
+            f"LOG_DIR={shlex.quote(remote_exp_dir)}",
         ]
         for k, v in env_overrides.items():
             if k in _stage_budget_keys:
                 continue  # clamped to stage budget below
-            env_parts.append(f"{k}='{v}'")
-        # Append the stage budget LAST so it wins.
-        env_parts.append(f"MAX_WALLCLOCK_SECONDS={wallclock_s}")
+            env_parts.append(f"{k}={shlex.quote(str(v))}")
+        _train_budget = train_wallclock_s if train_wallclock_s is not None else wallclock_s
+        env_parts.append(f"MAX_WALLCLOCK_SECONDS={_train_budget}")
         env_str = " ".join(env_parts)
 
         # 5. Launch via nohup + torchrun.

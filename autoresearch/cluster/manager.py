@@ -320,11 +320,15 @@ class ClusterManager:
     def deploy_experiment(self, experiment_id: str, job_dir,
                            env_overrides: dict, script: str = "train_gpt.py",
                            wallclock_s: int = 180,
+                           train_wallclock_s: Optional[int] = None,
                            branch: Optional[str] = None) -> bool:
         """Deploy an experiment to its allocated node.
 
         If branch is provided, the node will git-pull that branch before
         launching the job, ensuring reproducible code at a known commit.
+        `train_wallclock_s` is the training-side MAX_WALLCLOCK_SECONDS
+        (competition budget), while `wallclock_s` is the scheduler's hard
+        kill timeout and must be larger to leave room for compile/eval/ssh.
         """
         with self._lock:
             job = self._running_jobs.get(experiment_id)
@@ -344,6 +348,7 @@ class ClusterManager:
             gpu_indices=job.gpu_indices,
             script=script,
             wallclock_s=wallclock_s,
+            train_wallclock_s=train_wallclock_s,
             nproc=len(job.gpu_indices),
             branch=branch,
         )

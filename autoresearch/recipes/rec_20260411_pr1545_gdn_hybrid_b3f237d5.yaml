@@ -1,0 +1,106 @@
+id: rec_20260411_pr1545_gdn_hybrid_b3f237d5
+name: pr1545_gdn_hybrid
+description: "From PR #1545 (Record: GDN-Hybrid (Gated DeltaNet + SWA) \u2014 val_bpb\
+  \ 1.028308 (3-seed cold-cache ). Recommendation: reproduce, novelty: maintainer_request.\
+  \ This is a parallel rewrite, not a stackable env tune \u2014 the entire backbone\
+  \ is replaced with a Gated DeltaNet + SWA hybrid (first non-transformer entry in\
+  \ the 10-min track), matching the maintainers' o"
+parent_recipe: rec_20260410_2026_04_09_sp8192_3layerrecur_parresid_q_3710821c
+features:
+- brotli
+- depth_recurrence
+- ema
+- gdn_hybrid
+- gptq
+- legal_ttt
+- parallel_residuals
+- qk_gain
+- sdclip
+- sota_fork
+- sp8192
+feature_set_hash: b3f237d506367d97
+env_overrides:
+  ITERATIONS: '9999'
+  WARMDOWN_FRAC: '.72'
+  WARMUP_STEPS: '20'
+  TRAIN_BATCH_TOKENS: '786432'
+  TRAIN_SEQ_LEN: '2048'
+  TRAIN_LOG_EVERY: '500'
+  VAL_BATCH_TOKENS: '524288'
+  EVAL_SEQ_LEN: '2048'
+  VAL_LOSS_EVERY: '9999'
+  SLIDING_WINDOW_ENABLED: '1'
+  VOCAB_SIZE: '8192'
+  NUM_LAYERS: '11'
+  XSA_LAST_N: '11'
+  MODEL_DIM: '512'
+  EMBEDDING_DIM: '512'
+  NUM_KV_HEADS: '4'
+  NUM_HEADS: '8'
+  MLP_MULT: '4.'
+  SKIP_GATES_ENABLED: '1'
+  TIE_EMBEDDINGS: '1'
+  LOGIT_SOFTCAP: 3e1
+  ROPE_BASE: 1e4
+  ROPE_DIMS: '16'
+  ROPE_TRAIN_SEQ_LEN: '2048'
+  LN_SCALE: '1'
+  QK_GAIN_INIT: '5.0'
+  NUM_LOOPS: '2'
+  LOOP_START: '3'
+  LOOP_END: '5'
+  ENABLE_LOOPING_AT: '.35'
+  PARALLEL_RESIDUAL_START: '7'
+  MIN_LR: '.0'
+  EMBED_LR: '.6'
+  HEAD_LR: '.008'
+  TIED_EMBED_LR: '.03'
+  TIED_EMBED_INIT_STD: '.005'
+  MATRIX_LR: '.022'
+  SCALAR_LR: '.02'
+  MUON_MOMENTUM: '.99'
+  MUON_BACKEND_STEPS: '5'
+  MUON_MOMENTUM_WARMUP_START: '.92'
+  MUON_MOMENTUM_WARMUP_STEPS: '1500'
+  MUON_ROW_NORMALIZE: '1'
+  BETA1: '.9'
+  BETA2: '.95'
+  ADAM_EPS: 1e-08
+  GRAD_CLIP_NORM: '.3'
+  EVAL_STRIDE: '64'
+  MUON_BETA2: '.95'
+  ADAM_WD: '.02'
+  MUON_WD: '.095'
+  EMBED_WD: '.085'
+  EMA_DECAY: '.9965'
+  TTT_ENABLED: '0'
+  TTT_LR: '.005'
+  TTT_EPOCHS: '3'
+  TTT_MOMENTUM: '.9'
+  TTT_CHUNK_TOKENS: '32768'
+  ETLB_ENABLED: '0'
+  ETLB_LR: '.05'
+  ETLB_STEPS: '5'
+  ETLB_CLIP: '3.'
+  GPTQ_CALIBRATION_BATCHES: '64'
+  GPTQ_RESERVE_SECONDS: '12.'
+  MATRIX_BITS: '6'
+  EMBED_BITS: '8'
+  MATRIX_CLIP_SIGMAS: '12.85'
+  EMBED_CLIP_SIGMAS: 2e1
+  RANK: '0'
+  WORLD_SIZE: '1'
+  LOCAL_RANK: '0'
+  CONTROL_TENSOR_NAME_PATTERNS: attn_scale,attn_scales,mlp_scale,mlp_scales,resid_mix,resid_mixes,q_gain,skip_weight,skip_weights,skip_gates
+  SEED: '42'
+  ARCH_MODE: D
+  MAX_WALLCLOCK_SECONDS: '590'
+  GPTQ_ENABLED: '1'
+script_path: autoresearch/baselines/rec_20260410_2026_04_09_sp8192_3layerrecur_parresid_q_3710821c/train_gpt.py
+base_commit: ''
+base_branch: ''
+source_experiment: null
+best_val_bpb: null
+best_int6_bpb: null
+best_artifact_mb: null
+best_experiment_id: null

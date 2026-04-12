@@ -42,9 +42,16 @@ class AutoResearchConfig:
 
     # Scheduler
     tick_interval_s: float = 10.0
-    screen_wallclock_s: int = 180
-    gate_wallclock_s: int = 300
-    promote_wallclock_s: int = 600
+    # Scheduler hard-kill timeout per stage. Must exceed train_wallclock_s by
+    # enough to cover process startup, torch.compile, final eval and ssh poll
+    # lag (~180s on vast-h100).
+    screen_wallclock_s: int = 780
+    gate_wallclock_s: int = 780
+    promote_wallclock_s: int = 780
+    # Training-side MAX_WALLCLOCK_SECONDS passed into train_gpt.py. This is
+    # the competition training budget (10 min = 600s). Scheduler kill is
+    # larger to give the final eval room to finish.
+    train_wallclock_s: int = 600
     screen_gpus_per_job: int = 8
     gate_gpus_per_job: int = 8
     promote_gpus_per_job: int = 8
